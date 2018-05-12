@@ -1,0 +1,23 @@
+mcts :
+  nodes_per_move : 50
+  c_PUCT : 0.85
+  temperature :
+    exploration : 1
+    exploitation: 0.01
+
+network :
+  blocks : 5
+  filters : 8
+  
+  eval : 
+    dense : 8
+
+  loss :
+    L2_norm : 0.01
+
+training :
+  minibatches : 10
+  leaning_rate : 0.001
+  selfplay_games : 100
+  selfplay_tests : 50
+  random_tests : 50
