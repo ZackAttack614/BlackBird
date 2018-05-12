@@ -4,15 +4,16 @@ from src.node import node
 from src.network import network
 
 class mcts:
-    def __init__(self, game_state, network, playouts=400, temperature=1, c_PUCT=0.85):
+    def __init__(self, game_state, network, parameters, train=True):
         self.network = network
-        self.max_playouts = playouts
-        self.temperature = temperature
-        self.root = node(game_state, prior=1, c_PUCT=c_PUCT)
+        self.max_playouts = parameters['playouts']
+        self.temperature = parameters['temperature']['exploration'] if train else parameters['temperature']['exploitation']
+        self.c_PUCT = parameters['c_PUCT']
+        self.root = node(game_state, 1, self.c_PUCT)
         self.current_playouts = 0
-        self.c_PUCT = c_PUCT
+        self.train = train
         
-    def getBestMove(self, noise=True):
+    def getBestMove(self):
         selected_node = self.root
         
         while self.current_playouts < self.max_playouts:
@@ -26,7 +27,7 @@ class mcts:
                     [[selected_node.state.player] for i in range(selected_node.state.dim)]
                     for j in range(selected_node.state.dim)]]),
                 axis=3)
-            net_policy = self.network.getPolicy(state, noise)
+            net_policy = self.network.getPolicy(state, self.train)
 
             for legal_move in selected_node.state.getLegalMoves():
                 current_game = deepcopy(selected_node.state)
