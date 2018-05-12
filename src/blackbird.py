@@ -1,11 +1,15 @@
 import numpy as np
+import random
+
 from src.network import network
 from src.mcts import mcts
 
 class blackbird:
-    def __init__(self, game_framework):
+    def __init__(self, game_framework, parameters):
         self.game_framework = game_framework
-        self.network = network(load_old=True)
+        self.parameters = parameters
+        
+        self.network = network(parameters['network'], load_old=True)
         self.positions = []
     
     def selfPlay(self, num_games=1, show_game=False):
@@ -13,7 +17,7 @@ class blackbird:
             game_states = []
             new_game = self.game_framework()
             while not new_game.isGameOver():
-                treeSearch = mcts(new_game, self.network)
+                treeSearch = mcts(new_game, self.network, self.parameters['mcts'])
                 selected_move = treeSearch.getBestMove()
                 new_game.move(selected_move)
                 
@@ -67,14 +71,14 @@ class blackbird:
             while True:
                 if current_player == old_network_color:
                     if not against_random:
-                        m = mcts(new_game, old_network, temperature=0.01)
-                        move = m.getBestMove(noise=False)
+                        m = mcts(new_game, old_network, self.parameters['mcts'], train=False)
+                        move = m.getBestMove()
                     else:
                         move = random.choice(new_game.getLegalMoves())
                     new_game.move(move)
                 else:
-                    m = mcts(new_game, self.network, temperature=0.01)
-                    move = m.getBestMove(noise=False)
+                    m = mcts(new_game, self.network, self.parameters['mcts'], train=False)
+                    move = m.getBestMove()
                     new_game.move(move)
                 
                 if new_game.isGameOver():
