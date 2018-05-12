@@ -257,5 +257,9 @@ paket-files/
 .cr/
 
 # Python Tools for Visual Studio (PTVS)
-__pycache__/
-*.pyc
+src/__pycache__/
+src/*.pyc
+
+# BlackBird Models and Summaries
+blackbird_models/
+blackbird_summary/
