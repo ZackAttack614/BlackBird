@@ -28,6 +28,8 @@ class network:
                 self.saveModel()
     
     def createNetwork(self):
+        """ Build out the policy/evaluation combo network
+        """
         with tf.variable_scope('inputs', reuse=tf.AUTO_REUSE) as scope:
             self.input = tf.placeholder(shape=[1, self.dims[0], self.dims[1], 3], name='board_input', dtype=tf.float32)
             self.correct_move_vec = tf.placeholder(shape=[None], name='correct_move_from_mcts', dtype=tf.float32)
@@ -77,10 +79,16 @@ class network:
             self.training_op = self.optimizer.minimize(self.loss)
             
     def getEvaluation(self, state):
+        """ Given a game state, return the network's evaluation.
+        """
         evaluation = self.sess.run(self.evaluation, feed_dict={self.input:state})
         return evaluation
     
     def getPolicy(self, state, noise=True, epsilon=0.25, alpha=0.03):
+        """ Given a game state, return the network's policy.
+            If noise is turned on, random Dirichlet noise is applied
+            to the policy output to ensure exploration.
+        """
         policy = self.sess.run(self.policy, feed_dict={self.input:state})
         if True:
             while True:
@@ -92,6 +100,8 @@ class network:
         return policy
     
     def train(self, state, evaluation, policy, learning_rate=0.01):
+        """ Train the network
+        """
         feed_dict={
             self.input:state,
             self.mcts_evaluation:evaluation,
@@ -105,7 +115,12 @@ class network:
         self.writer.add_summary(summary, self.batch_count)
         
     def saveModel(self):
+        """ Write the state of the network to a file.
+            This should be reserved for "best" networks.
+        """
         self.saver.save(self.sess, self.model_loc)
         
     def loadModel(self):
+        """ Load an old version of the network.
+        """
         self.saver.restore(self.sess, self.model_loc)

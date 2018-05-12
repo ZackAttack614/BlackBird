@@ -17,15 +17,18 @@ class node:
         self.P = prior   # Prior probability
         
     def backup(self, reward):
+        """ Backup values obtained from mcts search through to the root.
+        """
         self.N += 1
         self.W += reward
         self.Q = self.W / self.N
         
-        pass # Do something to reward
         if self.parent is not None:
             self.parent.backup(reward)
         
     def updateU(self):
+        """ After backup is applied, update U values through to the root.
+        """
         self.U = (self.c_PUCT * self.P * np.sqrt(sum([child.N for child in self.parent.children]))) / (1 + self.N)
         if self.parent.parent is not None:
             self.parent.updateU()

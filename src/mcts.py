@@ -10,13 +10,16 @@ class mcts:
         self.temperature = parameters['temperature']['exploration'] if train else parameters['temperature']['exploitation']
         self.c_PUCT = parameters['c_PUCT']
         self.root = node(game_state, 1, self.c_PUCT)
-        self.current_playouts = 0
         self.train = train
         
     def getBestMove(self):
+        """ Given the game state of the root, find the best move
+            using the provided network and max playout number.
+        """
         selected_node = self.root
+        current_playouts = 0
         
-        while self.current_playouts < self.max_playouts:
+        while current_playouts < self.max_playouts:
             while any(selected_node.children):
                 children_QU = [child.Q + child.U for child in selected_node.children]
                 selected_node = selected_node.children[np.argmax(children_QU)]
@@ -48,7 +51,7 @@ class mcts:
             for child in selected_node.children:
                 child.updateU()
 
-            self.current_playouts += 1
+            current_playouts += 1
             
         children_probs = [
             (child.N ** (1/self.temperature)) / (self.root.N ** (1/self.temperature))

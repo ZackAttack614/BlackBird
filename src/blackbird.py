@@ -13,12 +13,14 @@ class blackbird:
         self.positions = []
     
     def selfPlay(self, num_games=1, show_game=False):
+        """ Use the current network to generate test games for training.
+        """
         for game_num in range(num_games):
             game_states = []
             new_game = self.game_framework()
             while not new_game.isGameOver():
-                treeSearch = mcts(new_game, self.network, self.parameters['mcts'])
-                selected_move = treeSearch.getBestMove()
+                tree_search = mcts(new_game, self.network, self.parameters['mcts'])
+                selected_move = tree_search.getBestMove()
                 new_game.move(selected_move)
                 
                 move_probs = np.zeros((new_game.dim, new_game.dim))
@@ -53,11 +55,16 @@ class blackbird:
             self.positions += game_states
             
     def train(self, learning_rate=0.01):
+        """ Use the games generated from selfPlay() to train the network.
+        """
         for position in self.positions:
             self.network.train(position['state'], position['reward'], position['move_probs'], learning_rate)
             del position
             
     def testNewNetwork(self, num_trials=25, against_random=False):
+        """ Test the trained network against an old version of the network
+            or against a bot playing random moves.
+        """
         new_network_score = 0
         old_network = network(load_old=True)
         
@@ -71,14 +78,14 @@ class blackbird:
             while True:
                 if current_player == old_network_color:
                     if not against_random:
-                        m = mcts(new_game, old_network, self.parameters['mcts'], train=False)
-                        move = m.getBestMove()
+                        tree_search = mcts(new_game, old_network, self.parameters['mcts'], train=False)
+                        move = tree_search.getBestMove()
                     else:
                         move = random.choice(new_game.getLegalMoves())
                     new_game.move(move)
                 else:
-                    m = mcts(new_game, self.network, self.parameters['mcts'], train=False)
-                    move = m.getBestMove()
+                    tree_search = mcts(new_game, self.network, self.parameters['mcts'], train=False)
+                    move = tree_search.getBestMove()
                     new_game.move(move)
                 
                 if new_game.isGameOver():

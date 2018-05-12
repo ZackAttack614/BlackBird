@@ -2,17 +2,25 @@ import numpy as np
 
 class game:
     def __init__(self, dim=3):
-        self.dim = dim
+        self.dim = dim  # Dimensionality of the square board
         self.reset()
         
     def reset(self):
-        self.gameover = False
+        """ Return the game to its starting state.
+        """
+
         self.player = 1
         self.x_state = np.zeros((self.dim, self.dim))
         self.o_state = np.zeros((self.dim, self.dim))
         self.board = np.zeros((1, self.dim, self.dim, 2))        
         
     def getResult(self):
+        """ Return the result of a terminal game state.
+            1  -> X won
+            0  -> Draw
+            -1 -> O won
+        """
+
         if self.dim in np.hstack([
             np.sum(self.x_state, axis=0),
             np.sum(self.x_state, axis=1),
@@ -31,6 +39,9 @@ class game:
             return 0
         
     def isGameOver(self):
+        """ Determine whether the current game state is a terminal position.
+        """
+
         if self.getResult() != 0:
             self.gameover = True
             return True
@@ -41,6 +52,8 @@ class game:
             return False
         
     def move(self, position):
+        """ Apply a move to the current game state.
+        """
         if self.player == 1:
             self.x_state[position] = 1
         elif self.player == -1:
@@ -51,18 +64,21 @@ class game:
         self.player *= -1
         
     def getLegalMoves(self):
-        legalMoves = []
-        if self.gameover:
-            return legalMoves
+        """ Return a list of all moves that are legal in the current game state.
+        """
+        legal_moves = []
         
         for i in range(self.dim):
             for j in range(self.dim):
                 if self.board[0, i, j, 0] == 0 and self.board[0, i, j, 1] == 0:
-                    legalMoves.append((i, j))
+                    legal_moves.append((i, j))
                     
-        return legalMoves
+        return legal_moves
     
     def dumpBoard(self):
+        """ Display the board state to the user
+        """
+
         for i in range(self.dim):
             next_line = [' ']*self.dim
             for j in range(self.dim):
