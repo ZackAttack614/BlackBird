@@ -1,14 +1,22 @@
+import yaml
+
 from src.game import game
 from src.blackbird import blackbird
 
 def main():
-    b = blackbird(game)
+    with open('parameters.yaml', 'r') as param_file:
+        parameters = yaml.load(param_file.read().strip())
 
-    for i in range(1, 10):
-        b.selfPlay(num_games=100)
-        b.train(learning_rate=0.002)
-        print('Self-play score: {0}'.format(b.testNewNetwork(num_trials=50)))
-        print('Random score: {0}'.format(b.testNewNetwork(against_random=True, num_trials=50)))
+    b = blackbird(game, parameters)
+    print('Loaded BlackBird')
+
+    training_parameters = parameters['training']
+
+    for i in range(1, training_parameters['minibatches'] + 1):
+        b.selfPlay(num_games=training_parameters['selfplay_games'])
+        b.train(learning_rate=training_parameters['learning_rate'])
+        print('Self-play score: {}'.format(b.testNewNetwork(num_trials=training_parameters['selfplay_tests'])))
+        print('Random score: {}'.format(b.testNewNetwork(against_random=True, num_trials=training_parameters['random_tests'])))
         print('Completed {} minibatch(es).'.format(i))
 
 if __name__ == '__main__':

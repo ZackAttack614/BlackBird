@@ -5,7 +5,8 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 class network:
-    def __init__(self, dims=(3,3), load_old=False):
+    def __init__(self, parameters, dims=(3,3), load_old=False):
+        self.parameters = parameters
         self.dims = dims
         self.sess = tf.Session()
         
@@ -35,10 +36,10 @@ class network:
         with tf.variable_scope('hidden', reuse=tf.AUTO_REUSE) as scope:
             self.hidden = [self.input]
             
-            for block in range(5):
+            for block in range(self.parameters['blocks']):
                 with tf.variable_scope('block_{}'.format(block), reuse=tf.AUTO_REUSE) as scope:
                     self.hidden.append(
-                        tf.layers.conv2d(inputs=self.input, filters=8, kernel_size=[3,3],
+                        tf.layers.conv2d(inputs=self.input, filters=self.parameters['filters'], kernel_size=[3,3],
                             strides=1, padding="same", activation=None, name='conv'))
                     self.hidden.append(tf.layers.batch_normalization(inputs=self.hidden[-1],name='batch_norm'))
                     self.hidden.append(tf.nn.relu(features=self.hidden[-1], name='rectifier_nonlinearity'))
@@ -47,8 +48,8 @@ class network:
             self.eval_conv = tf.layers.conv2d(self.hidden[-1],filters=1,kernel_size=(1,1),strides=1,name='convolution')
             self.eval_batch_norm = tf.layers.batch_normalization(self.eval_conv, name='batch_norm')
             self.eval_rect_norm = tf.nn.relu(self.eval_batch_norm, name='rect_norm')
-            self.eval_dense = tf.layers.dense(inputs=self.eval_rect_norm, units=8, name='dense', activation=tf.nn.relu)
-            self.eval_slice = tf.slice(input_=self.eval_dense, begin=[0,0,0,0], size=[1,1,1,8])
+            self.eval_dense = tf.layers.dense(inputs=self.eval_rect_norm, units=self.parameters['eval']['dense'], name='dense', activation=tf.nn.relu)
+            self.eval_slice = tf.slice(input_=self.eval_dense, begin=[0,0,0,0], size=[1,1,1,self.parameters['eval']['dense']])
             self.eval_scalar = tf.layers.dense(inputs=self.eval_slice, units=1, name='scalar')
             self.evaluation = tf.tanh(self.eval_scalar, name='evaluation')[0][0][0][0]
             
@@ -63,7 +64,7 @@ class network:
             self.loss_policy = tf.tensordot(self.correct_move_vec, tf.log(self.policy), axes=1)
             self.loss_param = tf.add_n([tf.nn.l2_loss(v) for v in tf.trainable_variables()
                               #if 'bias' not in v.name
-                              ]) * 1e-2
+                              ]) * self.parameters['loss']['L2_norm']
             self.loss = self.loss_evaluation - self.loss_policy + self.loss_param
             tf.summary.scalar('total_loss', self.loss[0])
             

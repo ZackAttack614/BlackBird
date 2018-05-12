@@ -1,5 +1,5 @@
 mcts :
-  nodes_per_move : 50
+  playouts : 500
   c_PUCT : 0.85
   temperature :
     exploration : 1
@@ -17,7 +17,7 @@ network :
 
 training :
   minibatches : 10
-  leaning_rate : 0.001
+  learning_rate : 0.001
   selfplay_games : 100
   selfplay_tests : 50
   random_tests : 50
