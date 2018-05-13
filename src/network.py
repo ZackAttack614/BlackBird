@@ -16,7 +16,8 @@ class network:
         self.batch_count = 0
         
         self.saver = tf.train.Saver()
-        self.model_loc = 'blackbird_models/best_model.ckpt'
+        self.network_name = '{0}_{1}.ckpt'.format(parameters['blocks'], parameters['filters'])
+        self.model_loc = 'blackbird_models/best_model_{0}.ckpt'.format(self.network_name)
         self.writer_loc = 'blackbird_summary/model_summary'
         
         self.writer = tf.summary.FileWriter(self.writer_loc)
