@@ -24,6 +24,9 @@ class mcts:
                 children_QU = [child.Q + child.U for child in selected_node.children]
                 selected_node = selected_node.children[np.argmax(children_QU)]
             
+            if not any(selected_node.state.getLegalMoves()):
+                break
+
             state = np.append(
                 selected_node.state.board,
                 np.array([[
