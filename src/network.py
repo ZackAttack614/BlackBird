@@ -96,21 +96,24 @@ class network:
         evaluation = self.sess.run(self.evaluation, feed_dict={self.input:state})
         return evaluation
     
-    def getPolicy(self, state, noise=True,
-                  epsilon=self.parameters['policy']['dirichlet']['epsilon'],
-                  alpha=self.parameters['policy']['dirichlet']['alpha']):
+    def getPolicy(self, state, noise=True, epsilon=None, alpha=None):
         """ Given a game state, return the network's policy.
             Random Dirichlet noise is applied to the policy output to ensure exploration.
         """
+        if epsilon is None:
+            epsilon = self.parameters['policy']['dirichlet']['epsilon']
+        if alpha is None:
+            alpha = self.parameters['policy']['dirichlet']['alpha']
         policy = self.sess.run(self.policy, feed_dict={self.input:state, self.epsilon:[epsilon], self.alpha:[alpha]})
         return policy
     
-    def train(self, state, evaluation, policy,
-              learning_rate=0.01,
-              epsilon=self.parameters['policy']['dirichlet']['epsilon'],
-              alpha=self.parameters['policy']['dirichlet']['alpha']):
+    def train(self, state, evaluation, policy, learning_rate=0.01, epsilon=None, alpha=None):
         """ Train the network
         """
+        if epsilon is None:
+            epsilon = self.parameters['policy']['dirichlet']['epsilon']
+        if alpha is None:
+            alpha = self.parameters['policy']['dirichlet']['alpha']
         feed_dict={
             self.input:state,
             self.mcts_evaluation:evaluation,
