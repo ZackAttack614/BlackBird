@@ -57,10 +57,16 @@ class network:
             self.evaluation = tf.tanh(self.eval_scalar, name='evaluation')[0][0][0][0]
             
         with tf.variable_scope('policy', reuse=tf.AUTO_REUSE) as scope:
+            self.epsilon = tf.placeholder(shape=[1], dtype=tf.float32)
+            self.alpha = tf.placeholder(shape=[1], dtype=tf.float32)
+
             self.policy_conv = tf.layers.conv2d(self.hidden[-1],filters=2,kernel_size=(1,1),strides=1,name='convolution')
             self.policy_batch_norm = tf.layers.batch_normalization(self.policy_conv,name='batch_norm')
             self.policy_rect_norm = tf.nn.relu(self.policy_batch_norm, name='rect_norm')
             self.policy = tf.layers.dense(self.policy_rect_norm, units=9, activation=tf.nn.softmax, name='policy')[0][0][0]
+
+            self.dist = tf.distributions.Dirichlet([self.alpha[0], 1-self.alpha[0]])
+            self.policy = tf.nn.softmax((1-self.epsilon[0])*self.policy + self.epsilon[0] * self.dist.sample([1,9])[0][:,0])
             
         with tf.variable_scope('loss', reuse=tf.AUTO_REUSE) as scope:
             self.loss_evaluation = tf.square(self.evaluation - self.mcts_evaluation)
@@ -90,29 +96,28 @@ class network:
         evaluation = self.sess.run(self.evaluation, feed_dict={self.input:state})
         return evaluation
     
-    def getPolicy(self, state, noise=True, epsilon=0.25, alpha=0.03):
+    def getPolicy(self, state, noise=True,
+                  epsilon=self.parameters['policy']['dirichlet']['epsilon'],
+                  alpha=self.parameters['policy']['dirichlet']['alpha']):
         """ Given a game state, return the network's policy.
-            If noise is turned on, random Dirichlet noise is applied
-            to the policy output to ensure exploration.
+            Random Dirichlet noise is applied to the policy output to ensure exploration.
         """
-        policy = self.sess.run(self.policy, feed_dict={self.input:state})
-        if True:
-            while True:
-                try:
-                    policy = [(1-epsilon)*p + epsilon*np.random.dirichlet([alpha]) for p in policy]
-                    break
-                except:
-                    continue
+        policy = self.sess.run(self.policy, feed_dict={self.input:state, self.epsilon:[epsilon], self.alpha:[alpha]})
         return policy
     
-    def train(self, state, evaluation, policy, learning_rate=0.01):
+    def train(self, state, evaluation, policy,
+              learning_rate=0.01,
+              epsilon=self.parameters['policy']['dirichlet']['epsilon'],
+              alpha=self.parameters['policy']['dirichlet']['alpha']):
         """ Train the network
         """
         feed_dict={
             self.input:state,
             self.mcts_evaluation:evaluation,
             self.correct_move_vec:policy,
-            self.learning_rate:[learning_rate]
+            self.learning_rate:[learning_rate],
+            self.epsilon:[epsilon],
+            self.alpha:[alpha]
         }
         
         self.sess.run(self.training_op, feed_dict=feed_dict)

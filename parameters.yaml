@@ -10,6 +10,10 @@ network :
   filters : 8
   eval : 
     dense : 8
+  policy :
+    dirichlet :
+      epsilon : 0.25
+      alpha : 0.03
   loss :
     L2_norm : 0.01
   training :
