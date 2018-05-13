@@ -263,3 +263,6 @@ src/*.pyc
 # BlackBird Models and Summaries
 blackbird_models/
 blackbird_summary/
+
+# BlackBird Virtual Environment
+BlackBirdEnvironment/

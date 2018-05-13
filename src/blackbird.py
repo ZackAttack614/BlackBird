@@ -66,7 +66,7 @@ class blackbird:
             or against a bot playing random moves.
         """
         new_network_score = 0
-        old_network = network(load_old=True)
+        old_network = network(self.parameters['network'], load_old=True)
         
         for trial in range(num_trials):
             new_game = self.game_framework()

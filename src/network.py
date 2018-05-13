@@ -75,7 +75,12 @@ class network:
             
         with tf.variable_scope('training', reuse=tf.AUTO_REUSE) as scope:
             self.learning_rate = tf.placeholder(shape=[1], dtype=tf.float32, name='learning_rate')
-            self.optimizer = tf.train.AdamOptimizer(self.learning_rate[0])
+
+            if self.parameters['training']['optimizer'] == 'adam':
+                self.optimizer = tf.train.AdamOptimizer(self.learning_rate[0])
+            else:  # Default to SGD
+                self.optimizer = tf.train.GradientDescentOptimizer(self.learning_rate[0])
+
             self.training_op = self.optimizer.minimize(self.loss)
             
     def getEvaluation(self, state):

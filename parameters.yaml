@@ -8,12 +8,12 @@ mcts :
 network :
   blocks : 5
   filters : 8
-  
   eval : 
     dense : 8
-
   loss :
     L2_norm : 0.01
+  training :
+	optimizer : adam
 
 training :
   minibatches : 10
