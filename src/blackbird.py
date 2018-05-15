@@ -1,5 +1,6 @@
 import numpy as np
 import random
+from copy import deepcopy
 
 from src.network import network
 from src.mcts import mcts
@@ -61,7 +62,7 @@ class blackbird:
             self.network.train(position['state'], position['reward'], position['move_probs'], learning_rate)
             del position
             
-    def testNewNetwork(self, num_trials=25, against_random=False):
+    def testNewNetwork(self, num_trials=25, against_random=False, against_simple=False):
         """ Test the trained network against an old version of the network
             or against a bot playing random moves.
         """
@@ -73,15 +74,22 @@ class blackbird:
             
             old_network_color = random.choice([1, -1])
             new_network_color = -old_network_color
+
+            if against_simple:
+                simple_parameters = deepcopy(self.parameters)
+                simple_parameters['mcts']['playouts'] = 1
             
             current_player = 1
             while True:
                 if current_player == old_network_color:
-                    if not against_random:
-                        tree_search = mcts(new_game, old_network, self.parameters['mcts'], train=False)
+                    if against_random:
+                        move = random.choice(new_game.getLegalMoves())
+                    elif against_simple:
+                        tree_search = mcts(new_game, self.network, simple_parameters['mcts'], train=False)
                         move = tree_search.getBestMove()
                     else:
-                        move = random.choice(new_game.getLegalMoves())
+                        tree_search = mcts(new_game, old_network, self.parameters['mcts'], train=False)
+                        move = tree_search.getBestMove()
                     new_game.move(move)
                 else:
                     tree_search = mcts(new_game, self.network, self.parameters['mcts'], train=False)
