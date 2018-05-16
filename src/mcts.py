@@ -10,7 +10,6 @@ class mcts:
         self.temperature = parameters['temperature']['exploration'] if train else parameters['temperature']['exploitation']
         self.c_PUCT = parameters['c_PUCT']
         self.root = node(game_state, 1, self.c_PUCT)
-        self.train = train
         
     def getBestMove(self):
         """ Given the game state of the root, find the best move
@@ -24,16 +23,17 @@ class mcts:
                 children_QU = [child.Q + child.U for child in selected_node.children]
                 selected_node = selected_node.children[np.argmax(children_QU)]
             
+            # If the QU search leads to an endgame, break the search loop.
             if not any(selected_node.state.getLegalMoves()):
                 break
 
             state = np.append(
                 selected_node.state.board,
-                np.array([[
+                np.array([[  # AlphaZero appends a constant layer whose values represent the current player.
                     [[selected_node.state.player] for i in range(selected_node.state.dim)]
                     for j in range(selected_node.state.dim)]]),
                 axis=3)
-            net_policy = self.network.getPolicy(state, self.train)
+            net_policy = self.network.getPolicy(state)
 
             for legal_move in selected_node.state.getLegalMoves():
                 current_game = deepcopy(selected_node.state)
@@ -57,6 +57,7 @@ class mcts:
             current_playouts += 1
             
         children_probs = [
-            (child.N ** (1/self.temperature)) / (self.root.N ** (1/self.temperature))
+            (child.N ** (1/self.temperature)) / sum([child.N ** (1/self.temperature) for child in self.root.children])
             for child in self.root.children]
-        return self.root.children[np.argmax(children_probs)].move
+        child = np.random.choice(self.root.children, 1, p=children_probs)[0]
+        return child.move
