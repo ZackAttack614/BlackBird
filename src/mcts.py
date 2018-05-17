@@ -56,8 +56,8 @@ class mcts:
 
             current_playouts += 1
             
-        children_probs = [
-            (child.N ** (1/self.temperature)) / sum([child.N ** (1/self.temperature) for child in self.root.children])
-            for child in self.root.children]
+        child_N_sum = sum([child.N ** (1/self.temperature) for child in self.root.children])
+        children_probs = [(child.N ** (1/self.temperature)) / child_N_sum for child in self.root.children]
         child = np.random.choice(self.root.children, 1, p=children_probs)[0]
+
         return child.move

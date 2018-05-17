@@ -10,7 +10,7 @@ class blackbird:
         self.game_framework = game_framework
         self.parameters = parameters
         
-        self.network = network(parameters['network'], load_old=True)
+        self.network = network(parameters['network'], load_old=True, writer=True)
         self.positions = []
     
     def selfPlay(self, num_games=1, show_game=False):

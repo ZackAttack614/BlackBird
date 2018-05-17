@@ -5,7 +5,7 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 class network:
-    def __init__(self, parameters, dims=(3,3), load_old=False):
+    def __init__(self, parameters, dims=(3,3), load_old=False, writer=False):
         self.parameters = parameters
         self.dims = dims
         self.sess = tf.Session()
@@ -20,9 +20,9 @@ class network:
         self.model_loc = 'blackbird_models/best_model_{0}.ckpt'.format(self.network_name)
         self.writer_loc = 'blackbird_summary/model_summary'
 
-        self.new_network = not load_old
+        self.writer = writer
         
-        if not load_old:
+        if writer:
             self.writer = tf.summary.FileWriter(self.writer_loc, graph=self.sess.graph)
         
         if load_old:
@@ -128,7 +128,7 @@ class network:
         
         self.sess.run(self.training_op, feed_dict=feed_dict)
         self.batch_count += 1
-        if self.batch_count % 10 == 0 and self.new_network:
+        if self.batch_count % 10 == 0 and self.writer:
             summary = self.sess.run(self.merged, feed_dict=feed_dict)
             self.writer.add_summary(summary, self.batch_count)
         
