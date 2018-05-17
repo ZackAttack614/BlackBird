@@ -15,10 +15,10 @@ class mcts:
         """ Given the game state of the root, find the best move
             using the provided network and max playout number.
         """
-        selected_node = self.root
         current_playouts = 0
         
         while current_playouts < self.max_playouts:
+            selected_node = self.root
             while any(selected_node.children):
                 children_QU = [child.Q + child.U for child in selected_node.children]
                 selected_node = selected_node.children[np.argmax(children_QU)]
