@@ -32,6 +32,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="parameters.yaml" />
+    <Content Include="requirements.txt" />
   </ItemGroup>
   <ItemGroup>
     <Interpreter Include="BlackBirdEnvironment\">

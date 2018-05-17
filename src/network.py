@@ -96,7 +96,7 @@ class network:
         evaluation = self.sess.run(self.evaluation, feed_dict={self.input:state})
         return evaluation
     
-    def getPolicy(self, state, noise=True, epsilon=None, alpha=None):
+    def getPolicy(self, state, epsilon=None, alpha=None):
         """ Given a game state, return the network's policy.
             Random Dirichlet noise is applied to the policy output to ensure exploration.
         """
