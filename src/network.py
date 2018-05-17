@@ -19,8 +19,11 @@ class network:
         self.network_name = '{0}_{1}.ckpt'.format(parameters['blocks'], parameters['filters'])
         self.model_loc = 'blackbird_models/best_model_{0}.ckpt'.format(self.network_name)
         self.writer_loc = 'blackbird_summary/model_summary'
+
+        self.new_network = not load_old
         
-        self.writer = tf.summary.FileWriter(self.writer_loc)
+        if not load_old:
+            self.writer = tf.summary.FileWriter(self.writer_loc, graph=self.sess.graph)
         
         if load_old:
             try:
@@ -125,8 +128,9 @@ class network:
         
         self.sess.run(self.training_op, feed_dict=feed_dict)
         self.batch_count += 1
-        summary = self.sess.run(self.merged, feed_dict=feed_dict)
-        self.writer.add_summary(summary, self.batch_count)
+        if self.batch_count % 10 == 0 and self.new_network:
+            summary = self.sess.run(self.merged, feed_dict=feed_dict)
+            self.writer.add_summary(summary, self.batch_count)
         
     def saveModel(self):
         """ Write the state of the network to a file.

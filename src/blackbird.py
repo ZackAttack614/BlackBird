@@ -67,7 +67,8 @@ class blackbird:
             or against a bot playing random moves.
         """
         new_network_score = 0
-        old_network = network(self.parameters['network'], load_old=True)
+        if not against_random:
+            old_network = network(self.parameters['network'], load_old=True)
         
         for trial in range(num_trials):
             new_game = self.game_framework()
@@ -110,5 +111,9 @@ class blackbird:
         
         if new_network_score > num_trials*0.05:
             self.network.saveModel()
+
+        if not against_random:
+            old_network.sess.close()
+            del old_network
         
         return new_network_score
