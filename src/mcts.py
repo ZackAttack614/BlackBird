@@ -60,4 +60,4 @@ class mcts:
         children_probs = [(child.N ** (1/self.temperature)) / child_N_sum for child in self.root.children]
         child = np.random.choice(self.root.children, 1, p=children_probs)[0]
 
-        return child.move
+        return child.move, np.array(children_probs)
