@@ -20,36 +20,28 @@ class mcts:
         while current_playouts <= self.max_playouts:
             selected_node = self.root
             while any(selected_node.children):
-                children_QU = [child.Q + child.U for child in selected_node.children]
+                children_QU = [child.Q + child.getU() for child in selected_node.children]
                 selected_node = selected_node.children[np.argmax(children_QU)]
             
-            # If the QU search leads to an endgame, then just increment the counter.
-            if not any(selected_node.state.getLegalMoves()):
-                selected_node.backup(selected_node.Q)
-                selected_node.updateU()
-                current_playouts +=1
-                continue
-
             state = np.append(
                 selected_node.state.board,
                 np.array([[  # AlphaZero appends a constant layer whose values represent the current player.
                     [[selected_node.state.player] for i in range(selected_node.state.dim)]
                     for j in range(selected_node.state.dim)]]),
                 axis=3)
-            net_policy = self.network.getPolicy(state)
 
             selected_node.backup(self.network.getEvaluation(state))
 
-            for legal_move in selected_node.state.getLegalMoves():
-                current_game = deepcopy(selected_node.state)
-                current_game.move(legal_move)
+            legal_moves = selected_node.state.getLegalMoves()
+            if any(legal_moves):
+                net_policy = self.network.getPolicy(state)
+                for legal_move in selected_node.state.getLegalMoves():
+                    current_game = deepcopy(selected_node.state)
+                    current_game.move(legal_move)
 
-                prior_prob = net_policy[current_game.dim*legal_move[1] + legal_move[0]]
-                child = node(current_game, parent=selected_node, move=legal_move, prior=prior_prob, c_PUCT=self.c_PUCT)
-                selected_node.children.append(child)            
-
-            for child in selected_node.children:
-                child.updateU()
+                    prior_prob = net_policy[current_game.dim*legal_move[1] + legal_move[0]]
+                    child = node(current_game, parent=selected_node, move=legal_move, prior=prior_prob, c_PUCT=self.c_PUCT)
+                    selected_node.children.append(child)   
 
             current_playouts += 1
 

@@ -3,7 +3,7 @@ mcts :
   c_PUCT : 0.85
   temperature :
     exploration : 1
-    exploitation: 0.001
+    exploitation: 0.1
 
 network :
   blocks : 2
@@ -22,6 +22,6 @@ network :
 selfplay :
   minibatches : 10
   learning_rate : 0.0001
-  selfplay_games : 20
+  selfplay_games : 100
   selfplay_tests : 10
   random_tests : 10

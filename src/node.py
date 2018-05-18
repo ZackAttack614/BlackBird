@@ -25,10 +25,8 @@ class node:
         
         if self.parent is not None:
             self.parent.backup(reward)
-        
-    def updateU(self):
-        """ After backup is applied, update U values through to the root.
-        """
-        self.U = (self.c_PUCT * self.P * np.sqrt(sum([child.N for child in self.parent.children]))) / (1 + self.N)
-        if self.parent.parent is not None:
-            self.parent.updateU()
+
+    def getU(self):
+        if self.parent is None:
+            return 0
+        return (self.c_PUCT * self.P * np.sqrt(self.parent.N)) / (1 + self.N) # Technically that is not sum(child.N) because we visit the parent once before the children. but this makes more sense?
