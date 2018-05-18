@@ -266,3 +266,5 @@ blackbird_summary/
 
 # BlackBird Virtual Environment
 BlackBirdEnvironment/
+parameters.yaml
+*.pyperf

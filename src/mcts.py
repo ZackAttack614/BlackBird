@@ -17,45 +17,34 @@ class mcts:
         """
         current_playouts = 0
         
-        while current_playouts < self.max_playouts:
+        while current_playouts <= self.max_playouts:
             selected_node = self.root
             while any(selected_node.children):
-                children_QU = [child.Q + child.U for child in selected_node.children]
+                children_QU = [child.Q + child.getU() for child in selected_node.children]
                 selected_node = selected_node.children[np.argmax(children_QU)]
             
-            # If the QU search leads to an endgame, break the search loop.
-            if not any(selected_node.state.getLegalMoves()):
-                break
-
             state = np.append(
                 selected_node.state.board,
                 np.array([[  # AlphaZero appends a constant layer whose values represent the current player.
                     [[selected_node.state.player] for i in range(selected_node.state.dim)]
                     for j in range(selected_node.state.dim)]]),
                 axis=3)
-            net_policy = self.network.getPolicy(state)
 
-            for legal_move in selected_node.state.getLegalMoves():
-                current_game = deepcopy(selected_node.state)
-                current_game.move(legal_move)
+            selected_node.backup(self.network.getEvaluation(state))
 
-                prior_prob = net_policy[current_game.dim*legal_move[1] + legal_move[0]]
-                child = node(current_game, parent=selected_node, move=legal_move, prior=prior_prob, c_PUCT=self.c_PUCT)
-                selected_node.children.append(child)            
+            legal_moves = selected_node.state.getLegalMoves()
+            if any(legal_moves):
+                net_policy = self.network.getPolicy(state)
+                for legal_move in legal_moves:
+                    current_game = deepcopy(selected_node.state)
+                    current_game.move(legal_move)
 
-            for child in selected_node.children:
-                current_game = child.state
-                state = np.append(current_game.board, np.array([[
-                        [[current_game.player] for i in range(current_game.dim)] for j in range(current_game.dim)
-                    ]]), axis=3)
-                net_eval = self.network.getEvaluation(state)
-                child.backup(net_eval)
-
-            for child in selected_node.children:
-                child.updateU()
+                    prior_prob = net_policy[current_game.dim*legal_move[1] + legal_move[0]]
+                    child = node(current_game, parent=selected_node, move=legal_move, prior=prior_prob, c_PUCT=self.c_PUCT)
+                    selected_node.children.append(child)   
 
             current_playouts += 1
-            
+
         child_N_sum = sum([child.N ** (1/self.temperature) for child in self.root.children])
 
         move_probs = np.zeros((self.root.state.dim ** 2))
