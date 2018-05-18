@@ -267,3 +267,4 @@ blackbird_summary/
 # BlackBird Virtual Environment
 BlackBirdEnvironment/
 BlackBirdEnvironmentK/
+*.pyperf
