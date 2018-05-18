@@ -17,7 +17,7 @@ class mcts:
         """
         current_playouts = 0
         
-        while current_playouts < self.max_playouts:
+        while current_playouts <= self.max_playouts:
             selected_node = self.root
             while any(selected_node.children):
                 children_QU = [child.Q + child.U for child in selected_node.children]
@@ -38,6 +38,8 @@ class mcts:
                 axis=3)
             net_policy = self.network.getPolicy(state)
 
+            selected_node.backup(self.network.getEvaluation(state))
+
             for legal_move in selected_node.state.getLegalMoves():
                 current_game = deepcopy(selected_node.state)
                 current_game.move(legal_move)
@@ -46,6 +48,7 @@ class mcts:
                 child = node(current_game, parent=selected_node, move=legal_move, prior=prior_prob, c_PUCT=self.c_PUCT)
                 selected_node.children.append(child)            
 
+            '''
             for child in selected_node.children:
                 current_game = child.state
                 state = np.append(current_game.board, np.array([[
@@ -53,6 +56,7 @@ class mcts:
                     ]]), axis=3)
                 net_eval = self.network.getEvaluation(state)
                 child.backup(net_eval)
+                '''
 
             for child in selected_node.children:
                 child.updateU()
