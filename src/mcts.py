@@ -48,16 +48,6 @@ class mcts:
                 child = node(current_game, parent=selected_node, move=legal_move, prior=prior_prob, c_PUCT=self.c_PUCT)
                 selected_node.children.append(child)            
 
-            '''
-            for child in selected_node.children:
-                current_game = child.state
-                state = np.append(current_game.board, np.array([[
-                        [[current_game.player] for i in range(current_game.dim)] for j in range(current_game.dim)
-                    ]]), axis=3)
-                net_eval = self.network.getEvaluation(state)
-                child.backup(net_eval)
-                '''
-
             for child in selected_node.children:
                 child.updateU()
 
