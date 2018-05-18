@@ -2,8 +2,10 @@ import yaml
 
 from src.game import game
 from src.blackbird import blackbird
+import os
 
 def main():
+    assert os.path.isfile('parameters.yaml'), 'Copy the parameters_template.yaml file into parameters.yaml to test runs.'
     with open('parameters.yaml') as param_file:
         parameters = yaml.load(param_file.read().strip())
         
