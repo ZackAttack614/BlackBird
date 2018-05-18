@@ -83,14 +83,14 @@ class blackbird:
                         move = random.choice(new_game.getLegalMoves())
                     elif against_simple:
                         tree_search = mcts(new_game, self.network, simple_parameters['mcts'], train=False)
-                        move = tree_search.getBestMove()
+                        move, _ = tree_search.getBestMove()
                     else:
                         tree_search = mcts(new_game, old_network, self.parameters['mcts'], train=False)
-                        move = tree_search.getBestMove()
+                        move, _ = tree_search.getBestMove()
                     new_game.move(move)
                 else:
                     tree_search = mcts(new_game, self.network, self.parameters['mcts'], train=False)
-                    move = tree_search.getBestMove()
+                    move, _ = tree_search.getBestMove()
                     new_game.move(move)
                 
                 if new_game.isGameOver():
