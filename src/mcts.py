@@ -23,9 +23,12 @@ class mcts:
                 children_QU = [child.Q + child.U for child in selected_node.children]
                 selected_node = selected_node.children[np.argmax(children_QU)]
             
-            # If the QU search leads to an endgame, break the search loop.
+            # If the QU search leads to an endgame, then just increment the counter.
             if not any(selected_node.state.getLegalMoves()):
-                break
+                selected_node.backup(selected_node.Q)
+                selected_node.updateU()
+                current_playouts +=1
+                continue
 
             state = np.append(
                 selected_node.state.board,
@@ -55,7 +58,7 @@ class mcts:
                 child.updateU()
 
             current_playouts += 1
-            
+
         child_N_sum = sum([child.N ** (1/self.temperature) for child in self.root.children])
 
         move_probs = np.zeros((self.root.state.dim ** 2))
