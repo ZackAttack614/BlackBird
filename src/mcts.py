@@ -35,7 +35,7 @@ class mcts:
             legal_moves = selected_node.state.getLegalMoves()
             if any(legal_moves):
                 net_policy = self.network.getPolicy(state)
-                for legal_move in selected_node.state.getLegalMoves():
+                for legal_move in legal_moves:
                     current_game = deepcopy(selected_node.state)
                     current_game.move(legal_move)
 
