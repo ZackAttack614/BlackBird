@@ -1,27 +1,27 @@
 mcts :
-  playouts : 500
+  playouts : 10
   c_PUCT : 0.85
   temperature :
     exploration : 1
     exploitation: 0.01
 
 network :
-  blocks : 5
-  filters : 8
-  eval : 
-    dense : 8
+  blocks : 2
+  filters : 4
+  eval :
+    dense : 4
   policy :
     dirichlet :
       epsilon : 0.25
       alpha : 0.03
   loss :
-    L2_norm : 0.01
+    L2_norm : 0.001
   training :
     optimizer : adam
 
 selfplay :
   minibatches : 10
-  learning_rate : 0.001
-  selfplay_games : 100
-  selfplay_tests : 50
-  random_tests : 50
+  learning_rate : 0.0001
+  selfplay_games : 10
+  selfplay_tests : 10
+  random_tests : 10

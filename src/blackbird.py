@@ -10,7 +10,7 @@ class blackbird:
         self.game_framework = game_framework
         self.parameters = parameters
         
-        self.network = network(parameters['network'], load_old=True)
+        self.network = network(parameters['network'], load_old=True, writer=True)
         self.positions = []
     
     def selfPlay(self, num_games=1, show_game=False):
@@ -21,12 +21,8 @@ class blackbird:
             new_game = self.game_framework()
             while not new_game.isGameOver():
                 tree_search = mcts(new_game, self.network, self.parameters['mcts'])
-                selected_move = tree_search.getBestMove()
+                selected_move, move_probs = tree_search.getBestMove()
                 new_game.move(selected_move)
-                
-                move_probs = np.zeros((new_game.dim, new_game.dim))
-                move_probs[selected_move] = 1
-                move_probs = move_probs.reshape(9)
                 
                 game_states.append({
                     'state':np.append(
@@ -67,7 +63,8 @@ class blackbird:
             or against a bot playing random moves.
         """
         new_network_score = 0
-        old_network = network(self.parameters['network'], load_old=True)
+        if not against_random:
+            old_network = network(self.parameters['network'], load_old=True)
         
         for trial in range(num_trials):
             new_game = self.game_framework()
@@ -86,14 +83,14 @@ class blackbird:
                         move = random.choice(new_game.getLegalMoves())
                     elif against_simple:
                         tree_search = mcts(new_game, self.network, simple_parameters['mcts'], train=False)
-                        move = tree_search.getBestMove()
+                        move, _ = tree_search.getBestMove()
                     else:
                         tree_search = mcts(new_game, old_network, self.parameters['mcts'], train=False)
-                        move = tree_search.getBestMove()
+                        move, _ = tree_search.getBestMove()
                     new_game.move(move)
                 else:
                     tree_search = mcts(new_game, self.network, self.parameters['mcts'], train=False)
-                    move = tree_search.getBestMove()
+                    move, _ = tree_search.getBestMove()
                     new_game.move(move)
                 
                 if new_game.isGameOver():
@@ -110,5 +107,9 @@ class blackbird:
         
         if new_network_score > num_trials*0.05:
             self.network.saveModel()
+
+        if not against_random:
+            old_network.sess.close()
+            del old_network
         
         return new_network_score
