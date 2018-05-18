@@ -15,10 +15,10 @@ class mcts:
         """ Given the game state of the root, find the best move
             using the provided network and max playout number.
         """
-        selected_node = self.root
         current_playouts = 0
         
         while current_playouts < self.max_playouts:
+            selected_node = self.root
             while any(selected_node.children):
                 children_QU = [child.Q + child.U for child in selected_node.children]
                 selected_node = selected_node.children[np.argmax(children_QU)]
@@ -56,8 +56,13 @@ class mcts:
 
             current_playouts += 1
             
-        children_probs = [
-            (child.N ** (1/self.temperature)) / sum([child.N ** (1/self.temperature) for child in self.root.children])
-            for child in self.root.children]
+        child_N_sum = sum([child.N ** (1/self.temperature) for child in self.root.children])
+
+        move_probs = np.zeros((self.root.state.dim ** 2))
+        for child in self.root.children:
+            move_probs[self.root.state.dim * child.move[1] + child.move[0]] = (child.N ** (1/self.temperature)) / child_N_sum
+
+        children_probs = [(child.N ** (1/self.temperature)) / child_N_sum for child in self.root.children]
         child = np.random.choice(self.root.children, 1, p=children_probs)[0]
-        return child.move
+
+        return child.move, move_probs
