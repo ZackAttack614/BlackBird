@@ -88,7 +88,7 @@ class network:
 
             if self.parameters['training']['optimizer'] == 'adam':
                 self.optimizer = tf.train.AdamOptimizer(self.learning_rate[0])
-            elif self.parameters['training']['otpimizer'] == 'momentum':
+            elif self.parameters['training']['optimizer'] == 'momentum':
                 self.optimizer = tf.train.MomentumOptimizer(self.learning_rate[0], momentum=self.parameters['training']['optimizer']['momentum'])
             else:  # Default to SGD
                 self.optimizer = tf.train.GradientDescentOptimizer(self.learning_rate[0])
