@@ -1,28 +1,32 @@
 mcts :
-  playouts : 100
-  c_PUCT : 0.85
-  temperature :
-    exploration : 1
-    exploitation: 0.1
+	playouts : 100
+	c_PUCT : 0.85
+	temperature :
+		exploration : 1
+		exploitation: 0.1
 
 network :
-  blocks : 2
-  filters : 4
-  eval :
-    dense : 4
-  policy :
-    dirichlet :
-      epsilon : 0.25
-      alpha : 0.03
-  loss :
-    L2_norm : 0.001
-  training :
-    optimizer : momentum
-    momentum : 0.9         # Momentum for SGD with mometum (MomentumOptimizer)
+	blocks : 2
+	filters : 4
+	eval :
+		dense : 4
+	policy :
+		dirichlet :
+		epsilon : 0.25
+		alpha : 0.03
+	loss :
+		L2_norm : 0.001
+	training :
+		optimizer : momentum
+		momentum : 0.9         # Momentum for SGD with mometum (MomentumOptimizer)
 
 selfplay :
-  epochs : 10              # Number of training sessions to go through
-  learning_rate : 0.0001   # Learning rate for the training optimizer
-  training_games : 100     # Number of games to generate for each epoch
-  selfplay_tests : 10      # Number of games to have new net play against itself for testing
-  random_tests : 10        # Number of games to have new net play against random player for testing
+	epochs : 10              # Number of training sessions to go through
+	learning_rate : 0.0001   # Learning rate for the training optimizer
+	training_games : 100     # Number of games to generate for each epoch
+	selfplay_tests : 10      # Number of games to have new net play against itself for testing
+	random_tests : 10        # Number of games to have new net play against random player for testing
+
+logging :
+	remote_logging : yes
+	log_server : 'localhost'
