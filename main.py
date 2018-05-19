@@ -21,7 +21,7 @@ def main():
         print('Self-play vs low-depth score: {}'.format(
             blackbird_instance.testNewNetwork(against_simple=True, num_trials=training_parameters['selfplay_tests'])))
         print('Random score: {}'.format(blackbird_instance.testNewNetwork(against_random=True, num_trials=training_parameters['random_tests'])))
-        print('Completed {} epoch(s).\n'.format(i))
+        print('Completed {} epoch(s).\n'.format(epoch))
 
 if __name__ == '__main__':
     main()
