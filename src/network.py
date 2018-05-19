@@ -20,6 +20,9 @@ class network:
         self.model_loc = 'blackbird_models/best_model_{0}.ckpt'.format(self.network_name)
         self.writer_loc = 'blackbird_summary/model_summary'
 
+        self.default_alpha = self.parameters['policy']['dirichlet']['alpha']
+        self.default_epsilon = self.parameters['policy']['dirichlet']['epsilon']
+
         self.write_summary = writer
         
         if writer:
@@ -101,31 +104,23 @@ class network:
         evaluation = self.sess.run(self.evaluation, feed_dict={self.input:state})
         return evaluation
     
-    def getPolicy(self, state, epsilon=None, alpha=None):
+    def getPolicy(self, state):
         """ Given a game state, return the network's policy.
             Random Dirichlet noise is applied to the policy output to ensure exploration.
         """
-        if epsilon is None:
-            epsilon = self.parameters['policy']['dirichlet']['epsilon']
-        if alpha is None:
-            alpha = self.parameters['policy']['dirichlet']['alpha']
-        policy = self.sess.run(self.policy, feed_dict={self.input:state, self.epsilon:[epsilon], self.alpha:[alpha]})
+        policy = self.sess.run(self.policy, feed_dict={self.input:state, self.epsilon:[self.default_epsilon], self.alpha:[self.default_alpha]})
         return policy
     
-    def train(self, state, evaluation, policy, learning_rate=0.01, epsilon=None, alpha=None):
+    def train(self, state, evaluation, policy, learning_rate=0.01):
         """ Train the network
         """
-        if epsilon is None:
-            epsilon = self.parameters['policy']['dirichlet']['epsilon']
-        if alpha is None:
-            alpha = self.parameters['policy']['dirichlet']['alpha']
         feed_dict={
             self.input:state,
             self.mcts_evaluation:evaluation,
             self.correct_move_vec:policy,
             self.learning_rate:[learning_rate],
-            self.epsilon:[epsilon],
-            self.alpha:[alpha]
+            self.epsilon:[self.default_epsilon],
+            self.alpha:[self.default_alpha]
         }
         
         self.sess.run(self.training_op, feed_dict=feed_dict)
