@@ -12,8 +12,8 @@ network :
     dense : 4
   policy :
     dirichlet :
-    epsilon : 0.25
-    alpha : 0.03
+      epsilon : 0.25
+      alpha : 0.03
   loss :
     L2_norm : 0.001
   training :
