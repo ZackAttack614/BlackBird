@@ -20,7 +20,7 @@ class network:
         self.model_loc = 'blackbird_models/best_model_{0}.ckpt'.format(self.network_name)
         self.writer_loc = 'blackbird_summary/model_summary'
 
-        self.writer = writer
+        self.write_summary = writer
         
         if writer:
             self.writer = tf.summary.FileWriter(self.writer_loc, graph=self.sess.graph)
@@ -128,7 +128,7 @@ class network:
         
         self.sess.run(self.training_op, feed_dict=feed_dict)
         self.batch_count += 1
-        if self.batch_count % 10 == 0 and self.writer:
+        if self.batch_count % 10 == 0 and self.write_summary:
             summary = self.sess.run(self.merged, feed_dict=feed_dict)
             self.writer.add_summary(summary, self.batch_count)
         
