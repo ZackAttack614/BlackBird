@@ -113,10 +113,7 @@ class blackbird(logger):
                 else:
                     tree_search = mcts(new_game, self.network, self.parameters['mcts'], train=False)
                     move, move_probs = tree_search.getBestMove()
-                    self.log('\nState')
-                    self.log('{}'.format(str(new_game)))
-                    self.log('Chosen Move: {}'.format(move))
-                    self.log('Probs: {}'.format(move_probs))
+                    self.__logMove(new_game, move, move_probs)
                     new_game.move(move)
                 
                 if new_game.isGameOver():
