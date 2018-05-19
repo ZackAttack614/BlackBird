@@ -4,24 +4,42 @@ from copy import deepcopy
 
 from src.network import network
 from src.mcts import mcts
+from src.logger import *
 
-class blackbird:
+def format2DArray(a):
+    s = ''
+    for r in range(a.shape[0]):
+        s += '['
+        for c in range(a.shape[1]):
+            s += '{:<4.1f}'.format(a[r,c])
+        s += ']\n'
+
+    return s
+
+
+class blackbird(logger):
     def __init__(self, game_framework, parameters):
         self.game_framework = game_framework
         self.parameters = parameters
         
         self.network = network(parameters['network'], load_old=True, writer=True)
         self.positions = []
-    
+
+        super().__init__(parameters.get('log_dir'))
+        
+    @canLog(log_file = 'selfPlay.txt')
     def selfPlay(self, num_games=1, show_game=False):
         """ Use the current network to generate test games for training.
         """
         for game_num in range(num_games):
+            self.log('-'*20)
+            self.log('New Game: {}'.format(game_num))
             game_states = []
             new_game = self.game_framework()
             while not new_game.isGameOver():
                 tree_search = mcts(new_game, self.network, self.parameters['mcts'])
                 selected_move, move_probs = tree_search.getBestMove()
+                self.__logMove(new_game, selected_move, move_probs)
                 new_game.move(selected_move)
                 
                 game_states.append({
@@ -57,7 +75,8 @@ class blackbird:
         for position in self.positions:
             self.network.train(position['state'], position['reward'], position['move_probs'], learning_rate)
             del position
-            
+    
+    @canLog(log_file = 'testNewNetwork.txt')
     def testNewNetwork(self, num_trials=25, against_random=False, against_simple=False):
         """ Test the trained network against an old version of the network
             or against a bot playing random moves.
@@ -67,6 +86,9 @@ class blackbird:
             old_network = network(self.parameters['network'], load_old=True)
         
         for trial in range(num_trials):
+            if not against_random and not against_simple:
+                self.log('-'*20)
+                self.log('Playing trial {}'.format(trial))
             new_game = self.game_framework()
             
             old_network_color = random.choice([1, -1])
@@ -90,7 +112,11 @@ class blackbird:
                     new_game.move(move)
                 else:
                     tree_search = mcts(new_game, self.network, self.parameters['mcts'], train=False)
-                    move, _ = tree_search.getBestMove()
+                    move, move_probs = tree_search.getBestMove()
+                    self.log('\nState')
+                    self.log('{}'.format(str(new_game)))
+                    self.log('Chosen Move: {}'.format(move))
+                    self.log('Probs: {}'.format(move_probs))
                     new_game.move(move)
                 
                 if new_game.isGameOver():
@@ -113,3 +139,17 @@ class blackbird:
             del old_network
         
         return new_network_score
+
+
+    def __logMove(self, board, move, probabilities):
+        self.log('\nState')
+        self.log('{}'.format(str(board)))
+        m = np.zeros((3,3))
+        m[move] = 1.0
+        self.log(format2DArray(probabilities.reshape((3,3)).transpose()))
+        self.log(format2DArray(m))
+        return
+
+    
+
+     

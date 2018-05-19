@@ -78,7 +78,11 @@ class game:
     def dumpBoard(self):
         """ Display the board state to the user
         """
+        print(str(self))
+        print('\n')
 
+    def __str__(self):
+        s = ''
         for i in range(self.dim):
             next_line = [' ']*self.dim
             for j in range(self.dim):
@@ -86,7 +90,7 @@ class game:
                     next_line[j]='X'
                 elif self.board[0,i,j,1] == 1:
                     next_line[j]='O'
-            print('|'.join(next_line))
+            s += '|'.join(next_line) + '\n'
             if i != self.dim-1:
-                print('-'*(2*self.dim-1))
-        print('\n')
+                s += '-'*(2*self.dim-1) + '\n'
+        return s
