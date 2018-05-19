@@ -8,7 +8,9 @@ class network:
     def __init__(self, parameters, dims=(3,3), load_old=False, writer=False):
         self.parameters = parameters
         self.dims = dims
-        self.sess = tf.Session()
+        config = tf.ConfigProto()
+        config.gpu_options.per_process_gpu_memory_fraction = 0.8
+        self.sess = tf.Session(config = config)
         
         self.createNetwork()
         self.init = tf.global_variables_initializer()

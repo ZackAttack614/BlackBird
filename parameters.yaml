@@ -1,5 +1,5 @@
 mcts :
-  playouts : 100
+  playouts : 10
   c_PUCT : 0.85
   temperature :
     exploration : 1
@@ -22,6 +22,6 @@ network :
 selfplay :
   minibatches : 10
   learning_rate : 0.0001
-  selfplay_games : 100
+  selfplay_games : 10
   selfplay_tests : 10
   random_tests : 10
