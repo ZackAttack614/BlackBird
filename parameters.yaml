@@ -20,8 +20,8 @@ network :
     optimizer : adam
 
 selfplay :
-  minibatches : 10
-  learning_rate : 0.0001
-  selfplay_games : 100
-  selfplay_tests : 10
-  random_tests : 10
+  epochs : 10              # Number of training sessions to go through
+  learning_rate : 0.0001   # Learning rate for the training optimizer
+  training_games : 100     # Number of games to generate for each epoch
+  selfplay_tests : 10      # Number of games to have new net play against itself for testing
+  random_tests : 10        # Number of games to have new net play against random player for testing

@@ -14,8 +14,8 @@ def main():
     training_parameters = parameters['selfplay']
 
 
-    for i in range(1, training_parameters['minibatches'] + 1):
-        b.selfPlay(num_games=training_parameters['selfplay_games'])
+    for i in range(1, training_parameters['epochs'] + 1):
+        b.selfPlay(num_games=training_parameters['training_games'])
         b.train(learning_rate=training_parameters['learning_rate'])
 
         print('Self-play score: {}'.format(b.testNewNetwork(num_trials=training_parameters['selfplay_tests'])))
