@@ -56,7 +56,7 @@ class blackbird:
         """
         for position in self.positions:
             self.network.train(position['state'], position['reward'], position['move_probs'], learning_rate)
-            del position
+        self.positions = []
             
     def testNewNetwork(self, num_trials=25, against_random=False, against_simple=False):
         """ Test the trained network against an old version of the network
