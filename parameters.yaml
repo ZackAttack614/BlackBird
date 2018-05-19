@@ -17,7 +17,8 @@ network :
   loss :
     L2_norm : 0.001
   training :
-    optimizer : adam
+    optimizer : momentum
+    momentum : 0.9         # Momentum for SGD with mometum (MomentumOptimizer)
 
 selfplay :
   epochs : 10              # Number of training sessions to go through
