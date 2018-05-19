@@ -25,3 +25,8 @@ selfplay :
   training_games : 100     # Number of games to generate for each epoch
   selfplay_tests : 10      # Number of games to have new net play against itself for testing
   random_tests : 10        # Number of games to have new net play against random player for testing
+  minibatches : 10
+  learning_rate : 0.0001
+  selfplay_games : 10
+  selfplay_tests : 10
+  random_tests : 10
