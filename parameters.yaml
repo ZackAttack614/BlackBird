@@ -1,5 +1,5 @@
 mcts :
-  playouts : 100
+  playouts : 10
   c_PUCT : 0.85
   temperature :
     exploration : 1
