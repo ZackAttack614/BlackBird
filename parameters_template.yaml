@@ -20,9 +20,9 @@ network :
     optimizer : adam
 
 selfplay :
-  minibatches : 10
+  epochs : 10
   learning_rate : 0.0001
-  selfplay_games : 100
+  training_games : 100
   selfplay_tests : 10
   random_tests : 10
 
