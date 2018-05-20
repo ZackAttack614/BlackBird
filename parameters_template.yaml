@@ -11,9 +11,9 @@ network :
   eval :
     dense : 4
   policy :
-    dirichlet :
-    epsilon : 0.25
-    alpha : 0.03
+    dirichlet : 
+      epsilon : 0.25
+      alpha : 0.03
   loss :
     L2_norm : 0.001
   training :
@@ -28,7 +28,7 @@ selfplay :
   random_tests : 10        # Number of games to have new net play against random player for testing
 
 logging : 
-	log_dir : None
-	dbURI : None
-	dbName : None
+  log_dir : None
+  dbURI : 'mongodb://108.199.144.40:5000/'
+  dbName : KTest
   

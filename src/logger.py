@@ -3,9 +3,9 @@ import os
 from pymongo import MongoClient
 
 def dbLogger(func):
-    def f(*args, **kwargs):
+    def f(self, *args, **kwargs):
         if self.DB is not None:
-            return f(*args, **kwargs)
+            return func(self, *args, **kwargs)
         return None
     return f
 
@@ -34,13 +34,17 @@ def canLog(log_file = 'default.txt'):
 class logger(object):
     """gives some basic logging functionality"""
 
-    def __init__(self, creationInstant = None, log_dir = None, dbURI = None, dbName = None):
-        self.log_dir = log_dir
-        if log_dir is not None and not os.path.isdir(log_dir):
-            os.mkdir(log_dir)
+    def __init__(self, params, creationInstant = None):
+        self.log_dir = params.get('log_dir')
+        if self.log_dir is not None and not os.path.isdir(self.log_dir):
+            os.mkdir(self.log_dir)
         self.handlers = {}
         self.fout = None
         self.CreationInstant = time.time() if creationInstant is None else creationInstant
+        
+        dbURI = params.get('dbURI')
+        dbName = params.get('dbName')
+        
         self.DB = None
         if dbURI is not None and dbName is not None:
             client = MongoClient(dbURI)

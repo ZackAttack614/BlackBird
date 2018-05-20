@@ -19,6 +19,7 @@ def format2DArray(a):
 
 class blackbird(logger):
     def __init__(self, game_framework, parameters):
+        super().__init__(parameters['logging'])
         self.game_framework = game_framework
         self.parameters = parameters
         
@@ -26,10 +27,9 @@ class blackbird(logger):
         self.positions = []
 
         self.game_id = 0
-        self.logConfig(params)
-        super().__init__(parameters['logging'])
+        self.logConfig(parameters)
         
-    @canLog(log_file = 'selfPlay.txt')
+    @canLog(log_file = 'selfPlay.log')
     def selfPlay(self, num_games=1, show_game=False):
         """ Use the current network to generate test games for training.
         """
@@ -38,10 +38,12 @@ class blackbird(logger):
             self.log('New Game: {}'.format(game_num))
             game_states = []
             new_game = self.game_framework()
+            move_num = 0
             while not new_game.isGameOver():
+                move_num += 1
                 tree_search = mcts(new_game, self.network, self.parameters['mcts'])
                 selected_move, move_probs = tree_search.getBestMove()
-                self.__logMove(new_game, selected_move, move_probs)
+                self.__logMove(self.game_id, move_num, new_game, selected_move, move_probs, isTraining = True)
                 
                 game_states.append({
                     'state':np.append(
@@ -78,7 +80,7 @@ class blackbird(logger):
             self.network.train(position['state'], position['reward'], position['move_probs'], learning_rate)
         self.positions = []
     
-    @canLog(log_file = 'testNewNetwork.txt')
+    @canLog(log_file = 'testNewNetwork.log')
     def testNewNetwork(self, num_trials=25, against_random=False, against_simple=False):
         """ Test the trained network against an old version of the network
             or against a bot playing random moves.
@@ -115,7 +117,6 @@ class blackbird(logger):
                 else:
                     tree_search = mcts(new_game, self.network, self.parameters['mcts'], train=False)
                     move, move_probs = tree_search.getBestMove()
-                    self.__logMove(new_game, move, move_probs)
                     new_game.move(move)
                 
                 if new_game.isGameOver():
@@ -149,7 +150,7 @@ class blackbird(logger):
         self.log(format2DArray(probabilities.reshape((3,3)).transpose()))
         self.log(format2DArray(m))
 
-        self.logDecision(move_num, game_id, state, move, probabilities, isTrianing)
+        self.logDecision(move_num, game_id, str(state), list(move), list(probabilities), isTraining)
 
         return
 

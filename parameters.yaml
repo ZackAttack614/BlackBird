@@ -12,8 +12,8 @@ network :
     dense : 4
   policy :
     dirichlet :
-    epsilon : 0.25
-    alpha : 0.03
+      epsilon : 0.25
+      alpha : 0.03
   loss :
     L2_norm : 0.001
   training :
@@ -27,7 +27,7 @@ selfplay :
   selfplay_tests : 0      # Number of games to have new net play against itself for testing
   random_tests : 10        # Number of games to have new net play against random player for testing
 
-logging :
-  log_dir : 'logDir'
-  remote_logging : yes
-  log_server : 'localhost'
+logging : 
+  log_dir : None
+  dbURI : 'mongodb://108.199.144.40:5000/'
+  dbName : KTest

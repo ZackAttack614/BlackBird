@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{306f3a22-70d1-4860-9b87-c4ea9b92dc20}</ProjectGuid>
     <ProjectHome />
-    <StartupFile>main.py</StartupFile>
+    <StartupFile>kTest.py</StartupFile>
     <SearchPath />
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
@@ -20,9 +20,15 @@
     <VisualStudioVersion Condition=" '$(VisualStudioVersion)' == '' ">10.0</VisualStudioVersion>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="kTest.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="main.py" />
     <Compile Include="src\blackbird.py" />
     <Compile Include="src\game.py" />
+    <Compile Include="src\logger.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="src\mcts.py" />
     <Compile Include="src\network.py" />
     <Compile Include="src\node.py" />
@@ -33,6 +39,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="parameters.yaml" />
+    <Content Include="parameters_template.yaml" />
     <Content Include="requirements.txt" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
