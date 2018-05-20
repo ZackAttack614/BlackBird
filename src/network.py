@@ -39,7 +39,7 @@ class network:
         """
         with tf.variable_scope('inputs', reuse=tf.AUTO_REUSE) as scope:
             self.input = tf.placeholder(shape=[None, self.dims[0], self.dims[1], 3], name='board_input', dtype=tf.float32)
-            self.correct_move_vec = tf.placeholder(shape=[None], name='correct_move_from_mcts', dtype=tf.float32)
+            self.correct_move_vec = tf.placeholder(shape=[None, self.dims[0] * self.dims[1]], name='correct_move_from_mcts', dtype=tf.float32)
             self.mcts_evaluation = tf.placeholder(shape=[None], name='mcts_evaluation', dtype=tf.float32)
             
         with tf.variable_scope('hidden', reuse=tf.AUTO_REUSE) as scope:
@@ -110,7 +110,7 @@ class network:
             Random Dirichlet noise is applied to the policy output to ensure exploration.
         """
         policy = self.sess.run(self.policy, feed_dict={self.input:state, self.epsilon:[self.default_epsilon], self.alpha:[self.default_alpha]})
-        return policy
+        return policy[0]
     
     def train(self, state, evaluation, policy, learning_rate=0.01):
         """ Train the network
