@@ -20,6 +20,9 @@ class network:
         self.model_loc = 'blackbird_models/best_model_{0}.ckpt'.format(self.network_name)
         self.writer_loc = 'blackbird_summary/model_summary'
 
+        self.default_alpha = self.parameters['policy']['dirichlet']['alpha']
+        self.default_epsilon = self.parameters['policy']['dirichlet']['epsilon']
+
         self.write_summary = writer
         
         if writer:
@@ -35,9 +38,9 @@ class network:
         """ Build out the policy/evaluation combo network
         """
         with tf.variable_scope('inputs', reuse=tf.AUTO_REUSE) as scope:
-            self.input = tf.placeholder(shape=[1, self.dims[0], self.dims[1], 3], name='board_input', dtype=tf.float32)
-            self.correct_move_vec = tf.placeholder(shape=[None], name='correct_move_from_mcts', dtype=tf.float32)
-            self.mcts_evaluation = tf.placeholder(shape=[1], name='mcts_evaluation', dtype=tf.float32)
+            self.input = tf.placeholder(shape=[None, self.dims[0], self.dims[1], 3], name='board_input', dtype=tf.float32)
+            self.correct_move_vec = tf.placeholder(shape=[None, self.dims[0] * self.dims[1]], name='correct_move_from_mcts', dtype=tf.float32)
+            self.mcts_evaluation = tf.placeholder(shape=[None], name='mcts_evaluation', dtype=tf.float32)
             
         with tf.variable_scope('hidden', reuse=tf.AUTO_REUSE) as scope:
             self.hidden = [self.input]
@@ -53,11 +56,10 @@ class network:
         with tf.variable_scope('evaluation', reuse=tf.AUTO_REUSE) as scope:
             self.eval_conv = tf.layers.conv2d(self.hidden[-1],filters=1,kernel_size=(1,1),strides=1,name='convolution')
             self.eval_batch_norm = tf.layers.batch_normalization(self.eval_conv, name='batch_norm')
-            self.eval_rect_norm = tf.nn.relu(self.eval_batch_norm, name='rect_norm')
-            self.eval_dense = tf.layers.dense(inputs=self.eval_rect_norm, units=self.parameters['eval']['dense'], name='dense', activation=tf.nn.relu)
-            self.eval_slice = tf.slice(input_=self.eval_dense, begin=[0,0,0,0], size=[1,1,1,self.parameters['eval']['dense']])
-            self.eval_scalar = tf.layers.dense(inputs=self.eval_slice, units=1, name='scalar')
-            self.evaluation = tf.tanh(self.eval_scalar, name='evaluation')[0][0][0][0]
+            self.eval_rectifier = tf.nn.relu(self.eval_batch_norm, name='rect_norm')
+            self.eval_dense = tf.layers.dense(inputs=self.eval_rectifier, units=self.parameters['eval']['dense'], name='dense', activation=tf.nn.relu)
+            self.eval_scalar = tf.reduce_sum(self.eval_dense, axis=[1,2,3])
+            self.evaluation = tf.tanh(self.eval_scalar, name='evaluation')
             
         with tf.variable_scope('policy', reuse=tf.AUTO_REUSE) as scope:
             self.epsilon = tf.placeholder(shape=[1], dtype=tf.float32)
@@ -65,18 +67,20 @@ class network:
 
             self.policy_conv = tf.layers.conv2d(self.hidden[-1],filters=2,kernel_size=(1,1),strides=1,name='convolution')
             self.policy_batch_norm = tf.layers.batch_normalization(self.policy_conv,name='batch_norm')
-            self.policy_rect_norm = tf.nn.relu(self.policy_batch_norm, name='rect_norm')
-            self.policy = tf.layers.dense(self.policy_rect_norm, units=9, activation=tf.nn.softmax, name='policy')[0][0][0]
+            self.policy_rectifier = tf.nn.relu(self.policy_batch_norm, name='rect_norm')
+            self.policy_dense = tf.layers.dense(self.policy_rectifier, units=9, activation=tf.nn.softmax, name='policy')
+            self.policy_vector = tf.reduce_sum(self.policy_dense, axis=[1,2])
+            self.policy = tf.nn.softmax(self.policy_vector)
 
             self.dist = tf.distributions.Dirichlet([self.alpha[0], 1-self.alpha[0]])
             self.policy = tf.nn.softmax((1-self.epsilon[0])*self.policy + self.epsilon[0] * self.dist.sample([1,9])[0][:,0])
             
         with tf.variable_scope('loss', reuse=tf.AUTO_REUSE) as scope:
             self.loss_evaluation = tf.square(self.evaluation - self.mcts_evaluation)
-            self.loss_policy = tf.tensordot(self.correct_move_vec, tf.log(self.policy), axes=1)
-            self.loss_param = tf.add_n([tf.nn.l2_loss(v) for v in tf.trainable_variables()
+            self.loss_policy = tf.reduce_sum(tf.tensordot( tf.log(self.policy), tf.transpose(self.correct_move_vec), axes=1), axis=1)
+            self.loss_param = tf.tile(tf.expand_dims(tf.reduce_sum([tf.nn.l2_loss(v) for v in tf.trainable_variables()
                               #if 'bias' not in v.name
-                              ]) * self.parameters['loss']['L2_norm']
+                              ]) * self.parameters['loss']['L2_norm'], 0), [tf.shape(self.loss_policy)[0]])
             self.loss = self.loss_evaluation - self.loss_policy + self.loss_param
             tf.summary.scalar('total_loss', self.loss[0])
             
@@ -99,33 +103,25 @@ class network:
         """ Given a game state, return the network's evaluation.
         """
         evaluation = self.sess.run(self.evaluation, feed_dict={self.input:state})
-        return evaluation
+        return evaluation[0]
     
-    def getPolicy(self, state, epsilon=None, alpha=None):
+    def getPolicy(self, state):
         """ Given a game state, return the network's policy.
             Random Dirichlet noise is applied to the policy output to ensure exploration.
         """
-        if epsilon is None:
-            epsilon = self.parameters['policy']['dirichlet']['epsilon']
-        if alpha is None:
-            alpha = self.parameters['policy']['dirichlet']['alpha']
-        policy = self.sess.run(self.policy, feed_dict={self.input:state, self.epsilon:[epsilon], self.alpha:[alpha]})
-        return policy
+        policy = self.sess.run(self.policy, feed_dict={self.input:state, self.epsilon:[self.default_epsilon], self.alpha:[self.default_alpha]})
+        return policy[0]
     
-    def train(self, state, evaluation, policy, learning_rate=0.01, epsilon=None, alpha=None):
+    def train(self, state, evaluation, policy, learning_rate=0.01):
         """ Train the network
         """
-        if epsilon is None:
-            epsilon = self.parameters['policy']['dirichlet']['epsilon']
-        if alpha is None:
-            alpha = self.parameters['policy']['dirichlet']['alpha']
         feed_dict={
             self.input:state,
             self.mcts_evaluation:evaluation,
             self.correct_move_vec:policy,
             self.learning_rate:[learning_rate],
-            self.epsilon:[epsilon],
-            self.alpha:[alpha]
+            self.epsilon:[self.default_epsilon],
+            self.alpha:[self.default_alpha]
         }
         
         self.sess.run(self.training_op, feed_dict=feed_dict)

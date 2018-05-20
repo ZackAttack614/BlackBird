@@ -23,8 +23,11 @@ class blackbird(logger):
         self.parameters = parameters
         
         self.network = network(parameters['network'], load_old=True, writer=True)
-        self.positions = []
-
+        
+        self.states = []
+        self.move_probs = []
+        self.rewards = []
+      
         super().__init__(parameters.get('log_dir'))
         
     @canLog(log_file = 'selfPlay.txt')
@@ -34,7 +37,7 @@ class blackbird(logger):
         for game_num in range(num_games):
             self.log('-'*20)
             self.log('New Game: {}'.format(game_num))
-            game_states = []
+            
             new_game = self.game_framework()
             while not new_game.isGameOver():
                 tree_search = mcts(new_game, self.network, self.parameters['mcts'])
@@ -42,40 +45,50 @@ class blackbird(logger):
                 self.__logMove(new_game, selected_move, move_probs)
                 new_game.move(selected_move)
                 
-                game_states.append({
-                    'state':np.append(
-                        new_game.board,
-                        np.array([[
-                            [[new_game.player] for i in range(new_game.dim)]
-                            for j in range(new_game.dim)]]),
-                        axis=3),
-                    'move_probs':move_probs
-                })
+                self.states.append(np.append(
+                    new_game.board,
+                    np.array([[
+                        [[new_game.player] for i in range(new_game.dim)]
+                        for j in range(new_game.dim)]]),
+                    axis=3))
+
+                self.move_probs.append(move_probs)
                 
+                new_game.move(selected_move)
                 if show_game:
                     new_game.dumpBoard()
                 
             result = new_game.getResult()
-            for state in game_states:
-                player = state['state'][0,0,0,2]
-                if player == result:
-                    reward = 1
-                elif player == -result:
-                    reward = -1
-                else:
-                    reward = 0
+            for state in self.states:
+                player = state[0,0,0,2]
+                reward = player * result
                 
-                state['reward'] = np.array([reward])
-            
-            self.positions += game_states
-            
+                self.rewards.append(reward)
+
     def train(self, learning_rate=0.01):
         """ Use the games generated from selfPlay() to train the network.
         """
-        for position in self.positions:
-            self.network.train(position['state'], position['reward'], position['move_probs'], learning_rate)
-            del position
-    
+        batch_size = self.parameters['network']['training']['batch_size']
+        num_batches = int(len(self.states) / batch_size)
+
+        for batch in range(num_batches):
+            batch_indices = np.sort(np.random.choice(range(len(self.states)), batch_size, replace=False))[::-1]
+            
+            batch_states = np.vstack([self.states[ind] for ind in batch_indices])
+            batch_move_probs = np.vstack([self.move_probs[ind] for ind in batch_indices])
+            batch_rewards = np.array([self.rewards[ind] for ind in batch_indices])
+
+            self.network.train(batch_states, batch_rewards, batch_move_probs, learning_rate=learning_rate)
+
+            for index in batch_indices:
+                self.states.pop(index)
+                self.move_probs.pop(index)
+                self.rewards.pop(index)
+                
+        self.states = []
+        self.move_probs = []
+        self.rewards = []
+        
     @canLog(log_file = 'testNewNetwork.txt')
     def testNewNetwork(self, num_trials=25, against_random=False, against_simple=False):
         """ Test the trained network against an old version of the network
