@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{306f3a22-70d1-4860-9b87-c4ea9b92dc20}</ProjectGuid>
     <ProjectHome />
-    <StartupFile>kTest.py</StartupFile>
+    <StartupFile>main.py</StartupFile>
     <SearchPath />
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
