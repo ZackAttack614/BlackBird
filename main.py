@@ -1,5 +1,6 @@
 from pymongo import MongoClient
 import yaml
+from time import time
 import os
 
 from src.game import game
@@ -17,7 +18,6 @@ def main():
         client = MongoClient(parameters['logging']['log_server'],5000)
         db = client.blackbird_test_games
         test_results = db.test_results
-        test_results.delete_many({"limit":False})
 
     for epoch in range(1, training_parameters['epochs'] + 1):
         blackbird_instance.selfPlay(num_games=training_parameters['training_games'])
@@ -34,12 +34,13 @@ def main():
 
         if parameters['logging']['remote_logging']:
             test_results.insert_one({
-                'blocks':parameters['network']['blocks'],
-                'filters':parameters['network']['filters'],
-                'playout_depth':parameters['mcts']['playouts'],
-                'selfplay_against_best': selfplay_score,
-                'selfplay_against_simple': simple_score,
-                'play_against_random': random_score
+                **parameters['network'],
+                **{
+                    'timestamp':time(),
+                    'playout_depth':parameters['mcts']['playouts'],
+                    'selfplay_against_best': selfplay_score,
+                    'selfplay_against_simple': simple_score,
+                    'play_against_random': random_score}
             })
 
 if __name__ == '__main__':
