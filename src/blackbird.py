@@ -24,19 +24,13 @@ class blackbird(logger):
         self.parameters = parameters
         
         self.network = network(parameters['network'], load_old=True, writer=True)
-<<<<<<< HEAD
-        self.positions = []
-
         self.game_id = 0
         self.logConfig(parameters)
-=======
         
         self.states = []
         self.move_probs = []
         self.rewards = []
-      
-        super().__init__(parameters.get('log_dir'))
->>>>>>> master
+     
         
     @canLog(log_file = 'selfPlay.log')
     def selfPlay(self, num_games=1, show_game=False):
@@ -54,18 +48,6 @@ class blackbird(logger):
                 selected_move, move_probs = tree_search.getBestMove()
                 self.__logMove(self.game_id, move_num, new_game, selected_move, move_probs, isTraining = True)
                 
-<<<<<<< HEAD
-                game_states.append({
-                    'state':np.append(
-                        new_game.board,
-                        np.array([[
-                            [[new_game.player] for i in range(new_game.dim)]
-                            for j in range(new_game.dim)]]),
-                        axis=3),
-                    'move_probs':move_probs
-                })
-                new_game.move(selected_move)
-=======
                 self.states.append(np.append(
                     new_game.board,
                     np.array([[
@@ -74,7 +56,6 @@ class blackbird(logger):
                     axis=3))
 
                 self.move_probs.append(move_probs)
->>>>>>> master
                 
                 new_game.move(selected_move)
                 if show_game:
@@ -90,13 +71,6 @@ class blackbird(logger):
     def train(self, learning_rate=0.01):
         """ Use the games generated from selfPlay() to train the network.
         """
-<<<<<<< HEAD
-        for position in self.positions:
-            self.network.train(position['state'], position['reward'], position['move_probs'], learning_rate)
-        self.positions = []
-    
-    @canLog(log_file = 'testNewNetwork.log')
-=======
         batch_size = self.parameters['network']['training']['batch_size']
         num_batches = int(len(self.states) / batch_size)
 
@@ -118,8 +92,7 @@ class blackbird(logger):
         self.move_probs = []
         self.rewards = []
         
-    @canLog(log_file = 'testNewNetwork.txt')
->>>>>>> master
+    @canLog(log_file = 'testNewNetwork.log')
     def testNewNetwork(self, num_trials=25, against_random=False, against_simple=False):
         """ Test the trained network against an old version of the network
             or against a bot playing random moves.
