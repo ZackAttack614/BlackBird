@@ -11,6 +11,9 @@ def main():
     with open('parameters.yaml') as param_file:
         parameters = yaml.load(param_file.read().strip())
 
+    if parameters['logging']['log_dir'] is not None and os.path.isdir(parameters['logging']['log_dir']):
+        for file in os.listdir(os.path.join(os.curdir,parameters['logging']['log_dir'])):
+            os.remove(os.path.join(os.curdir,parameters['logging']['log_dir'],file))
     training_parameters = parameters['selfplay']
     blackbird_instance = blackbird(game, parameters)
 

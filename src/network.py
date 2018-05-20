@@ -57,7 +57,7 @@ class network:
             self.eval_conv = tf.layers.conv2d(self.hidden[-1],filters=1,kernel_size=(1,1),strides=1,name='convolution')
             self.eval_batch_norm = tf.layers.batch_normalization(self.eval_conv, name='batch_norm')
             self.eval_rectifier = tf.nn.relu(self.eval_batch_norm, name='rect_norm')
-            self.eval_dense = tf.layers.dense(inputs=self.eval_rectifier, units=self.parameters['eval']['dense'], name='dense', activation=tf.nn.relu)
+            self.eval_dense = tf.layers.dense(inputs=self.eval_rectifier, units=self.parameters['eval']['dense'], name='dense', activation=None)
             self.eval_scalar = tf.reduce_sum(self.eval_dense, axis=[1,2,3])
             self.evaluation = tf.tanh(self.eval_scalar, name='evaluation')
             

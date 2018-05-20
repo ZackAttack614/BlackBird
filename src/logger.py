@@ -47,9 +47,11 @@ class logger(object):
         
         self.DB = None
         if dbURI is not None and dbName is not None:
-            client = MongoClient(dbURI)
-            self.DB = client[dbName]
-
+            try:
+                client = MongoClient(dbURI)
+                self.DB = client[dbName]
+            except:
+                self.DB = None
         return
     
     @dbLogger
@@ -64,7 +66,7 @@ class logger(object):
         return
 
     @dbLogger
-    def logDecision(self, move_num, game_id, state, decision, probabilities, isTrianing):
+    def logDecision(self, move_num, game_id, state, decision, probabilities, isTrianing, eval):
         decisionObj = {
                 'CreationInstant' : self.CreationInstant,
                 'GameId' : game_id,
@@ -72,7 +74,8 @@ class logger(object):
                 'State' : state,
                 'Decision' : decision,
                 'Probabilities' : probabilities,
-                'IsTraining' : isTrianing
+                'IsTraining' : isTrianing,
+                'NetworkEval' : eval
             }
         self.DB.Decisions.insert_one(decisionObj)
         return

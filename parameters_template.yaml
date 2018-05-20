@@ -19,6 +19,7 @@ network :
   training :
     optimizer : momentum
     momentum : 0.9         # Momentum for SGD with mometum (MomentumOptimizer)
+	batch_size : 50
 
 selfplay :
   epochs : 10              # Number of training sessions to go through
@@ -30,5 +31,5 @@ selfplay :
 logging : 
   log_dir : None
   dbURI : 'mongodb://localhost:port/'
-  dbName : KTest
+  dbName : DB
   
