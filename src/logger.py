@@ -1,5 +1,13 @@
 import time
 import os
+from pymongo import MongoClient
+
+def dbLogger(func):
+    def f(self, *args, **kwargs):
+        if self.DB is not None:
+            return func(self, *args, **kwargs)
+        return None
+    return f
 
 def canLog(log_file = 'default.txt'):
     """Decorator for enabling something for logging. Should only be used in classes that extend logger"""
@@ -26,13 +34,54 @@ def canLog(log_file = 'default.txt'):
 class logger(object):
     """gives some basic logging functionality"""
 
-    def __init__(self, d = None):
-        self.log_dir = d
-        if d is not None and not os.path.isdir(d):
-            os.mkdir(d)
+    def __init__(self, params, creationInstant = None):
+        self.log_dir = params.get('log_dir')
+        if self.log_dir is not None and not os.path.isdir(self.log_dir):
+            os.mkdir(self.log_dir)
         self.handlers = {}
         self.fout = None
+        self.CreationInstant = time.time() if creationInstant is None else creationInstant
+        
+        dbURI = params.get('dbURI')
+        dbName = params.get('dbName')
+        
+        self.DB = None
+        if dbURI is not None and dbName is not None:
+            try:
+                client = MongoClient(dbURI)
+                self.DB = client[dbName]
+            except:
+                self.DB = None
         return
+    
+    @dbLogger
+    def logConfig(self, config):
+        configObj = {
+            'CreationTime' : self.CreationInstant
+            }
+        if not self.DB.Configs.find_one(configObj):
+            configObj['Config'] = config
+            self.DB.Configs.insert_one(configObj)
+
+        return
+
+    @dbLogger
+    def logDecision(self, move_num, game_id, state, decision, probabilities, isTrianing, eval):
+        decisionObj = {
+                'CreationInstant' : self.CreationInstant,
+                'GameId' : game_id,
+                'MoveNum' : move_num,
+                'State' : state,
+                'Decision' : decision,
+                'Probabilities' : probabilities,
+                'IsTraining' : isTrianing,
+                'NetworkEval' : eval
+            }
+        self.DB.Decisions.insert_one(decisionObj)
+        return
+
+
+    #Local Logging
 
     def log(self, s, end = '\n'):
         if self.fout is not None:

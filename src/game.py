@@ -81,6 +81,16 @@ class game:
         print(str(self))
         print('\n')
 
+    def toArray(self):
+        return np.append(
+                    self.board,
+                    np.array([[
+                        [[self.player] for i in range(self.dim)]
+                        for j in range(self.dim)]]),
+                    axis=3)
+    def __hash__(self):
+        return hash(str(self))
+
     def __str__(self):
         s = ''
         for i in range(self.dim):

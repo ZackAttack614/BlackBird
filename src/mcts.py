@@ -16,21 +16,20 @@ class mcts:
             using the provided network and max playout number.
         """
         current_playouts = 0
-        
+        evalCache = {}
         while current_playouts <= self.max_playouts:
             selected_node = self.root
             while any(selected_node.children):
                 children_QU = [child.Q + child.getU() for child in selected_node.children]
                 selected_node = selected_node.children[np.argmax(children_QU)]
             
-            state = np.append(
-                selected_node.state.board,
-                np.array([[  # AlphaZero appends a constant layer whose values represent the current player.
-                    [[selected_node.state.player] for i in range(selected_node.state.dim)]
-                    for j in range(selected_node.state.dim)]]),
-                axis=3)
-
-            selected_node.backup(self.network.getEvaluation(state))
+            state = selected_node.state.toArray()
+            if selected_node.state in evalCache:
+                val = evalCache[selected_node.state]
+            else:
+                val = self.network.getEvaluation(state)
+                evalCache[selected_node.state] = val
+            selected_node.backup(val)
 
             legal_moves = selected_node.state.getLegalMoves()
             if any(legal_moves):
@@ -48,10 +47,12 @@ class mcts:
         child_N_sum = sum([child.N ** (1/self.temperature) for child in self.root.children])
 
         move_probs = np.zeros((self.root.state.dim ** 2))
+        child_evals = np.zeros((self.root.state.dim ** 2))
         for child in self.root.children:
             move_probs[self.root.state.dim * child.move[1] + child.move[0]] = (child.N ** (1/self.temperature)) / child_N_sum
+            child_evals[self.root.state.dim * child.move[1] + child.move[0]] = child.Q
 
         children_probs = [(child.N ** (1/self.temperature)) / child_N_sum for child in self.root.children]
         child = np.random.choice(self.root.children, 1, p=children_probs)[0]
 
-        return child.move, move_probs
+        return child.move, move_probs, (child.Q, child_evals)
