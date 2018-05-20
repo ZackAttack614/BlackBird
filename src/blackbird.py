@@ -61,12 +61,7 @@ class blackbird(logger):
             result = new_game.getResult()
             for state in self.states:
                 player = state[0,0,0,2]
-                if player == result:
-                    reward = 1
-                elif player == -result:
-                    reward = -1
-                else:
-                    reward = 0
+                reward = player * result
                 
                 self.rewards.append(reward)
 
@@ -74,7 +69,7 @@ class blackbird(logger):
         """ Use the games generated from selfPlay() to train the network.
         """
         batch_size = self.parameters['network']['training']['batch_size']
-        num_batches = round(len(self.states) / batch_size)
+        num_batches = int(len(self.states) / batch_size)
 
         for batch in range(num_batches):
             batch_indices = np.sort(np.random.choice(range(len(self.states)), batch_size, replace=False))[::-1]
@@ -89,9 +84,6 @@ class blackbird(logger):
                 self.states.pop(index)
                 self.move_probs.pop(index)
                 self.rewards.pop(index)
-
-            if len(self.states) < batch_size:
-                break
                 
         self.states = []
         self.move_probs = []
