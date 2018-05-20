@@ -22,7 +22,6 @@ class blackbird:
             while not new_game.isGameOver():
                 tree_search = mcts(new_game, self.network, self.parameters['mcts'])
                 selected_move, move_probs = tree_search.getBestMove()
-                new_game.move(selected_move)
                 
                 game_states.append({
                     'state':np.append(
@@ -34,6 +33,7 @@ class blackbird:
                     'move_probs':move_probs
                 })
                 
+                new_game.move(selected_move)
                 if show_game:
                     new_game.dumpBoard()
                 
