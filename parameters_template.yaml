@@ -29,6 +29,6 @@ selfplay :
 
 logging : 
   log_dir : None
-  dbURI : 'mongodb://108.199.144.40:5000/'
+  dbURI : 'mongodb://localhost:port/'
   dbName : KTest
   
