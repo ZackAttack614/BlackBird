@@ -67,18 +67,20 @@ class network:
 
             self.policy_conv = tf.layers.conv2d(self.hidden[-1],filters=2,kernel_size=(1,1),strides=1,name='convolution')
             self.policy_batch_norm = tf.layers.batch_normalization(self.policy_conv,name='batch_norm')
-            self.policy_rect_norm = tf.nn.relu(self.policy_batch_norm, name='rect_norm')
-            self.policy = tf.layers.dense(self.policy_rect_norm, units=9, activation=tf.nn.softmax, name='policy')[0][0][0]
+            self.policy_rectifier = tf.nn.relu(self.policy_batch_norm, name='rect_norm')
+            self.policy_dense = tf.layers.dense(self.policy_rectifier, units=9, activation=tf.nn.softmax, name='policy')
+            self.policy_vector = tf.reduce_sum(self.policy_dense, axis=[1,2])
+            self.policy = tf.nn.softmax(self.policy_vector)
 
             self.dist = tf.distributions.Dirichlet([self.alpha[0], 1-self.alpha[0]])
             self.policy = tf.nn.softmax((1-self.epsilon[0])*self.policy + self.epsilon[0] * self.dist.sample([1,9])[0][:,0])
             
         with tf.variable_scope('loss', reuse=tf.AUTO_REUSE) as scope:
             self.loss_evaluation = tf.square(self.evaluation - self.mcts_evaluation)
-            self.loss_policy = tf.tensordot(self.correct_move_vec, tf.log(self.policy), axes=1)
-            self.loss_param = tf.add_n([tf.nn.l2_loss(v) for v in tf.trainable_variables()
+            self.loss_policy = tf.reduce_sum(tf.tensordot( tf.log(self.policy), tf.transpose(self.correct_move_vec), axes=1), axis=1)
+            self.loss_param = tf.tile(tf.expand_dims(tf.reduce_sum([tf.nn.l2_loss(v) for v in tf.trainable_variables()
                               #if 'bias' not in v.name
-                              ]) * self.parameters['loss']['L2_norm']
+                              ]) * self.parameters['loss']['L2_norm'], 0), [tf.shape(self.loss_policy)[0]])
             self.loss = self.loss_evaluation - self.loss_policy + self.loss_param
             tf.summary.scalar('total_loss', self.loss[0])
             
