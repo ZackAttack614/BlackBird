@@ -17,9 +17,10 @@ def main():
         blackbird_instance.selfPlay(num_games=training_parameters['training_games'])
         blackbird_instance.train(learning_rate=training_parameters['learning_rate'])
 
-        print('Self-play score: {}'.format(blackbird_instance.testNewNetwork(num_trials=training_parameters['selfplay_tests'])))
-        print('Self-play vs low-depth score: {}'.format(
-            blackbird_instance.testNewNetwork(against_simple=True, num_trials=training_parameters['selfplay_tests'])))
+        #print('Self-play score: {}'.format(blackbird_instance.testNewNetwork(num_trials=training_parameters['selfplay_tests'])))
+        #print('Self-play vs low-depth score: {}'.format(
+        #    blackbird_instance.testNewNetwork(against_simple=True, num_trials=training_parameters['selfplay_tests'])))
+
         print('Random score: {}'.format(blackbird_instance.testNewNetwork(against_random=True, num_trials=training_parameters['random_tests'])))
         print('Completed {} epoch(s).\n'.format(epoch))
 

@@ -1,5 +1,13 @@
 import time
 import os
+from pymongo import MongoClient
+
+def dbLogger(func):
+    def f(*args, **kwargs):
+        if self.DB is not None:
+            return f(*args, **kwargs)
+        return None
+    return f
 
 def canLog(log_file = 'default.txt'):
     """Decorator for enabling something for logging. Should only be used in classes that extend logger"""
@@ -26,13 +34,47 @@ def canLog(log_file = 'default.txt'):
 class logger(object):
     """gives some basic logging functionality"""
 
-    def __init__(self, d = None):
-        self.log_dir = d
-        if d is not None and not os.path.isdir(d):
-            os.mkdir(d)
+    def __init__(self, creationInstant = None, log_dir = None, dbURI = None, dbName = None):
+        self.log_dir = log_dir
+        if log_dir is not None and not os.path.isdir(log_dir):
+            os.mkdir(log_dir)
         self.handlers = {}
         self.fout = None
+        self.CreationInstant = time.time() if creationInstant is None else creationInstant
+        self.DB = None
+        if dbURI is not None and dbName is not None:
+            client = MongoClient(dbURI)
+            self.DB = client[dbName]
+
         return
+    
+    @dbLogger
+    def logConfig(self, config):
+        configObj = {
+            'CreationTime' : self.CreationInstant
+            }
+        if not self.DB.Configs.find_one(configObj):
+            configObj['Config'] = config
+            self.DB.Configs.insert_one(configObj)
+
+        return
+
+    @dbLogger
+    def logDecision(self, move_num, game_id, state, decision, probabilities, isTrianing):
+        decisionObj = {
+                'CreationInstant' : self.CreationInstant,
+                'GameId' : game_id,
+                'MoveNum' : move_num,
+                'State' : state,
+                'Decision' : decision,
+                'Probabilities' : probabilities,
+                'IsTraining' : isTrianing
+            }
+        self.DB.Decisions.insert_one(decisionObj)
+        return
+
+
+    #Local Logging
 
     def log(self, s, end = '\n'):
         if self.fout is not None:

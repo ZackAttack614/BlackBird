@@ -25,7 +25,9 @@ class blackbird(logger):
         self.network = network(parameters['network'], load_old=True, writer=True)
         self.positions = []
 
-        super().__init__(parameters.get('log_dir'))
+        self.game_id = 0
+        self.logConfig(params)
+        super().__init__(parameters['logging'])
         
     @canLog(log_file = 'selfPlay.txt')
     def selfPlay(self, num_games=1, show_game=False):
@@ -40,7 +42,6 @@ class blackbird(logger):
                 tree_search = mcts(new_game, self.network, self.parameters['mcts'])
                 selected_move, move_probs = tree_search.getBestMove()
                 self.__logMove(new_game, selected_move, move_probs)
-                new_game.move(selected_move)
                 
                 game_states.append({
                     'state':np.append(
@@ -51,10 +52,11 @@ class blackbird(logger):
                         axis=3),
                     'move_probs':move_probs
                 })
+                new_game.move(selected_move)
                 
                 if show_game:
                     new_game.dumpBoard()
-                
+            self.game_id += 1
             result = new_game.getResult()
             for state in game_states:
                 player = state['state'][0,0,0,2]
@@ -74,7 +76,7 @@ class blackbird(logger):
         """
         for position in self.positions:
             self.network.train(position['state'], position['reward'], position['move_probs'], learning_rate)
-            del position
+        self.positions = []
     
     @canLog(log_file = 'testNewNetwork.txt')
     def testNewNetwork(self, num_trials=25, against_random=False, against_simple=False):
@@ -138,13 +140,17 @@ class blackbird(logger):
         return new_network_score
 
 
-    def __logMove(self, board, move, probabilities):
+    def __logMove(self, game_id, move_num, state, move, probabilities, isTraining):
+        # Log to file
         self.log('\nState')
-        self.log('{}'.format(str(board)))
+        self.log('{}'.format(str(state)))
         m = np.zeros((3,3))
         m[move] = 1.0
         self.log(format2DArray(probabilities.reshape((3,3)).transpose()))
         self.log(format2DArray(m))
+
+        self.logDecision(move_num, game_id, state, move, probabilities, isTrianing)
+
         return
 
     

@@ -26,5 +26,8 @@ selfplay :
   selfplay_tests : 10
   random_tests : 10
 
-  
+logging : 
+	log_dir : None
+	dbURI : None
+	dbName : None
   
