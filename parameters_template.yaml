@@ -19,7 +19,7 @@ network :
   training :
     optimizer : momentum
     momentum : 0.9         # Momentum for SGD with mometum (MomentumOptimizer)
-	batch_size : 50
+    batch_size : 50
 
 selfplay :
   epochs : 10              # Number of training sessions to go through
