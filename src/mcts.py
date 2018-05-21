@@ -10,6 +10,7 @@ class mcts:
         self.temperature = parameters['temperature']['exploration'] if train else parameters['temperature']['exploitation']
         self.c_PUCT = parameters['c_PUCT']
         self.root = node(game_state, 1, self.c_PUCT)
+        self.train = train
         
     def getBestMove(self):
         """ Given the game state of the root, find the best move
@@ -33,7 +34,7 @@ class mcts:
 
             legal_moves = selected_node.state.getLegalMoves()
             if any(legal_moves):
-                net_policy = self.network.getPolicy(state)
+                net_policy = self.network.getPolicy(state, explore=self.train)
                 for legal_move in legal_moves:
                     current_game = deepcopy(selected_node.state)
                     current_game.move(legal_move)
