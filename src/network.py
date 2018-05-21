@@ -82,7 +82,7 @@ class network:
                               #if 'bias' not in v.name
                               ]) * self.parameters['loss']['L2_norm'], 0), [tf.shape(self.loss_policy)[0]])
             self.loss = self.loss_evaluation - self.loss_policy + self.loss_param
-            tf.summary.scalar('total_loss', self.loss[0])
+            tf.summary.scalar('total_loss', tf.reduce_sum(self.loss[0]))
             
         with tf.name_scope('summary') as scope:
             self.merged = tf.summary.merge_all()
