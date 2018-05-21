@@ -68,12 +68,12 @@ class network:
             self.policy_conv = tf.layers.conv2d(self.hidden[-1],filters=2,kernel_size=(1,1),strides=1,name='convolution')
             self.policy_batch_norm = tf.layers.batch_normalization(self.policy_conv,name='batch_norm')
             self.policy_rectifier = tf.nn.relu(self.policy_batch_norm, name='rect_norm')
-            self.policy_dense = tf.layers.dense(self.policy_rectifier, units=9, activation=tf.nn.softmax, name='policy')
+            self.policy_dense = tf.layers.dense(self.policy_rectifier, units=9, activation=None, name='policy')
             self.policy_vector = tf.reduce_sum(self.policy_dense, axis=[1,2])
             self.policy = tf.nn.softmax(self.policy_vector)
 
             self.dist = tf.distributions.Dirichlet([self.alpha[0], 1-self.alpha[0]])
-            self.policy = tf.nn.softmax((1-self.epsilon[0])*self.policy + self.epsilon[0] * self.dist.sample([1,9])[0][:,0])
+            self.policy = (1-self.epsilon[0])*self.policy + self.epsilon[0] * self.dist.sample([1,9])[0][:,0]
             
         with tf.variable_scope('loss', reuse=tf.AUTO_REUSE) as scope:
             self.loss_evaluation = tf.square(self.evaluation - self.mcts_evaluation)
