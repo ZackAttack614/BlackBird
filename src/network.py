@@ -44,14 +44,28 @@ class network:
             
         with tf.variable_scope('hidden', reuse=tf.AUTO_REUSE) as scope:
             self.hidden = [self.input]
+
+            
+            with tf.variable_scope('conv_block', reuse=tf.AUTO_REUSE) as scope:
+                self.hidden.append(
+                    tf.layers.conv2d(inputs=self.input, filters=self.parameters['filters'], kernel_size=[3,3],
+                        strides=1, padding="same", activation=None, name='conv'))
+                self.hidden.append(tf.layers.batch_normalization(inputs=self.hidden[-1],name='batch_norm'))
+                self.hidden.append(tf.nn.relu(features=self.hidden[-1], name='rectifier_nonlinearity'))
             
             for block in range(self.parameters['blocks']):
                 with tf.variable_scope('block_{}'.format(block), reuse=tf.AUTO_REUSE) as scope:
                     self.hidden.append(
-                        tf.layers.conv2d(inputs=self.input, filters=self.parameters['filters'], kernel_size=[3,3],
-                            strides=1, padding="same", activation=None, name='conv'))
-                    self.hidden.append(tf.layers.batch_normalization(inputs=self.hidden[-1],name='batch_norm'))
-                    self.hidden.append(tf.nn.relu(features=self.hidden[-1], name='rectifier_nonlinearity'))
+                        tf.layers.conv2d(inputs=self.hidden[-1], filters=self.parameters['filters'], kernel_size=[3,3],
+                            strides=1, padding="same", activation=None, name='conv_1'))
+                    self.hidden.append(tf.layers.batch_normalization(inputs=self.hidden[-1],name='batch_norm_1'))
+                    self.hidden.append(tf.nn.relu(features=self.hidden[-1], name='rectifier_nonlinearity_1'))
+                    self.hidden.append(
+                        tf.layers.conv2d(inputs=self.hidden[-1], filters=self.parameters['filters'], kernel_size=[3,3],
+                            strides=1, padding="same", activation=None, name='conv_2'))
+                    self.hidden.append(tf.layers.batch_normalization(inputs=self.hidden[-1],name='batch_norm_2'))
+                    self.hidden.append(tf.add(self.hidden[-1], self.hidden[-6], name='skip_connection'))
+                    self.hidden.append(tf.nn.relu(features=self.hidden[-1], name='rectifier_nonlinearity_2'))
                     
         with tf.variable_scope('evaluation', reuse=tf.AUTO_REUSE) as scope:
             self.eval_conv = tf.layers.conv2d(self.hidden[-1],filters=1,kernel_size=(1,1),strides=1,name='convolution')
