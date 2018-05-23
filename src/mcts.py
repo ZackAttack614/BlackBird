@@ -9,11 +9,13 @@ def softMax(x):
 
 
 class Node:
+    """This is the abtract tree node class that is used to cache/organize information during the search.
+    """
     def __init__(self, state, legalActions, priors, **kwargs):
         self.State = state
         self.Value = 0
         self.Plays = 0
-        self.LegalActions = legalActions
+        self.LegalActions = np.array(legalActions)
         self.Children = None
         self.Parent = None
         # Use the legal actions mask to ignore priors that don't make sense.
@@ -34,16 +36,21 @@ class Node:
                 self._childWinRates[i] = self.Children[i].WinRate()
         return self._childWinRates
 
-    def ChildProbability(self):
-        rates = np.array(self.ChildWinRates())
+    def ChildProbability(self, explorationFactor = 0.0):
+        rates = self.ChildWinRates()
         
-        return softMax(rates)
+        rates += explorationFactor * self.Priors * self.Plays / (1.0 + self.ChildPlays())
+
+        return np.multiply(rates/sum(rates), self.LegalActions) # Presumably the legal actions mask is not necessary here, but Im too lazy to be responsible for that decision.
 
     def ChildPlays(self):
         for i in range(len(self.Children)):
             if self.Children[i] is not None:
                 self._childPlays[i] = self.Children[i].Plays
         return self._childPlays
+
+    def AvgValue(self):
+        return self.Value/self.Plays if self.Plays > 0 else 0
 
 class MCTS:
     """This is a base class for Monte Carlo Tree Search algorithms. It outlines all the necessary operations for the core algorithm.
@@ -59,7 +66,9 @@ class MCTS:
         return super().__init__(**kwargs)
 
     def FindMove(self, state, moveTime = None, playLimit = None):
-        """Given a game state, this will use a Monte Carlo Tree Search algorithm to pick the best next move."""
+        """Given a game state, this will use a Monte Carlo Tree Search algorithm to pick the best next move.
+            Returns (the chosen state, the decided value of input state, and the probabilities of choosing each of the children)
+        """
         endTime = None
         if moveTime is None:
             moveTime = self.TimeLimit
@@ -79,7 +88,9 @@ class MCTS:
         elif self.Threads > 1:
             self._runAsynch(state, endTime, playLimit)
 
-        return self.ApplyAction(state, self.SelectAction(self.Root, True))
+        action = self.SelectAction(self.Root, False)
+
+        return self.ApplyAction(state, action), self.Root.AvgValue, self.Root.ChildProbability()
 
     def _runAsynch(self, state, endTime = None, nPlays = None):
         roots = []
@@ -126,16 +137,18 @@ class MCTS:
 
         return
 
-    def SelectAction(self, root, testing = False):
-        """Selects a child of the root using an upper confidence interval. If you are not exploring, setting the testing flag will
+    def SelectAction(self, root, exploring = True):
+        """Selects a child of the root using an upper confidence interval. If you are not exploring, setting the exploring flag to false will
             instead choose the one with the highest expected payout - ignoring the exploration/regret factor."""
         assert root.Children is not None, 'The node has children to select.'
 
-        upperConfidence = root.ChildWinRates()
-        if not testing:
-            upperConfidence += self.ExplorationRate * root.Priors * np.sqrt(root.Plays) / (1.0 + root.ChildPlays())
+        if not exploring:
+            return np.argmax(np.multiply(root.ChildWinRates(), root.LegalActions))
 
-        return np.argmax(upperConfidence + root.LegalActions)
+        explorationFactor = self.ExplorationRate if exploring else 0
+        probability = root.ChildProbability(explorationFactor)
+
+        return np.random.choice(len(probability), 1, p = probability)[0]
 
     def AddChildren(self, node):
         """Expands the node and adds children, actions and priors."""
@@ -200,6 +213,8 @@ class MCTS:
         raise NotImplementedError
 
     '''Game implementation functions.'''
+
+    '''There is a hidden constraint here. The state returned must have a property called Player that holds the player with the right to move.'''
     def ApplyAction(self, state, action):
         raise NotImplementedError
 

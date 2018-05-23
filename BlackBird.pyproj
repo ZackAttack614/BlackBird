@@ -20,18 +20,24 @@
     <VisualStudioVersion Condition=" '$(VisualStudioVersion)' == '' ">10.0</VisualStudioVersion>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="kTest.py">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="main.py" />
     <Compile Include="src\blackbird.py" />
+    <Compile Include="src\BlackBird.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="src\Connect4.py" />
+    <Compile Include="src\Connect4MCTS.py" />
+    <Compile Include="src\FixedMCTS.py" />
     <Compile Include="src\game.py" />
     <Compile Include="src\logger.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="src\mcts.py" />
+    <Compile Include="src\MCTS.py" />
     <Compile Include="src\network.py" />
     <Compile Include="src\node.py" />
+    <Compile Include="src\TicTacToe.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="src\__init__.py" />
   </ItemGroup>
   <ItemGroup>
