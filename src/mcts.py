@@ -90,7 +90,7 @@ class MCTS:
 
         action = self.SelectAction(self.Root, False)
 
-        return self.ApplyAction(state, action), self.Root.AvgValue, self.Root.ChildProbability()
+        return self.__applyAction(state, action), self.Root.AvgValue, self.Root.ChildProbability()
 
     def _runAsynch(self, state, endTime = None, nPlays = None):
         roots = []
@@ -156,12 +156,14 @@ class MCTS:
         node.Children = [None] * l
         for i in range(l):
             if node.LegalActions[i] == 1:
-                s = self.ApplyAction(node.State, i)
+                s = self.__applyAction(node.State, i)
                 node.Children[i] = Node(s, self.LegalActions(s), self.GetPriors(s))
                 node.Children[i].Parent = node
         return
 
     def MoveRoot(self, states):
+        '''Functiont hat is used to move the root of the tree to the next state. Use this to update the root so
+            that tree integrity can be maintained between moves if necessary.'''
         for s in states: 
             self._moveRoot(s)
         return
@@ -202,19 +204,21 @@ class MCTS:
             self.BackProp(leaf.Parent, stateValue, playerForValue)
         return
     
+
+    '''Private functions'''
+    def __applyAction(self, state, action):
+        s = self.ApplyAction(self, state, action)
+        assert hasattr(s, 'Player'), 'State must have a Player attribute that represents the player with the right to move.'
+        return
+
     '''Algorithm implementation functions'''
     def RunSimulation(self, root):
-        raise NotImplementedError
-    
-    def SampleValue(self, state, player):
         raise NotImplementedError
 
     def GetPriors(self, state):
         raise NotImplementedError
 
     '''Game implementation functions.'''
-
-    '''There is a hidden constraint here. The state returned must have a property called Player that holds the player with the right to move.'''
     def ApplyAction(self, state, action):
         raise NotImplementedError
 
@@ -224,7 +228,6 @@ class MCTS:
     def Winner(self, state, lastAction = None):
         raise NotImplementedError
 
-    
     def __getstate__(self):
         self_dict = self.__dict__.copy()
         del self_dict['Pool']

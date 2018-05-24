@@ -22,26 +22,27 @@ class BlackBird(FixedMCTS):
 
 
     def GenerateTrainingSamples(self, nGames):
+        assert nGames > 0, 'What are you doing?'
+
         examples = set()
-        maxNMoves = None
 
         for i in len(nGames):
             gameHistory = set()
             state = self.NewGame()
             lastAction = None
             winner = None
+            self.ResetRoot()
             while winner is not None:
                 (nextState, currentValue, currentProbabilties) = self.FindMove(state)
                 example = TrainingExample(state, None, currentProbabilties)
                 state = nextState
+                self.MoveRoot(state)
+
                 winner = self.Winner(state, lastAction)
-                gameHistory += example
+                gameHistory.add(example)
                 
-                if maxNMoves is None: # Don't want to hard code this, and I don't really want to have a whole property for it. So ill just snipe it from an array.
-                    maxNMoves = len(currentProbabilties)
-            
-            example = TrainingExample(state, None, np.zeros([maxNMoves]))
-            gameHistory += example
+            example = TrainingExample(state, None, np.zeros([len(currentProbabilties)]))
+            gameHistory.add(example)
             
             for example in gameHistory:
                 example.Value = 1 if example.sate.Player == winner else 0
@@ -51,14 +52,17 @@ class BlackBird(FixedMCTS):
         return examples
 
 
-    def LearnExamples(self, examples):
+    def LearnFromExamples(self, examples):
         raise NotImplementedError
-
 
     # Overriden from MCTS
     def SampleValue(self, state, player):
         raise NotImplementedError
 
     def GetPriors(self, state):
+        raise NotImplementedError
+
+    # Need to be overriden
+    def NewGame(self):
         raise NotImplementedError
 
