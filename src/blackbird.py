@@ -3,7 +3,7 @@ import numpy as np
 
 class BlackBird(FixedMCTS):
     """Class to train a network using an MCTS driver to improve decision making"""
-    class TrainingExample():
+    class TrainingExample(object):
         def __init__(self, state, value, probabilities):
             self.State = state # state holds the player
             self.Value = value
@@ -17,7 +17,7 @@ class BlackBird(FixedMCTS):
     def __init__(self, maxDepth, explorationRate, threads = 1, timeLimit = None, playLimit = None, **kwargs):
         raise NotImplementedError
         # Probably want to store the network somewhere in here :).
-        # Need to pass in these things.
+        # Need to pass in these things to super.
         return super().__init__(maxDepth, explorationRate, 1, timeLimit, playLimit, **kwargs)
 
 
@@ -45,7 +45,7 @@ class BlackBird(FixedMCTS):
             gameHistory.add(example)
             
             for example in gameHistory:
-                example.Value = 1 if example.sate.Player == winner else 0
+                example.Value = 1 if example.state.Player == winner else 0
 
             examples |= gameHistory
 
