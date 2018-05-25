@@ -2,9 +2,12 @@ import yaml
 from time import time
 import os
 import json
+import sys
+sys.path.insert(0, './src/')
+print(sys.path)
 
-from src.game import game
-from src.blackbird import blackbird
+from game import game
+from blackbird import BlackBird
 
 def main():
     assert os.path.isfile('parameters.yaml'), 'Copy the parameters_template.yaml file into parameters.yaml to test runs.'
@@ -15,7 +18,7 @@ def main():
         for file in os.listdir(os.path.join(os.curdir,parameters['logging']['log_dir'])):
             os.remove(os.path.join(os.curdir,parameters['logging']['log_dir'],file))
     training_parameters = parameters['selfplay']
-    blackbird_instance = blackbird(game, parameters)
+    blackbird_instance = BlackBird(game, parameters)
 
     for epoch in range(1, training_parameters['epochs'] + 1):
         blackbird_instance.selfPlay(num_games=training_parameters['training_games'])
