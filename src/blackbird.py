@@ -1,4 +1,4 @@
-from FixedMCTS import FixedMCTS
+from src.FixedMCTS import FixedMCTS
 import numpy as np
 
 class BlackBird(FixedMCTS):
@@ -12,7 +12,6 @@ class BlackBird(FixedMCTS):
 
         def asInputArray(self):
             raise NotImplementedError
-            return
 
     def __init__(self, maxDepth, explorationRate, threads = 1, timeLimit = None, playLimit = None, **kwargs):
         raise NotImplementedError
