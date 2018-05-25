@@ -2,9 +2,9 @@ import numpy as np
 import random
 from copy import deepcopy
 
-from src.network import network
-from src.mcts import mcts
-from src.logger import *
+from network import network
+from mcts import mcts
+from logger import *
 
 def format2DArray(a):
     s = ''

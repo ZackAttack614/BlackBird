@@ -88,9 +88,9 @@ class MCTS:
         elif self.Threads > 1:
             self._runAsynch(state, endTime, playLimit)
 
-        action = self.SelectAction(self.Root, False)
+        action = self._selectAction(self.Root, False)
 
-        return self.__applyAction(state, action), self.Root.AvgValue, self.Root.ChildProbability()
+        return self._applyAction(state, action), self.Root.AvgValue, self.Root.ChildProbability()
 
     def _runAsynch(self, state, endTime = None, nPlays = None):
         roots = []
@@ -137,7 +137,7 @@ class MCTS:
 
         return
 
-    def SelectAction(self, root, exploring = True):
+    def _selectAction(self, root, exploring = True):
         """Selects a child of the root using an upper confidence interval. If you are not exploring, setting the exploring flag to false will
             instead choose the one with the highest expected payout - ignoring the exploration/regret factor."""
         assert root.Children is not None, 'The node has children to select.'
@@ -156,7 +156,7 @@ class MCTS:
         node.Children = [None] * l
         for i in range(l):
             if node.LegalActions[i] == 1:
-                s = self.__applyAction(node.State, i)
+                s = self._applyAction(node.State, i)
                 node.Children[i] = Node(s, self.LegalActions(s), self.GetPriors(s))
                 node.Children[i].Parent = node
         return
@@ -206,7 +206,7 @@ class MCTS:
     
 
     '''Private functions'''
-    def __applyAction(self, state, action):
+    def _applyAction(self, state, action):
         s = self.ApplyAction(self, state, action)
         assert hasattr(s, 'Player'), 'State must have a Player attribute that represents the player with the right to move.'
         return

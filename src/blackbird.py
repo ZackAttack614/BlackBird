@@ -66,3 +66,5 @@ class BlackBird(FixedMCTS):
     def NewGame(self):
         raise NotImplementedError
 
+if __name__ == '__main__':
+    b = BlackBird(1,2)
