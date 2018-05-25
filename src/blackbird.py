@@ -45,7 +45,7 @@ class BlackBird(FixedMCTS):
             gameHistory.add(example)
             
             for example in gameHistory:
-                example.Value = 1 if example.state.Player == winner else 0
+                example.Value = 1 if example.State.Player == winner else 0
 
             examples |= gameHistory
 
