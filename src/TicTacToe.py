@@ -49,7 +49,7 @@ class BoardState(GameState):
         board = self._collapsed()
 
         if prevAction is not None:
-            coords = state._indexToCoords(prevAction)
+            coords = self._indexToCoords(prevAction)
             win = self._checkVictory(board, coords[0], coords[1])
             if win is not None: 
                 return win

@@ -104,7 +104,8 @@ class MCTS:
         return
 
     def _runMCTS(self, root, endTime = None, nPlays = None):
-        while (endTime is None or time.time() < endTime) and (nPlays is None or root.Plays < nPlays):
+        while (endTime is None or (time.time() < endTime or root.Children is None)) \
+                and (nPlays is None or root.Plays < nPlays):
             node = self.FindLeaf(root)
             
             val, player = self.SampleValue(node.State, node.State.PreviousPlayer)

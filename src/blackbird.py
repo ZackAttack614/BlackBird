@@ -16,6 +16,8 @@ class BlackBird(FixedMCTS, Network):
             return
 
     def __init__(self, parameters):
+        self.batchSize = parameters.get('network').get('training').get('batch_size')
+        self.learningRate = parameters.get('selfplay').get('learning_rate')
         FixedMCTS.__init__(self, parameters=parameters)
         Network.__init__(self, parameters=parameters)
 
@@ -43,14 +45,30 @@ class BlackBird(FixedMCTS, Network):
             gameHistory.append(example)
             
             for example in gameHistory:
-                example.Value = 1 if example.State.Player == winner else 0
+                if winner == 0:
+                    example.Value = 0.5 # Draw
+                else:
+                    example.Value = 1 if example.State.Player == winner else -1
 
             examples += gameHistory
 
         return examples
 
     def LearnFromExamples(self, examples):
-        raise NotImplementedError
+        examples = np.random.choice(examples, 
+                                    len(examples) - (len(examples) % self.batchSize), 
+                                    replace = False)
+                            
+        for i in range(len(examples) // self.batchSize):
+            start = i * self.batchSize
+            batch = examples[start : start + self.batchSize]
+            self.train(
+                    np.stack([b.State.AsInputArray()[0] for b in batch], axis = 0),
+                    np.stack([b.Value for b in batch], axis = 0),
+                    np.stack([b.Probabilities for b in batch], axis = 0),
+                    self.learningRate
+                    )
+        return
 
     # Overriden from MCTS
     def SampleValue(self, state, player):
@@ -64,4 +82,8 @@ if __name__ == '__main__':
     with open('parameters.yaml', 'r') as param_file:
         parameters = yaml.load(param_file)
     b = BlackBird(parameters)
-    b.GenerateTrainingSamples(1)
+    for i in range(20):
+        b.LearnFromExamples(b.GenerateTrainingSamples(10))
+    for t in b.GenerateTrainingSamples(1):
+        print(t.State)
+        print(t.Probabilities)
