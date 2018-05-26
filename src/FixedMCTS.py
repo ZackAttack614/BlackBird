@@ -29,8 +29,6 @@ class FixedMCTS(MCTS):
                 break
             lastAction = self._selectAction(node)
             node = node.Children[lastAction]
-        assert i > 0, 'When requesting a move from the MCTS, there is at least one legal option.'
+        assert lastAction is not None, 'When requesting a move from the MCTS, there is at least one legal option.'
             
         return node
-
-
