@@ -44,14 +44,6 @@ class BoardState(GameState):
         array[0, :, :, 0:2] = self.Board
         array[0, :, :, 2] = player
         return array
-    
-    def NumericRepresentation(self):
-        return np.append(
-            self.Board,
-            np.array([
-                [[self.Player] for i in range(self.Size)]
-                for j in range(self.Size)]),
-            axis=2)
 
     def Winner(self, prevAction = None):
         board = self._collapsed()

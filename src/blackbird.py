@@ -54,11 +54,11 @@ class BlackBird(FixedMCTS, Network):
 
     # Overriden from MCTS
     def SampleValue(self, state, player):
-        value = self.getEvaluation([state.NumericRepresentation()])
+        value = self.getEvaluation(state.AsInputArray())
         return value, player
 
     def GetPriors(self, state):
-        return self.getPolicy([state.NumericRepresentation()])
+        return self.getPolicy(state.AsInputArray())
 
     # Need to be overriden
     def NewGame(self):
