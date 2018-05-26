@@ -17,7 +17,7 @@ class Node:
         self.Value = 0
         self.Plays = 0
         self.LegalActions = np.array(legalActions)
-        self.Children = []
+        self.Children = None
         self.Parent = None
         # Use the legal actions mask to ignore priors that don't make sense.
         self.Priors = np.multiply(priors, legalActions)
