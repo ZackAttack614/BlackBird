@@ -10,10 +10,6 @@ class BlackBird(FixedMCTS):
             self.Probabilities = probabilities
             return
 
-        def asInputArray(self):
-            raise NotImplementedError
-            return
-
     def __init__(self, maxDepth, explorationRate, threads = 1, timeLimit = None, playLimit = None, **kwargs):
         raise NotImplementedError
         # Probably want to store the network somewhere in here :).
