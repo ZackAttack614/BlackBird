@@ -9,14 +9,15 @@ def softMax(x):
 
 
 class Node:
-    """This is the abtract tree node class that is used to cache/organize information during the search.
+    """ This is the abtract tree node class that is used to cache/organize
+        game information during the search.
     """
     def __init__(self, state, legalActions, priors, **kwargs):
         self.State = state
         self.Value = 0
         self.Plays = 0
         self.LegalActions = np.array(legalActions)
-        self.Children = None
+        self.Children = []
         self.Parent = None
         # Use the legal actions mask to ignore priors that don't make sense.
         self.Priors = np.multiply(priors, legalActions)
@@ -24,9 +25,7 @@ class Node:
         # Do some caching here. This is to reduce the strain on the CPU memory cache compared to receating a new array on every access.
         self._childWinRates = np.zeros(len(legalActions))
         self._childPlays = np.zeros(len(legalActions))
-
-        return super().__init__(**kwargs)
-
+        
     def WinRate(self):
         return self.Value/self.Plays if self.Plays > 0 else 0.
 
@@ -53,9 +52,11 @@ class Node:
         return self.Value/self.Plays if self.Plays > 0 else 0
 
 class MCTS:
-    """This is a base class for Monte Carlo Tree Search algorithms. It outlines all the necessary operations for the core algorithm.
-        Most operations will need to be overriden to avoid a NotImplemenetedError."""
-    def __init__(self, explorationRate, timeLimit = None, playLimit = None, threads = 1, **kwargs):
+    """ Base class for Monte Carlo Tree Search algorithms. Outlines all the 
+        necessary operations for the core algorithm. Most operations will need
+        to be overriden to avoid a NotImplemenetedError.
+    """
+    def __init__(self, explorationRate, timeLimit = None, playLimit = None, threads = 1):
         self.TimeLimit = timeLimit
         self.PlayLimit = playLimit
         self.ExplorationRate = explorationRate
@@ -63,11 +64,12 @@ class MCTS:
         self.Threads = threads
         if self.Threads > 1:
             self.Pool = mp.Pool(processes = self.Threads)
-        return super().__init__(**kwargs)
-
+            
     def FindMove(self, state, moveTime = None, playLimit = None):
-        """Given a game state, this will use a Monte Carlo Tree Search algorithm to pick the best next move.
-            Returns (the chosen state, the decided value of input state, and the probabilities of choosing each of the children)
+        """ Given a game state, this will use a Monte Carlo Tree Search
+            algorithm to pick the best next move. Returns (the chosen state, the
+            decided value of input state, and the probabilities of choosing each
+            of the children).
         """
         endTime = None
         if moveTime is None:
@@ -138,8 +140,11 @@ class MCTS:
         return
 
     def _selectAction(self, root, exploring = True):
-        """Selects a child of the root using an upper confidence interval. If you are not exploring, setting the exploring flag to false will
-            instead choose the one with the highest expected payout - ignoring the exploration/regret factor."""
+        """ Selects a child of the root using an upper confidence interval. If
+            you are not exploring, setting the exploring flag to false will
+            instead choose the one with the highest expected payout - ignoring 
+            the exploration/regret factor.
+        """
         assert root.Children is not None, 'The node has children to select.'
 
         if not exploring:
@@ -151,7 +156,8 @@ class MCTS:
         return np.random.choice(len(probability), 1, p = probability)[0]
 
     def AddChildren(self, node):
-        """Expands the node and adds children, actions and priors."""
+        """ Expands the node and adds children, actions and priors.
+        """
         l = len(node.LegalActions)
         node.Children = [None] * l
         for i in range(l):
@@ -162,8 +168,10 @@ class MCTS:
         return
 
     def MoveRoot(self, states):
-        '''Functiont hat is used to move the root of the tree to the next state. Use this to update the root so
-            that tree integrity can be maintained between moves if necessary.'''
+        """ Function that is used to move the root of the tree to the next
+            state. Use this to update the root so that tree integrity can be
+            maintained between moves if necessary.
+        """
         for s in states: 
             self._moveRoot(s)
         return
@@ -204,8 +212,6 @@ class MCTS:
             self.BackProp(leaf.Parent, stateValue, playerForValue)
         return
     
-
-    '''Private functions'''
     def _applyAction(self, state, action):
         s = self.ApplyAction(self, state, action)
         assert hasattr(s, 'Player'), 'State must have a Player attribute that represents the player with the right to move.'
