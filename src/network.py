@@ -4,9 +4,9 @@ import os
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
-class network:
-    def __init__(self, parameters, dims=(3,3), load_old=False, writer=False):
-        self.parameters = parameters
+class Network:
+    def __init__(self, parameters, dims=(3,3), load_old=False, writer=False, **kwargs):
+        self.parameters = parameters['network']
         self.dims = dims
         self.sess = tf.Session()
         
@@ -16,7 +16,8 @@ class network:
         self.batch_count = 0
         
         self.saver = tf.train.Saver()
-        self.network_name = '{0}_{1}.ckpt'.format(parameters['blocks'], parameters['filters'])
+        self.network_name = '{0}_{1}.ckpt'.format(self.parameters['blocks'], 
+            self.parameters['filters'])
         self.model_loc = 'blackbird_models/best_model_{0}.ckpt'.format(self.network_name)
         self.writer_loc = 'blackbird_summary/model_summary'
 
