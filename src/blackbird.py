@@ -33,7 +33,7 @@ class BlackBird(FixedMCTS, Network):
             winner = None
             self.ResetRoot()
             while winner is None:
-                (nextState, currentValue, currentProbabilties) = self.FindMove(state)
+                (nextState, _, currentProbabilties) = self.FindMove(state)
                 example = self.TrainingExample(state, None, currentProbabilties)
                 state = nextState
                 self.MoveRoot([state])
