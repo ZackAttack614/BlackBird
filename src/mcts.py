@@ -104,16 +104,14 @@ class MCTS:
         return
 
     def _runMCTS(self, root, endTime = None, nPlays = None):
+        endPlays = root.Plays + nPlays
         while (endTime is None or (time.time() < endTime or root.Children is None)) \
-                and (nPlays is None or root.Plays < nPlays):
+                and (nPlays is None or root.Plays < endPlays):
             node = self.FindLeaf(root)
             
             val, player = self.SampleValue(node.State, node.State.PreviousPlayer)
             self.BackProp(node, val, player)
 
-        for c in root.Children:
-            if c is not None:
-                c.Children = None # Kill the children. We only want to pass back the immediate results.
         return root
 
     def _mergeAll(self, target, trees):

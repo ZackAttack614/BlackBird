@@ -82,6 +82,9 @@ if __name__ == '__main__':
     with open('parameters.yaml', 'r') as param_file:
         parameters = yaml.load(param_file)
     b = BlackBird(parameters)
+    print(b.GenerateTrainingSamples(10))
+    raise Exception('Done')
+
     for i in range(20):
         b.LearnFromExamples(b.GenerateTrainingSamples(10))
     for t in b.GenerateTrainingSamples(1):
