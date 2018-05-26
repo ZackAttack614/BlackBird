@@ -270,4 +270,4 @@ BlackBirdEnvironment/
 parameters.yaml
 kTest.py
 parameters.yaml
-.vscode/settings.json
+.vscode/*

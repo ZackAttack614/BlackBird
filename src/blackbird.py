@@ -16,7 +16,6 @@ class BlackBird(FixedMCTS):
         # Need to pass in these things to super.
         return super().__init__(maxDepth, explorationRate, 1, timeLimit, playLimit, **kwargs)
 
-
     def GenerateTrainingSamples(self, nGames):
         assert nGames > 0, 'What are you doing?'
 
@@ -32,7 +31,7 @@ class BlackBird(FixedMCTS):
                 (nextState, currentValue, currentProbabilties) = self.FindMove(state)
                 example = TrainingExample(state, None, currentProbabilties)
                 state = nextState
-                self.MoveRoot(state)
+                self.MoveRoot([state])
 
                 winner = self.Winner(state, lastAction)
                 gameHistory.add(example)
@@ -46,7 +45,6 @@ class BlackBird(FixedMCTS):
             examples |= gameHistory
 
         return examples
-
 
     def LearnFromExamples(self, examples):
         raise NotImplementedError
