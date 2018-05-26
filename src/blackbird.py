@@ -36,7 +36,7 @@ class BlackBird(FixedMCTS, Network):
                 state = nextState
                 self.MoveRoot([state])
 
-                winner = self.Winner(state, lastAction)
+                winner = state.Winner(lastAction)
                 gameHistory.append(example)
                 
             example = self.TrainingExample(state, None, np.zeros([len(currentProbabilties)]))
