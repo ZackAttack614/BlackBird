@@ -26,7 +26,7 @@ class BlackBird(FixedMCTS, Network):
 
         for i in range(nGames):
             gameHistory = []
-            state = self.NewGame()
+            state = BoardState()
             lastAction = None
             winner = None
             self.ResetRoot()
@@ -59,10 +59,6 @@ class BlackBird(FixedMCTS, Network):
 
     def GetPriors(self, state):
         return self.getPolicy(state.AsInputArray())
-
-    # Need to be overriden
-    def NewGame(self):
-        return BoardState()
 
 if __name__ == '__main__':
     with open('parameters.yaml', 'r') as param_file:
