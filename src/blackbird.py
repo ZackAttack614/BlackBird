@@ -1,8 +1,13 @@
-from src.FixedMCTS import FixedMCTS
+from FixedMCTS import FixedMCTS
+from TicTacToe import BoardState
+from network import Network
+
+import yaml
 import numpy as np
 
-class BlackBird(FixedMCTS):
-    """Class to train a network using an MCTS driver to improve decision making"""
+class BlackBird(FixedMCTS, Network):
+    """ Class to train a network using an MCTS driver to improve decision making
+    """
     class TrainingExample(object):
         def __init__(self, state, value, probabilities):
             self.State = state # state holds the player
@@ -10,39 +15,37 @@ class BlackBird(FixedMCTS):
             self.Probabilities = probabilities
             return
 
-    def __init__(self, maxDepth, explorationRate, threads = 1, timeLimit = None, playLimit = None, **kwargs):
-        raise NotImplementedError
-        # Probably want to store the network somewhere in here :).
-        # Need to pass in these things to super.
-        return super().__init__(maxDepth, explorationRate, 1, timeLimit, playLimit, **kwargs)
+    def __init__(self, parameters):
+        FixedMCTS.__init__(self, parameters=parameters)
+        Network.__init__(self, parameters=parameters)
 
     def GenerateTrainingSamples(self, nGames):
-        assert nGames > 0, 'What are you doing?'
+        assert nGames > 0, 'Use a positive integer for number of games.'
 
-        examples = set()
+        examples = []
 
-        for i in len(nGames):
-            gameHistory = set()
-            state = self.NewGame()
+        for i in range(nGames):
+            gameHistory = []
+            state = BoardState()
             lastAction = None
             winner = None
             self.ResetRoot()
-            while winner is not None:
+            while winner is None:
                 (nextState, currentValue, currentProbabilties) = self.FindMove(state)
-                example = TrainingExample(state, None, currentProbabilties)
+                example = self.TrainingExample(state, None, currentProbabilties)
                 state = nextState
                 self.MoveRoot([state])
 
-                winner = self.Winner(state, lastAction)
-                gameHistory.add(example)
+                winner = state.Winner(lastAction)
+                gameHistory.append(example)
                 
-            example = TrainingExample(state, None, np.zeros([len(currentProbabilties)]))
-            gameHistory.add(example)
+            example = self.TrainingExample(state, None, np.zeros([len(currentProbabilties)]))
+            gameHistory.append(example)
             
             for example in gameHistory:
                 example.Value = 1 if example.State.Player == winner else 0
 
-            examples |= gameHistory
+            examples += gameHistory
 
         return examples
 
@@ -51,14 +54,14 @@ class BlackBird(FixedMCTS):
 
     # Overriden from MCTS
     def SampleValue(self, state, player):
-        raise NotImplementedError
+        value = self.getEvaluation(state.AsInputArray())
+        return value, player
 
     def GetPriors(self, state):
-        raise NotImplementedError
-
-    # Need to be overriden
-    def NewGame(self):
-        raise NotImplementedError
+        return self.getPolicy(state.AsInputArray())
 
 if __name__ == '__main__':
-    b = BlackBird(1,2)
+    with open('parameters.yaml', 'r') as param_file:
+        parameters = yaml.load(param_file)
+    b = BlackBird(parameters)
+    b.GenerateTrainingSamples(1)

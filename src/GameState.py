@@ -16,3 +16,6 @@ class GameState(object):
     
     def Winner(self, prevAction = None):
         raise NotImplementedError
+
+    def NumericRepresentation(self):
+        raise NotImplementedError

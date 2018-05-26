@@ -44,7 +44,7 @@ class BoardState(GameState):
         array[0, :, :, 0:2] = self.Board
         array[0, :, :, 2] = player
         return array
-    
+
     def Winner(self, prevAction = None):
         board = self._collapsed()
 

@@ -2,10 +2,20 @@ from mcts import MCTS,Node
 import numpy as np
 
 class FixedMCTS(MCTS):
-    """An implementation of Monte Carlo Tree Search that only aggregates statistics up to a fixed depth."""
-    def __init__(self, maxDepth, explorationRate, threads = 1, timeLimit = None, playLimit = None, **kwargs):
-        self.MaxDepth = maxDepth
-        return super().__init__(explorationRate, timeLimit, playLimit, threads, **kwargs)
+    """ An implementation of Monte Carlo Tree Search that only aggregates 
+        statistics up to a fixed depth.
+    """
+    def __init__(self, parameters):
+        self.parameters = parameters.get('mcts')
+        self.MaxDepth = self.parameters.get('maxDepth')
+        explorationRate = self.parameters.get('explorationRate')
+        timeLimit = self.parameters.get('timeLimit')
+        playLimit = self.parameters.get('playLimit')
+        threads = self.parameters.get('threads')
+
+        assert self.MaxDepth > 0, 'MaxDepth for MCTS must be > 0.'
+
+        super().__init__(explorationRate, timeLimit, playLimit, threads)
     
     # Overriding from MCTS
     def FindLeaf(self, node):
@@ -19,7 +29,6 @@ class FixedMCTS(MCTS):
                 break
             lastAction = self._selectAction(node)
             node = node.Children[lastAction]
-        assert i > 0, 'When requesting a move from the MCTS, there is at least one legal option.'
+        assert lastAction is not None, 'When requesting a move from the MCTS, there is at least one legal option.'
+            
         return node
-
-
