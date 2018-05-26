@@ -6,12 +6,12 @@ class FixedMCTS(MCTS):
         statistics up to a fixed depth.
     """
     def __init__(self, parameters):
-        self.parameters = parameters['mcts']
-        self.MaxDepth = self.parameters['maxDepth']
-        explorationRate = self.parameters['explorationRate']
-        timeLimit = self.parameters['timeLimit']
-        playLimit = self.parameters['playLimit']
-        threads = self.parameters['threads']
+        self.parameters = parameters.get('mcts')
+        self.MaxDepth = self.parameters.get('maxDepth')
+        explorationRate = self.parameters.get('explorationRate')
+        timeLimit = self.parameters.get('timeLimit')
+        playLimit = self.parameters.get('playLimit')
+        threads = self.parameters.get('threads')
 
         assert self.MaxDepth > 0, 'MaxDepth for MCTS must be > 0.'
 
