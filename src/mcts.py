@@ -1,12 +1,7 @@
 import numpy as np
 import time
 import multiprocessing as mp
-
-
-def softMax(x):
-    exps = np.exp(x)
-    return exps / np.sum(exps)
-
+from GameState import GameState
 
 class Node:
     """ This is the abtract tree node class that is used to cache/organize
@@ -27,7 +22,7 @@ class Node:
         self._childPlays = np.zeros(len(legalActions))
         
     def WinRate(self):
-        return self.Value/self.Plays if self.Plays > 0 else 0.
+        return self.Value/self.Plays if self.Plays > 0 else 0
 
     def ChildWinRates(self):
         for i in range(len(self.Children)):
@@ -38,18 +33,17 @@ class Node:
     def ChildProbability(self, explorationFactor = 0.0):
         rates = self.ChildWinRates()
         
-        rates += explorationFactor * self.Priors * self.Plays / (1.0 + self.ChildPlays())
-
-        return np.multiply(rates/sum(rates), self.LegalActions) # Presumably the legal actions mask is not necessary here, but Im too lazy to be responsible for that decision.
+        rates += explorationFactor * self.Priors * np.sqrt((1.0 + self.Plays) / (1.0 + self.ChildPlays()))
+        s = sum(rates)
+        if s == 0:
+            return self.LegalActions/sum(self.LegalActions)
+        return np.multiply(rates/s, self.LegalActions) # Presumably the legal actions mask is not necessary here, but Im too lazy to be responsible for that decision.
 
     def ChildPlays(self):
         for i in range(len(self.Children)):
             if self.Children[i] is not None:
                 self._childPlays[i] = self.Children[i].Plays
         return self._childPlays
-
-    def AvgValue(self):
-        return self.Value/self.Plays if self.Plays > 0 else 0
 
 class MCTS:
     """ Base class for Monte Carlo Tree Search algorithms. Outlines all the 
@@ -71,6 +65,8 @@ class MCTS:
             decided value of input state, and the probabilities of choosing each
             of the children).
         """
+        assert isinstance(state, GameState), 'State type must inherit from GameState'
+
         endTime = None
         if moveTime is None:
             moveTime = self.TimeLimit
@@ -80,7 +76,7 @@ class MCTS:
             playLimit = self.PlayLimit
 
         if self.Root is None:
-            self.Root = Node(state, self.LegalActions(state), self.GetPriors(state))
+            self.Root = Node(state, state.LegalActions(), self.GetPriors(state))
 
         assert self.Root.State == state, 'MCTS has been primed for the correct input state.'
         assert endTime is not None or playLimit is not None, 'The MCTS algorithm has a cutoff point.'
@@ -92,13 +88,13 @@ class MCTS:
 
         action = self._selectAction(self.Root, False)
 
-        return self._applyAction(state, action), self.Root.AvgValue, self.Root.ChildProbability()
+        return self._applyAction(state, action), self.Root.WinRate(), self.Root.ChildProbability()
 
     def _runAsynch(self, state, endTime = None, nPlays = None):
         roots = []
         results = []
         for i in range(self.Threads):
-            root = Node(state, self.LegalActions(state), self.GetPriors(state))
+            root = Node(state, state.LegalActions(), self.GetPriors(state))
             results.append(self.Pool.apply_async(self._runMCTS, (root, endTime, nPlays)))
 
         for r in results:
@@ -109,7 +105,11 @@ class MCTS:
 
     def _runMCTS(self, root, endTime = None, nPlays = None):
         while (endTime is None or time.time() < endTime) and (nPlays is None or root.Plays < nPlays):
-            self.RunSimulation(root)
+            node = self.FindLeaf(root)
+            
+            val, player = self.SampleValue(node.State, node.State.PreviousPlayer)
+            self.BackProp(node, val, player)
+
         for c in root.Children:
             if c is not None:
                 c.Children = None # Kill the children. We only want to pass back the immediate results.
@@ -147,13 +147,14 @@ class MCTS:
         """
         assert root.Children is not None, 'The node has children to select.'
 
-        if not exploring:
-            return np.argmax(np.multiply(root.ChildWinRates(), root.LegalActions))
-
         explorationFactor = self.ExplorationRate if exploring else 0
         probability = root.ChildProbability(explorationFactor)
-
-        return np.random.choice(len(probability), 1, p = probability)[0]
+        
+        if not exploring:
+            return np.argmax(probability)
+        
+        return np.argmax(probability)
+        #return np.random.choice(len(probability), 1, p = probability)[0]
 
     def AddChildren(self, node):
         """ Expands the node and adds children, actions and priors.
@@ -163,7 +164,7 @@ class MCTS:
         for i in range(l):
             if node.LegalActions[i] == 1:
                 s = self._applyAction(node.State, i)
-                node.Children[i] = Node(s, self.LegalActions(s), self.GetPriors(s))
+                node.Children[i] = Node(s, s.LegalActions(), self.GetPriors(s))
                 node.Children[i].Parent = node
         return
 
@@ -213,27 +214,36 @@ class MCTS:
         return
     
     def _applyAction(self, state, action):
-        s = self.ApplyAction(self, state, action)
-        assert hasattr(s, 'Player'), 'State must have a Player attribute that represents the player with the right to move.'
-        return
+        s = state.Copy()
+        s.ApplyAction(action)
+        return s
 
+    '''Can override these'''
     '''Algorithm implementation functions'''
-    def RunSimulation(self, root):
-        raise NotImplementedError
-
     def GetPriors(self, state):
+        """Gets the array of prior search probabilities. 
+            Default is just 1 for each possible move.
+        """
+        return np.array([1] * len(state.LegalActions()))
+
+    def SampleValue(self, state, player):
+        """Samples the value of the state for the specified player.
+            Default is to randomly playout the game.
+        """
+        rolloutState = state
+        winner = rolloutState.Winner()
+        while winner is None:
+            actions = np.where(rolloutState.LegalActions() == 1)[0]
+            action = np.random.choice(actions)
+            rolloutState = self.ApplyAction(rolloutState, action)
+            winner = rolloutState.Winner(action)
+        return 0.5 if winner == 0 else int(player == winner), winner
+
+    '''Must override these'''
+    def FindLeaf(self, node):
         raise NotImplementedError
 
-    '''Game implementation functions.'''
-    def ApplyAction(self, state, action):
-        raise NotImplementedError
-
-    def LegalActions(self, state):
-        raise NotImplementedError
-
-    def Winner(self, state, lastAction = None):
-        raise NotImplementedError
-
+    '''Overriden from Object'''
     def __getstate__(self):
         self_dict = self.__dict__.copy()
         del self_dict['Pool']

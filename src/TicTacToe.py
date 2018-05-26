@@ -1,20 +1,22 @@
-from blackbird import BlackBird
+from FixedMCTS import FixedMCTS
+from DynamicMCTS import DynamicMCTS
+from GameState import GameState
 import numpy as np
 
+class BoardState(GameState):
+    Players = {0: ' ', 1 : 'X', 2 : 'O'}
+    Size = 3
+    InARow = 3
+    Dirs = [(0,1),(1,1),(1,0),(1,-1)]
 
-# Check out Connect4MCTS.py as an example here.
-class BoardState():
-    players = {0: ' ', 1 : 'X', 2 : 'O'}
-    def __init__(self, size = 3, inARow = 3):
-        self.Board = np.zeros((size,size,2))
-        self.Size = size
-        self.InARow = inARow
+    def __init__(self):
+        self.Board = np.zeros((self.Size,self.Size,2))
         self.Player = 1
-        self.Dirs = [(0,1),(1,1),(1,0),(1,-1)]
+        self.PreviousPlayer = None
         return 
 
     def Copy(self):
-        copy = BoardState(self.Board.shape[0])
+        copy = BoardState()
         copy.Player = self.Player
         copy.Board = np.copy(self.Board)
         return copy
@@ -32,6 +34,7 @@ class BoardState():
         coords = self._indexToCoords(action)
         assert np.sum(self.Board[coords[0], coords[1], :]) == 0, 'Ahh. Can\'t go there! {}'.format(action)
         self.Board[coords[0], coords[1], self.Player - 1] = 1
+        self.PreviousPlayer = self.Player
         self.Player = 1 if self.Player == 2 else 2
         return
 
@@ -47,7 +50,9 @@ class BoardState():
 
         if prevAction is not None:
             coords = state._indexToCoords(prevAction)
-            return self.__checkVictory(board, coords[0], coords[1])
+            win = self._checkVictory(board, coords[0], coords[1])
+            if win is not None: 
+                return win
         else:
             for i in range(self.Size):
                 for j in range(self.Size):
@@ -57,7 +62,12 @@ class BoardState():
                     if win is not None: 
                         return win
 
+        if self._isOver(board):
+            return 0
         return None
+
+    def _isOver(self, board):
+        return np.sum(board > 0) == self.Size * self.Size
 
     def _checkVictory(self, board, i, j):
         p = board[i,j]
@@ -83,7 +93,7 @@ class BoardState():
     
     def _collapsed(self):
         array = np.zeros(self.Board.shape[:2])
-        for p in BoardState.players:
+        for p in BoardState.Players:
             array[self.Board[:, :, p - 1] == 1] = p
         return array
 
@@ -93,7 +103,7 @@ class BoardState():
         for i in range(array.shape[0]):
             s += '[ '
             for j in range(array.shape[1]):
-                s += ' {} '.format(BoardState.players[array[i, j]])
+                s += ' {} '.format(BoardState.Players[array[i, j]])
                 if j < array.shape[1] - 1:
                     s += '|'
             s += ']\n\n'
@@ -108,41 +118,24 @@ class BoardState():
     def __hash__(self):
         return "{0}{1}".format(self.Player,str(self)).__hash__()
 
-class TicTacToePlayer(BlackBird):
-    """Implementation of game"""
-    def __init__(self, size = 3, inARow = 3, **kwargs):
-        self.Size = size
-        self.InARow = inARow
-        return super().__init__(**kwargs)
-
-    def LegalActions(self, state):
-        return state.LegalActions()
-
-    def ApplyAction(self, state, action):
-        next = state.Copy()
-        next.ApplyAction(action)
-        return next
-
-    def NewGame(self):
-        return BoardState(self.Size, self.InARow)
-
-    def Winner(self, state, prevAction = None):
-        return state.Winner()
-
 if __name__ == '__main__':
-    size = 10
-    state = BoardState(size, 5)
-    prevAction = None
-    while state.Winner(prevAction) is None:
+    player = FixedMCTS(maxDepth = 10, explorationRate = 0.7, timeLimit = 1)
+    BoardState.Size = 3
+    BoardState.InARow = 3
+
+    state = BoardState()
+    while state.Winner() is None:
         print(state)
-        options = np.where(state.LegalActions() == 1)[0]
-        if len(options) == 0:
-            break
-        action = np.random.choice(options)
-        state.ApplyAction(action)
+        print('To move: {}'.format(state.Player))
+        state, v, p = player.FindMove(state)
+        print('Value: {}'.format(v))
+        print('Selection Probabilities: {}'.format(p))
+        print('Child Values: {}'.format(player.Root.ChildWinRates()))
+        print('Child Exploration Rates: {}'.format(player.Root.ChildPlays()))
+        print()
+        player.MoveRoot([state])
     print(state)
     print(state.Winner())
-    print(state.AsInputArray())
 
 
 
