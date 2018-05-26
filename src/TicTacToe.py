@@ -24,35 +24,42 @@ class BoardState():
         for i in range(self.Size):
             for j in range(self.Size):
                 if np.sum(self.Board[i, j, :]) == 0:
-                    actions[self.CoordsToIndex((i,j))] = 1
+                    actions[self._coordsToIndex((i,j))] = 1
 
         return actions
 
     def ApplyAction(self, action):
-        coords = self.IndexToCoords(action)
+        coords = self._indexToCoords(action)
         assert np.sum(self.Board[coords[0], coords[1], :]) == 0, 'Ahh. Can\'t go there! {}'.format(action)
         self.Board[coords[0], coords[1], self.Player - 1] = 1
         self.Player = 1 if self.Player == 2 else 2
         return
+
+    def AsInputArray(self):
+        player = np.full((self.Size, self.Size), 1 if self.Player == 1 else -1)
+        array = np.zeros((1, self.Size, self.Size, 3))
+        array[0, :, :, 0:2] = self.Board
+        array[0, :, :, 2] = player
+        return array
     
     def Winner(self, prevAction = None):
-        board = self.Collapsed()
+        board = self._collapsed()
 
         if prevAction is not None:
-            coords = state.IndexToCoords(prevAction)
+            coords = state._indexToCoords(prevAction)
             return self.__checkVictory(board, coords[0], coords[1])
         else:
             for i in range(self.Size):
                 for j in range(self.Size):
                     if board[i,j] == 0:
                         continue
-                    win = self.__checkVictory(board, i, j)
+                    win = self._checkVictory(board, i, j)
                     if win is not None: 
                         return win
 
         return None
 
-    def __checkVictory(self, board, i, j):
+    def _checkVictory(self, board, i, j):
         p = board[i,j]
         for dir in self.Dirs:
             inARow = 0
@@ -68,27 +75,20 @@ class BoardState():
                 return p
         return None
     
-    def CoordsToIndex(self, coords):
+    def _coordsToIndex(self, coords):
         return coords[0]*self.Size + coords[1]
 
-    def IndexToCoords(self, index):
+    def _indexToCoords(self, index):
         return (index//self.Size, index % self.Size)
     
-    def Collapsed(self):
+    def _collapsed(self):
         array = np.zeros(self.Board.shape[:2])
         for p in BoardState.players:
             array[self.Board[:, :, p - 1] == 1] = p
         return array
 
-    def AsInputArray(self):
-        player = np.full((self.Size, self.Size), 1 if self.Player == 1 else -1)
-        array = np.zeros((1, self.Size, self.Size, 3))
-        array[0, :, :, 0:2] = self.Board
-        array[0, :, :, 2] = player
-        return array
-
     def __str__(self):
-        array = self.Collapsed()
+        array = self._collapsed()
         s = ''
         for i in range(array.shape[0]):
             s += '[ '
@@ -142,7 +142,6 @@ if __name__ == '__main__':
         state.ApplyAction(action)
     print(state)
     print(state.Winner())
-
     print(state.AsInputArray())
 
 
