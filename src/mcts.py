@@ -79,7 +79,6 @@ class MCTS:
             self.Root = Node(state, state.LegalActions(), self.GetPriors(state))
 
         assert self.Root.State == state, 'MCTS has been primed for the correct input state.'
-        assert endTime is not None or playLimit is not None, 'The MCTS algorithm has a cutoff point.'
         
         if self.Threads == 1:
             self._runMCTS(self.Root, endTime, playLimit)
@@ -221,7 +220,7 @@ class MCTS:
     '''Can override these'''
     '''Algorithm implementation functions'''
     def GetPriors(self, state):
-        """Gets the array of prior search probabilities. 
+        """ Gets the array of prior search probabilities. 
             Default is just 1 for each possible move.
         """
         return np.array([1] * len(state.LegalActions()))
