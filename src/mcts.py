@@ -104,7 +104,7 @@ class MCTS:
         return
 
     def _runMCTS(self, root, endTime = None, nPlays = None):
-        endPlays = root.Plays + nPlays
+        endPlays = root.Plays + (nPlays if nPlays is not None else 0)
         while (endTime is None or (time.time() < endTime or root.Children is None)) \
                 and (nPlays is None or root.Plays < endPlays):
             node = self.FindLeaf(root)
