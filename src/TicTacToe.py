@@ -106,7 +106,7 @@ class BoardState(GameState):
                 s += ' {} '.format(BoardState.Players[array[i, j]])
                 if j < array.shape[1] - 1:
                     s += '|'
-            s += ']\n\n'
+            s += ']\n'
 
         return s
 
@@ -119,7 +119,8 @@ class BoardState(GameState):
         return "{0}{1}".format(self.Player,str(self)).__hash__()
 
 if __name__ == '__main__':
-    player = FixedMCTS(maxDepth = 10, explorationRate = 0.7, timeLimit = 1)
+    params = {'mcts' : {'maxDepth' : 10, 'explorationRate' : 0.7, 'timeLimit' : 1}}
+    player = DynamicMCTS(params)
     BoardState.Size = 3
     BoardState.InARow = 3
 

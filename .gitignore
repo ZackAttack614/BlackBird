@@ -271,3 +271,4 @@ parameters.yaml
 kTest.py
 parameters.yaml
 .vscode/*
+logDir/*

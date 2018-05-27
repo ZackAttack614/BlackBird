@@ -1,11 +1,11 @@
-from FixedMCTS import FixedMCTS
+from FixedMCTS import FixedMCTS as MCTS
 from TicTacToe import BoardState
 from network import Network
 
 import yaml
 import numpy as np
 
-class BlackBird(FixedMCTS, Network):
+class BlackBird(MCTS, Network):
     """ Class to train a network using an MCTS driver to improve decision making
     """
     class TrainingExample(object):
@@ -15,10 +15,16 @@ class BlackBird(FixedMCTS, Network):
             self.Probabilities = probabilities
             return
 
+        def __str__(self):
+            return '{}\nValue: {}\nProbabilites{}\n'.format(
+                    str(self.State), 
+                    str(self.Value), 
+                    ','.join(map(str, self.Probabilities)))
+
     def __init__(self, parameters):
         self.batchSize = parameters.get('network').get('training').get('batch_size')
         self.learningRate = parameters.get('selfplay').get('learning_rate')
-        FixedMCTS.__init__(self, parameters=parameters)
+        MCTS.__init__(self, parameters=parameters)
         Network.__init__(self, parameters=parameters)
 
     def GenerateTrainingSamples(self, nGames):
@@ -72,8 +78,12 @@ class BlackBird(FixedMCTS, Network):
 
     # Overriden from MCTS
     def SampleValue(self, state, player):
-        value = self.getEvaluation(state.AsInputArray())
-        return value, player
+        value = self.getEvaluation(state.AsInputArray()) # Gets the value for the current player.
+        value = value * 0.5 + 1 # [-1, 1] -> [0, 1]
+        if state.Player != player:
+            value *= -1
+        assert value > 0 # Just to make sure Im not dumb :).
+        return value
 
     def GetPriors(self, state):
         return self.getPolicy(state.AsInputArray())
@@ -82,11 +92,12 @@ if __name__ == '__main__':
     with open('parameters.yaml', 'r') as param_file:
         parameters = yaml.load(param_file)
     b = BlackBird(parameters)
-    print(b.GenerateTrainingSamples(10))
-    raise Exception('Done')
 
     for i in range(20):
-        b.LearnFromExamples(b.GenerateTrainingSamples(10))
+        examples = b.GenerateTrainingSamples(10)
+        for e in examples:
+            print(e)
+        b.LearnFromExamples(examples)
     for t in b.GenerateTrainingSamples(1):
         print(t.State)
         print(t.Probabilities)
