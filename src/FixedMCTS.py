@@ -12,6 +12,7 @@ class FixedMCTS(MCTS):
         timeLimit = self.parameters.get('timeLimit')
         playLimit = self.parameters.get('playLimit')
         threads = self.parameters.get('threads')
+        if threads is None: threads =1 
 
         assert self.MaxDepth > 0, 'MaxDepth for MCTS must be > 0.'
 
