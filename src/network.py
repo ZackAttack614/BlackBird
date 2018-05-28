@@ -86,10 +86,11 @@ class Network:
             self.policy_rectifier = tf.nn.relu(self.policy_batch_norm, name='rect_norm')
             self.policy_dense = tf.layers.dense(self.policy_rectifier, units=9, activation=None, name='policy')
             self.policy_vector = tf.reduce_sum(self.policy_dense, axis=[1,2])
-            self.policy = tf.nn.softmax(self.policy_vector)
+            self.policy_base = tf.nn.softmax(self.policy_vector)
 
             self.dist = tf.distributions.Dirichlet([self.alpha[0], 1-self.alpha[0]])
-            self.policy_explore = (1-self.epsilon[0])*self.policy + self.epsilon[0] * self.dist.sample([1,9])[0][:,0]
+            self.policy = (1-self.epsilon[0])*self.policy_base + self.epsilon[0] * self.dist.sample([1,9])[0][:,0]
+            self.policy /= tf.reduce_sum(self.policy)
             
         with tf.variable_scope('loss', reuse=tf.AUTO_REUSE) as scope:
             self.loss_evaluation = tf.square(self.evaluation - self.mcts_evaluation)
@@ -121,14 +122,11 @@ class Network:
         evaluation = self.sess.run(self.evaluation, feed_dict={self.input:state})
         return evaluation[0]
     
-    def getPolicy(self, state, explore):
+    def getPolicy(self, state):
         """ Given a game state, return the network's policy.
             Random Dirichlet noise is applied to the policy output to ensure exploration, if training.
         """
-        if explore:
-            policy = self.sess.run(self.policy, feed_dict={self.input:state, self.epsilon:[self.default_epsilon], self.alpha:[self.default_alpha]})
-        else:
-            policy = self.sess.run(self.policy_explore, feed_dict={self.input:state, self.epsilon:[self.default_epsilon], self.alpha:[self.default_alpha]})
+        policy = self.sess.run(self.policy, feed_dict={self.input:state, self.epsilon:[self.default_epsilon], self.alpha:[self.default_alpha]})
         return policy[0]
     
     def train(self, state, evaluation, policy, learning_rate=0.01):
