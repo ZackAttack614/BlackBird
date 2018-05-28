@@ -81,7 +81,7 @@ class Network:
             self.loss_evaluation = tf.square(self.evaluation - self.mcts_evaluation)
             self.loss_policy = tf.reduce_sum(tf.tensordot( tf.log(self.policy), tf.transpose(self.correct_move_vec), axes=1), axis=1)
             self.loss_param = tf.tile(tf.expand_dims(tf.reduce_sum([tf.nn.l2_loss(v) for v in tf.trainable_variables()
-                              #if 'bias' not in v.name
+                              if 'bias' not in v.name
                               ]) * self.parameters['loss']['L2_norm'], 0), [tf.shape(self.loss_policy)[0]])
             self.loss = self.loss_evaluation - self.loss_policy + self.loss_param
             tf.summary.scalar('total_loss', self.loss[0])

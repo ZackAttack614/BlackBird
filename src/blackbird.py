@@ -10,21 +10,24 @@ class BlackBird(MCTS, Network):
     """ Class to train a network using an MCTS driver to improve decision making
     """
     class TrainingExample(object):
-        def __init__(self, state, value, childValues, probabilities):
+        def __init__(self, state, value, childValues, probabilities, priors):
             self.State = state # state holds the player
             self.Value = value
             self.ChildValues = childValues.reshape((3,3)) if childValues is not None else None
             self.Reward = None
+            self.Priors = priors.reshape((3,3))
             self.Probabilities = probabilities
             return
 
         def __str__(self):
-            return '{}\nValue: {}\nChild Values:\n{}\nReward: {}\nProbabilites: {}\n'.format(
+            return '{}\nValue: {}\nChild Values:\n{}\nReward: {}\nProbabilites:\n{}\n\nPriors:\n{}\n'.format(
                     str(self.State),
                     str(self.Value),
                     str(self.ChildValues),
                     str(self.Reward), 
-                    ','.join(map(str, self.Probabilities)))
+                    str(self.Probabilities.reshape((3,3))),
+                    str(self.Priors)
+                    )
 
     def __init__(self, parameters):
         self.batchSize = parameters.get('network').get('training').get('batch_size')
@@ -46,14 +49,14 @@ class BlackBird(MCTS, Network):
             while winner is None:
                 (nextState, v, currentProbabilties) = self.FindMove(state)
                 childValues = self.Root.ChildWinRates()
-                example = self.TrainingExample(state, 1 - v, 1 - childValues, currentProbabilties)
+                example = self.TrainingExample(state, 1 - v, childValues, currentProbabilties, priors = self.Root.Priors)
                 state = nextState
                 self.MoveRoot([state])
 
                 winner = state.Winner(lastAction)
                 gameHistory.append(example)
                 
-            example = self.TrainingExample(state, None, None, np.zeros([len(currentProbabilties)]))
+            example = self.TrainingExample(state, None, None, np.zeros([len(currentProbabilties)]), np.zeros([len(currentProbabilties)]))
             gameHistory.append(example)
             
             for example in gameHistory:
