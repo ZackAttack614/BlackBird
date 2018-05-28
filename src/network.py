@@ -46,14 +46,28 @@ class Network:
             
         with tf.variable_scope('hidden', reuse=tf.AUTO_REUSE) as scope:
             self.hidden = [self.input]
+
+            
+            with tf.variable_scope('conv_block', reuse=tf.AUTO_REUSE) as scope:
+                self.hidden.append(
+                    tf.layers.conv2d(inputs=self.input, filters=self.parameters['filters'], kernel_size=[3,3],
+                        strides=1, padding="same", activation=None, name='conv'))
+                self.hidden.append(tf.layers.batch_normalization(inputs=self.hidden[-1],name='batch_norm'))
+                self.hidden.append(tf.nn.relu(features=self.hidden[-1], name='rectifier_nonlinearity'))
             
             for block in range(self.parameters['blocks']):
                 with tf.variable_scope('block_{}'.format(block), reuse=tf.AUTO_REUSE) as scope:
                     self.hidden.append(
-                        tf.layers.conv2d(inputs=self.input, filters=self.parameters['filters'], kernel_size=[3,3],
-                            strides=1, padding="same", activation=None, name='conv'))
-                    self.hidden.append(tf.layers.batch_normalization(inputs=self.hidden[-1],name='batch_norm'))
-                    self.hidden.append(tf.nn.relu(features=self.hidden[-1], name='rectifier_nonlinearity'))
+                        tf.layers.conv2d(inputs=self.hidden[-1], filters=self.parameters['filters'], kernel_size=[3,3],
+                            strides=1, padding="same", activation=None, name='conv_1'))
+                    self.hidden.append(tf.layers.batch_normalization(inputs=self.hidden[-1],name='batch_norm_1'))
+                    self.hidden.append(tf.nn.relu(features=self.hidden[-1], name='rectifier_nonlinearity_1'))
+                    self.hidden.append(
+                        tf.layers.conv2d(inputs=self.hidden[-1], filters=self.parameters['filters'], kernel_size=[3,3],
+                            strides=1, padding="same", activation=None, name='conv_2'))
+                    self.hidden.append(tf.layers.batch_normalization(inputs=self.hidden[-1],name='batch_norm_2'))
+                    self.hidden.append(tf.add(self.hidden[-1], self.hidden[-6], name='skip_connection'))
+                    self.hidden.append(tf.nn.relu(features=self.hidden[-1], name='rectifier_nonlinearity_2'))
                     
         with tf.variable_scope('evaluation', reuse=tf.AUTO_REUSE) as scope:
             self.eval_conv = tf.layers.conv2d(self.hidden[-1],filters=1,kernel_size=(1,1),strides=1,name='convolution')
@@ -70,12 +84,12 @@ class Network:
             self.policy_conv = tf.layers.conv2d(self.hidden[-1],filters=2,kernel_size=(1,1),strides=1,name='convolution')
             self.policy_batch_norm = tf.layers.batch_normalization(self.policy_conv,name='batch_norm')
             self.policy_rectifier = tf.nn.relu(self.policy_batch_norm, name='rect_norm')
-            self.policy_dense = tf.layers.dense(self.policy_rectifier, units=9, activation=tf.nn.softmax, name='policy')
+            self.policy_dense = tf.layers.dense(self.policy_rectifier, units=9, activation=None, name='policy')
             self.policy_vector = tf.reduce_sum(self.policy_dense, axis=[1,2])
             self.policy = tf.nn.softmax(self.policy_vector)
 
             self.dist = tf.distributions.Dirichlet([self.alpha[0], 1-self.alpha[0]])
-            self.policy = tf.nn.softmax((1-self.epsilon[0])*self.policy + self.epsilon[0] * self.dist.sample([1,9])[0][:,0])
+            self.policy_explore = (1-self.epsilon[0])*self.policy + self.epsilon[0] * self.dist.sample([1,9])[0][:,0]
             
         with tf.variable_scope('loss', reuse=tf.AUTO_REUSE) as scope:
             self.loss_evaluation = tf.square(self.evaluation - self.mcts_evaluation)
@@ -84,7 +98,7 @@ class Network:
                               if 'bias' not in v.name
                               ]) * self.parameters['loss']['L2_norm'], 0), [tf.shape(self.loss_policy)[0]])
             self.loss = self.loss_evaluation - self.loss_policy + self.loss_param
-            tf.summary.scalar('total_loss', self.loss[0])
+            tf.summary.scalar('total_loss', tf.reduce_sum(self.loss[0]))
             
         with tf.name_scope('summary') as scope:
             self.merged = tf.summary.merge_all()
@@ -107,11 +121,14 @@ class Network:
         evaluation = self.sess.run(self.evaluation, feed_dict={self.input:state})
         return evaluation[0]
     
-    def getPolicy(self, state):
+    def getPolicy(self, state, explore):
         """ Given a game state, return the network's policy.
-            Random Dirichlet noise is applied to the policy output to ensure exploration.
+            Random Dirichlet noise is applied to the policy output to ensure exploration, if training.
         """
-        policy = self.sess.run(self.policy, feed_dict={self.input:state, self.epsilon:[self.default_epsilon], self.alpha:[self.default_alpha]})
+        if explore:
+            policy = self.sess.run(self.policy, feed_dict={self.input:state, self.epsilon:[self.default_epsilon], self.alpha:[self.default_alpha]})
+        else:
+            policy = self.sess.run(self.policy_explore, feed_dict={self.input:state, self.epsilon:[self.default_epsilon], self.alpha:[self.default_alpha]})
         return policy[0]
     
     def train(self, state, evaluation, policy, learning_rate=0.01):
