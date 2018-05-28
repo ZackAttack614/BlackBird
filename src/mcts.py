@@ -33,7 +33,7 @@ class Node:
     def ChildProbability(self, explorationFactor = 0.0):
         rates = self.ChildWinRates()
         
-        rates += explorationFactor * self.Priors * np.sqrt((1.0 + self.Plays) / (1.0 + self.ChildPlays()))
+        rates += explorationFactor * self.Priors * np.sqrt(1.0 + self.Plays) / (1.0 + self.ChildPlays())
         s = sum(rates)
         if s == 0:
             return self.LegalActions/sum(self.LegalActions)
@@ -50,7 +50,7 @@ class MCTS:
         necessary operations for the core algorithm. Most operations will need
         to be overriden to avoid a NotImplemenetedError.
     """
-    def __init__(self, explorationRate, timeLimit = None, playLimit = None, threads = 1):
+    def __init__(self, explorationRate, timeLimit = None, playLimit = None, threads = 1, **kwargs):
         self.TimeLimit = timeLimit
         self.PlayLimit = playLimit
         self.ExplorationRate = explorationRate
@@ -109,8 +109,8 @@ class MCTS:
                 and (nPlays is None or root.Plays < endPlays):
             node = self.FindLeaf(root)
             
-            val, player = self.SampleValue(node.State, node.State.PreviousPlayer)
-            self.BackProp(node, val, player)
+            val = self.SampleValue(node.State, node.State.PreviousPlayer)
+            self.BackProp(node, val, node.State.PreviousPlayer)
 
         return root
 
@@ -227,6 +227,7 @@ class MCTS:
 
     def SampleValue(self, state, player):
         """Samples the value of the state for the specified player.
+            Must return the value in [0, 1]
             Default is to randomly playout the game.
         """
         rolloutState = state
@@ -234,9 +235,9 @@ class MCTS:
         while winner is None:
             actions = np.where(rolloutState.LegalActions() == 1)[0]
             action = np.random.choice(actions)
-            rolloutState = self.ApplyAction(rolloutState, action)
+            rolloutState = self._applyAction(rolloutState, action)
             winner = rolloutState.Winner(action)
-        return 0.5 if winner == 0 else int(player == winner), winner
+        return 0.5 if winner == 0 else int(player == winner)
 
     '''Must override these'''
     def FindLeaf(self, node):
