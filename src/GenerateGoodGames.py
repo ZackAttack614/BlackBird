@@ -33,6 +33,6 @@ if __name__ == '__main__':
         parameters = yaml.load(param_file)
     ai = JustTakeThatOneFunction(parameters)
 
-    examples = ai.GenerateTrainingSamples(1)
+    examples = ai.GenerateTrainingSamples(500)
     with open('goodGames.txt', 'bw') as goodGames:
         pickle.dump(examples, goodGames)
