@@ -1,6 +1,7 @@
 from FixedMCTS import FixedMCTS as MCTS
 from TicTacToe import BoardState
 from FFNetwork import Network
+import functools
 
 import yaml
 import numpy as np
@@ -70,6 +71,15 @@ class BlackBird(MCTS, Network):
         return examples
 
     def LearnFromExamples(self, examples):
+        print('Caching worked! - \nSampleValues {}\nGetPriors {}'.format(
+                                                self.SampleValue.cache_info(),
+                                                self.GetPriors.cache_info()))
+        self.SampleValue.cache_clear()
+        self.GetPriors.cache_clear()
+        print('Cache is clear: \n{}\n{}'.format(
+            self.SampleValue.cache_info(),
+            self.GetPriors.cache_info()
+        ))
         examples = np.random.choice(examples, 
                                     len(examples) - (len(examples) % self.batchSize), 
                                     replace = False)
@@ -86,6 +96,7 @@ class BlackBird(MCTS, Network):
         return
 
     # Overriden from MCTS
+    @functools.lru_cache(maxsize = 256)
     def SampleValue(self, state, player):
         value = self.getEvaluation(state.AsInputArray()) # Gets the value for the current player.
         value = (value + 1 ) * 0.5 # [-1, 1] -> [0, 1]
@@ -94,13 +105,14 @@ class BlackBird(MCTS, Network):
         assert value >= 0, 'Value: {}'.format(value) # Just to make sure Im not dumb :).
         return value
 
+    @functools.lru_cache(maxsize = 32768)
     def GetPriors(self, state):
         return self.getPolicy(state.AsInputArray())
 
 if __name__ == '__main__':
     with open('parameters.yaml', 'r') as param_file:
         parameters = yaml.load(param_file)
-    b = BlackBird(parameters)
+    b = BlackBird(**parameters)
 
     for i in range(100):
         examples = b.GenerateTrainingSamples(10)
