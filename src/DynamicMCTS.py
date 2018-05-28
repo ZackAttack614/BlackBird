@@ -5,8 +5,8 @@ class DynamicMCTS(MCTS):
     """ An implementation of Monte Carlo Tree Search that aggregates statistics
         as it explores the tree
     """
-    def __init__(self, params, **kwargs):
-        params = params.get('mcts')
+    def __init__(self, **kwargs):
+        params = kwargs.get('mcts')
         return super().__init__(**params, **kwargs)
     
     # Overriding from MCTS
