@@ -25,7 +25,8 @@ class Node:
         return self.Value/self.Plays if self.Plays > 0 else 0
 
     def ChildProbability(self):
-        return self.ChildPlays()/self.Plays if self.Plays > 0 else np.array([0] * len(self.ChildPlays()))
+        allPlays = sum(self.ChildPlays())
+        return self.ChildPlays()/allPlays if allPlays > 0 else np.array([0] * len(self.ChildPlays()))
 
     def ChildWinRates(self):
         for i in range(len(self.Children)):
@@ -82,9 +83,6 @@ class MCTS:
 
         action = self._selectAction(self.Root, exploring = False)
 
-        childPlays = sum(self.Root.ChildPlays())
-        assert abs(self.Root.Plays - childPlays) < 2, \
-                'It isn\'t working: child {} parent {}'.format(childPlays, self.Root.Plays)
         return self._applyAction(state, action), self.Root.WinRate(), self.Root.ChildProbability()
 
     def _runAsynch(self, state, endTime = None, nPlays = None):
@@ -144,7 +142,8 @@ class MCTS:
         assert root.Children is not None, 'The node has children to select.'
 
         if exploring:
-            upperConfidence = root.ChildWinRates() + self.ExplorationRate * root.Priors * np.sqrt(1.0 + root.Plays) / (1.0 + root.ChildPlays())
+            allPlays = sum(root.ChildPlays())
+            upperConfidence = root.ChildWinRates() + self.ExplorationRate * root.Priors * np.sqrt(1.0 + allPlays) / (1.0 + root.ChildPlays())
             return np.argmax(upperConfidence)
         else:
             return np.argmax(root.ChildPlays())
