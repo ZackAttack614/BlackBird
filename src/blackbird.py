@@ -1,6 +1,6 @@
 from FixedMCTS import FixedMCTS as MCTS
 from TicTacToe import BoardState
-from network import Network
+from FFNetwork import Network
 
 import yaml
 import numpy as np
