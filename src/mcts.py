@@ -24,20 +24,14 @@ class Node:
     def WinRate(self):
         return self.Value/self.Plays if self.Plays > 0 else 0
 
+    def ChildProbability(self):
+        return self.ChildPlays()/self.Plays if self.Plays > 0 else np.array([0] * len(self.ChildPlays()))
+
     def ChildWinRates(self):
         for i in range(len(self.Children)):
             if self.Children[i] is not None:
                 self._childWinRates[i] = self.Children[i].WinRate()
         return self._childWinRates
-
-    def ChildProbability(self, explorationFactor = 0.0):
-        rates = self.ChildWinRates()
-        
-        rates += explorationFactor * self.Priors * np.sqrt(1.0 + self.Plays) / (1.0 + self.ChildPlays())
-        s = sum(rates)
-        if s == 0:
-            return self.LegalActions/sum(self.LegalActions)
-        return np.multiply(rates/s, self.LegalActions) # Presumably the legal actions mask is not necessary here, but Im too lazy to be responsible for that decision.
 
     def ChildPlays(self):
         for i in range(len(self.Children)):
@@ -86,7 +80,7 @@ class MCTS:
         elif self.Threads > 1:
             self._runAsynch(state, endTime, playLimit)
 
-        action = self._selectAction(self.Root, False)
+        action = self._selectAction(self.Root, exploring = False)
 
         return self._applyAction(state, action), self.Root.WinRate(), self.Root.ChildProbability()
 
@@ -146,14 +140,12 @@ class MCTS:
         """
         assert root.Children is not None, 'The node has children to select.'
 
-        explorationFactor = self.ExplorationRate if exploring else 0
-        probability = root.ChildProbability(explorationFactor)
-        
-        if not exploring:
-            return np.argmax(probability)
-        
-        return np.argmax(probability)
-        #return np.random.choice(len(probability), 1, p = probability)[0]
+        if exploring:
+            upperConfidence = root.ChildWinRates() + self.ExplorationRate * root.Priors * np.sqrt(1.0 + root.Plays) / (1.0 + root.ChildPlays())
+            return np.argmax(upperConfidence)
+        else:
+            return np.argmax(root.ChildPlays())
+        return
 
     def AddChildren(self, node):
         """ Expands the node and adds children, actions and priors.

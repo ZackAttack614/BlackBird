@@ -46,7 +46,7 @@ class BlackBird(MCTS, Network):
             while winner is None:
                 (nextState, v, currentProbabilties) = self.FindMove(state)
                 childValues = self.Root.ChildWinRates()
-                example = self.TrainingExample(state, 1 - v, childValues, currentProbabilties)
+                example = self.TrainingExample(state, 1 - v, 1 - childValues, currentProbabilties)
                 state = nextState
                 self.MoveRoot([state])
 
