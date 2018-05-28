@@ -1,4 +1,4 @@
-from DynamicMCTS import DynamicMCTS as MCTS
+from FixedMCTS import FixedMCTS as MCTS
 from TicTacToe import BoardState
 from FFNetwork import Network
 
@@ -29,7 +29,7 @@ class BlackBird(MCTS, Network):
                     str(self.Priors)
                     )
 
-    def __init__(self, parameters):
+    def __init__(self, **parameters):
         self.batchSize = parameters.get('network').get('training').get('batch_size')
         self.learningRate = parameters.get('selfplay').get('learning_rate')
         MCTS.__init__(self, **parameters)

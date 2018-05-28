@@ -5,8 +5,8 @@ class FixedMCTS(MCTS):
     """ An implementation of Monte Carlo Tree Search that only aggregates 
         statistics up to a fixed depth.
     """
-    def __init__(self, parameters):
-        self.parameters = parameters.get('mcts')
+    def __init__(self, **kwargs):
+        self.parameters = kwargs.get('mcts')
         self.MaxDepth = self.parameters.get('maxDepth')
         explorationRate = self.parameters.get('explorationRate')
         timeLimit = self.parameters.get('timeLimit')

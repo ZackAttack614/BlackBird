@@ -82,6 +82,9 @@ class MCTS:
 
         action = self._selectAction(self.Root, exploring = False)
 
+        childPlays = sum(self.Root.ChildPlays())
+        assert abs(self.Root.Plays - childPlays) < 2, \
+                'It isn\'t working: child {} parent {}'.format(childPlays, self.Root.Plays)
         return self._applyAction(state, action), self.Root.WinRate(), self.Root.ChildProbability()
 
     def _runAsynch(self, state, endTime = None, nPlays = None):

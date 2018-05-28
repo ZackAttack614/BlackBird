@@ -119,8 +119,8 @@ class BoardState(GameState):
         return "{0}{1}".format(self.Player,str(self)).__hash__()
 
 if __name__ == '__main__':
-    params = {'mcts' : {'maxDepth' : 10, 'explorationRate' : 0.7, 'timeLimit' : 2}}
-    player = DynamicMCTS(params)
+    params = {'mcts' : {'maxDepth' : 10, 'explorationRate' : 1.414, 'playLimit' : 5000}}
+    player = FixedMCTS(**params)
     BoardState.Size = 3
     BoardState.InARow = 3
 
