@@ -33,7 +33,7 @@ class Node:
     def ChildProbability(self, explorationFactor = 0.0):
         rates = self.ChildWinRates()
         
-        rates += explorationFactor * self.Priors * np.sqrt((1.0 + self.Plays) / (1.0 + self.ChildPlays()))
+        rates += explorationFactor * self.Priors * np.sqrt(1.0 + self.Plays) / (1.0 + self.ChildPlays())
         s = sum(rates)
         if s == 0:
             return self.LegalActions/sum(self.LegalActions)

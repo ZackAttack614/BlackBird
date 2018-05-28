@@ -12,13 +12,15 @@ class BlackBird(MCTS, Network):
         def __init__(self, state, value, probabilities):
             self.State = state # state holds the player
             self.Value = value
+            self.Reward = None
             self.Probabilities = probabilities
             return
 
         def __str__(self):
-            return '{}\nValue: {}\nProbabilites{}\n'.format(
-                    str(self.State), 
-                    str(self.Value), 
+            return '{}\nValue {}\nReward: {}\nProbabilites: {}\n'.format(
+                    str(self.State),
+                    str(self.Value),
+                    str(self.Reward), 
                     ','.join(map(str, self.Probabilities)))
 
     def __init__(self, parameters):
@@ -39,8 +41,8 @@ class BlackBird(MCTS, Network):
             winner = None
             self.ResetRoot()
             while winner is None:
-                (nextState, _, currentProbabilties) = self.FindMove(state)
-                example = self.TrainingExample(state, None, currentProbabilties)
+                (nextState, v, currentProbabilties) = self.FindMove(state)
+                example = self.TrainingExample(state, 1 - v, currentProbabilties)
                 state = nextState
                 self.MoveRoot([state])
 
@@ -52,9 +54,9 @@ class BlackBird(MCTS, Network):
             
             for example in gameHistory:
                 if winner == 0:
-                    example.Value = 0.5 # Draw
+                    example.Reward = 0.5 # Draw
                 else:
-                    example.Value = 1 if example.State.Player == winner else -1
+                    example.Reward = 1 if example.State.Player == winner else -1
 
             examples += gameHistory
 
@@ -70,7 +72,7 @@ class BlackBird(MCTS, Network):
             batch = examples[start : start + self.batchSize]
             self.train(
                     np.stack([b.State.AsInputArray()[0] for b in batch], axis = 0),
-                    np.stack([b.Value for b in batch], axis = 0),
+                    np.stack([b.Reward for b in batch], axis = 0),
                     np.stack([b.Probabilities for b in batch], axis = 0),
                     self.learningRate
                     )
@@ -79,10 +81,10 @@ class BlackBird(MCTS, Network):
     # Overriden from MCTS
     def SampleValue(self, state, player):
         value = self.getEvaluation(state.AsInputArray()) # Gets the value for the current player.
-        value = value * 0.5 + 1 # [-1, 1] -> [0, 1]
+        value = (value + 1 ) * 0.5 # [-1, 1] -> [0, 1]
         if state.Player != player:
-            value *= -1
-        assert value > 0 # Just to make sure Im not dumb :).
+            value = 1 - value
+        assert value >= 0, 'Value: {}'.format(value) # Just to make sure Im not dumb :).
         return value
 
     def GetPriors(self, state):
@@ -93,7 +95,7 @@ if __name__ == '__main__':
         parameters = yaml.load(param_file)
     b = BlackBird(parameters)
 
-    for i in range(20):
+    for i in range(100):
         examples = b.GenerateTrainingSamples(10)
         for e in examples:
             print(e)
