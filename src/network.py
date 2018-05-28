@@ -5,8 +5,8 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 class Network:
-    def __init__(self, parameters, dims=(3,3), load_old=False, writer=False, **kwargs):
-        self.parameters = parameters['network']
+    def __init__(self, dims=(3,3), load_old=False, writer=False, **kwargs):
+        self.parameters = kwargs['network']
         self.dims = dims
         gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.4)
         self.sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))

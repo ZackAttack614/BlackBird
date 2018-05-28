@@ -1,33 +1,36 @@
-from FixedMCTS import FixedMCTS as MCTS
+from DynamicMCTS import DynamicMCTS as MCTS
 from TicTacToe import BoardState
 from network import Network
 
 import yaml
 import numpy as np
+np.set_printoptions(precision=2)
 
 class BlackBird(MCTS, Network):
     """ Class to train a network using an MCTS driver to improve decision making
     """
     class TrainingExample(object):
-        def __init__(self, state, value, probabilities):
+        def __init__(self, state, value, childValues, probabilities):
             self.State = state # state holds the player
             self.Value = value
+            self.ChildValues = childValues.reshape((3,3)) if childValues is not None else None
             self.Reward = None
             self.Probabilities = probabilities
             return
 
         def __str__(self):
-            return '{}\nValue {}\nReward: {}\nProbabilites: {}\n'.format(
+            return '{}\nValue: {}\nChild Values:\n{}\nReward: {}\nProbabilites: {}\n'.format(
                     str(self.State),
                     str(self.Value),
+                    str(self.ChildValues),
                     str(self.Reward), 
                     ','.join(map(str, self.Probabilities)))
 
     def __init__(self, parameters):
         self.batchSize = parameters.get('network').get('training').get('batch_size')
         self.learningRate = parameters.get('selfplay').get('learning_rate')
-        MCTS.__init__(self, parameters=parameters)
-        Network.__init__(self, parameters=parameters)
+        MCTS.__init__(self, **parameters)
+        Network.__init__(self, **parameters)
 
     def GenerateTrainingSamples(self, nGames):
         assert nGames > 0, 'Use a positive integer for number of games.'
@@ -39,22 +42,23 @@ class BlackBird(MCTS, Network):
             state = BoardState()
             lastAction = None
             winner = None
-            self.ResetRoot()
+            self.DropRoot()
             while winner is None:
                 (nextState, v, currentProbabilties) = self.FindMove(state)
-                example = self.TrainingExample(state, 1 - v, currentProbabilties)
+                childValues = self.Root.ChildWinRates()
+                example = self.TrainingExample(state, 1 - v, childValues, currentProbabilties)
                 state = nextState
                 self.MoveRoot([state])
 
                 winner = state.Winner(lastAction)
                 gameHistory.append(example)
                 
-            example = self.TrainingExample(state, None, np.zeros([len(currentProbabilties)]))
+            example = self.TrainingExample(state, None, None, np.zeros([len(currentProbabilties)]))
             gameHistory.append(example)
             
             for example in gameHistory:
                 if winner == 0:
-                    example.Reward = 0.5 # Draw
+                    example.Reward = 0
                 else:
                     example.Reward = 1 if example.State.Player == winner else -1
 
