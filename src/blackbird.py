@@ -1,6 +1,6 @@
 from FixedMCTS import FixedMCTS as MCTS
 from TicTacToe import BoardState
-from FFNetwork import Network
+from network import Network
 import functools
 
 import yaml
@@ -107,7 +107,10 @@ class BlackBird(MCTS, Network):
 
     @functools.lru_cache(maxsize = 32768)
     def GetPriors(self, state):
-        return self.getPolicy(state.AsInputArray())
+        policy = self.getPolicy(state.AsInputArray()) * state.LegalActions()
+        policy /= np.sum(policy)
+        
+        return policy
 
 if __name__ == '__main__':
     with open('parameters.yaml', 'r') as param_file:
