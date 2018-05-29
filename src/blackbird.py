@@ -30,11 +30,11 @@ class BlackBird(MCTS, Network):
                     str(self.Priors)
                     )
 
-    def __init__(self, **parameters):
+    def __init__(self, saver=False, tfLog=False, **parameters):
         self.batchSize = parameters.get('network').get('training').get('batch_size')
         self.learningRate = parameters.get('selfplay').get('learning_rate')
         MCTS.__init__(self, **parameters)
-        Network.__init__(self, **parameters)
+        Network.__init__(self, saver, tfLog, **parameters)
 
     def GenerateTrainingSamples(self, nGames):
         assert nGames > 0, 'Use a positive integer for number of games.'
@@ -115,7 +115,7 @@ class BlackBird(MCTS, Network):
 if __name__ == '__main__':
     with open('parameters.yaml', 'r') as param_file:
         parameters = yaml.load(param_file)
-    b = BlackBird(**parameters)
+    b = BlackBird(saver=True, tfLog=True, loadOld=True, **parameters)
 
     for i in range(parameters.get('selfplay').get('epochs')):
         examples = b.GenerateTrainingSamples(parameters.get('selfplay').get('training_games'))
