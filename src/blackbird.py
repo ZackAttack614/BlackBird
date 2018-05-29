@@ -117,8 +117,8 @@ if __name__ == '__main__':
         parameters = yaml.load(param_file)
     b = BlackBird(**parameters)
 
-    for i in range(100):
-        examples = b.GenerateTrainingSamples(10)
+    for i in range(parameters.get('selfplay').get('epochs')):
+        examples = b.GenerateTrainingSamples(parameters.get('selfplay').get('training_games'))
         for e in examples:
             print(e)
         b.LearnFromExamples(examples)
