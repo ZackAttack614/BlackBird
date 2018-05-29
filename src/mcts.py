@@ -141,13 +141,15 @@ class MCTS:
         """
         assert root.Children is not None, 'The node has children to select.'
 
+        allPlays = sum(root.ChildPlays())
         if exploring:
-            allPlays = sum(root.ChildPlays())
             upperConfidence = root.ChildWinRates() + self.ExplorationRate * root.Priors * np.sqrt(1.0 + allPlays) / (1.0 + root.ChildPlays())
             return np.argmax(upperConfidence)
         else:
-            return np.argmax(root.ChildPlays())
-        return
+            nChildren = len(root.ChildPlays())
+            return np.random.choice(
+                range(nChildren), 
+                p=[c ** (1/1) / allPlays for c in root.ChildPlays()])
 
     def AddChildren(self, node):
         """ Expands the node and adds children, actions and priors.
