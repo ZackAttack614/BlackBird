@@ -32,7 +32,7 @@ class BlackBird(MCTS, Network):
 
     def __init__(self, saver=False, tfLog=False, **parameters):
         self.batchSize = parameters.get('network').get('training').get('batch_size')
-        self.learningRate = parameters.get('selfplay').get('learning_rate')
+        self.learningRate = parameters.get('network').get('training').get('learning_rate')
         MCTS.__init__(self, **parameters)
         Network.__init__(self, saver, tfLog, **parameters)
 
