@@ -11,19 +11,18 @@ class DynamicMCTS(MCTS):
     
     # Overriding from MCTS
     def FindLeaf(self, node):
+        lastAction = None
         while True:
-            # If we are at the edge of our currently explored branch, 
-            # build out the children and stop.
             if node.Children is None:
+                if node.State.Winner(lastAction) is not None:
+                    break
                 self.AddChildren(node)
                 break
             if np.sum(node.LegalActions) == 0:
                 break
-
-            # Otherwise, keep going!
             lastAction = self._selectAction(node)
             node = node.Children[lastAction]
-
+            
         return node
 
 
