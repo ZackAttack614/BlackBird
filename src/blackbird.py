@@ -71,15 +71,9 @@ class BlackBird(MCTS, Network):
         return examples
 
     def LearnFromExamples(self, examples):
-        print('Caching worked! - \nSampleValues {}\nGetPriors {}'.format(
-                                                self.SampleValue.cache_info(),
-                                                self.GetPriors.cache_info()))
         self.SampleValue.cache_clear()
         self.GetPriors.cache_clear()
-        print('Cache is clear: \n{}\n{}'.format(
-            self.SampleValue.cache_info(),
-            self.GetPriors.cache_info()
-        ))
+        
         examples = np.random.choice(examples, 
                                     len(examples) - (len(examples) % self.batchSize), 
                                     replace = False)
