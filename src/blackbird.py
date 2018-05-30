@@ -1,6 +1,6 @@
-from FixedMCTS import FixedMCTS as MCTS
+from DynamicMCTS import DynamicMCTS as MCTS
 from TicTacToe import BoardState
-from network import Network
+from FFNetwork import Network
 import functools
 
 import yaml
@@ -90,7 +90,7 @@ class BlackBird(MCTS, Network):
         return
 
     # Overriden from MCTS
-    @functools.lru_cache(maxsize = 256)
+    @functools.lru_cache(maxsize = 4096)
     def SampleValue(self, state, player):
         value = self.getEvaluation(state.AsInputArray()) # Gets the value for the current player.
         value = (value + 1 ) * 0.5 # [-1, 1] -> [0, 1]
@@ -99,7 +99,7 @@ class BlackBird(MCTS, Network):
         assert value >= 0, 'Value: {}'.format(value) # Just to make sure Im not dumb :).
         return value
 
-    @functools.lru_cache(maxsize = 32768)
+    @functools.lru_cache(maxsize = 4096)
     def GetPriors(self, state):
         policy = self.getPolicy(state.AsInputArray()) * state.LegalActions()
         policy /= np.sum(policy)
