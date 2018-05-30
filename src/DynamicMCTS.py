@@ -10,7 +10,7 @@ class DynamicMCTS(MCTS):
         return super().__init__(**params, **kwargs)
     
     # Overriding from MCTS
-    def FindLeaf(self, node):
+    def FindLeaf(self, node, temp):
         lastAction = None
         while True:
             if node.Children is None:
@@ -20,7 +20,7 @@ class DynamicMCTS(MCTS):
                 break
             if np.sum(node.LegalActions) == 0:
                 break
-            lastAction = self._selectAction(node)
+            lastAction = self._selectAction(node, temp)
             node = node.Children[lastAction]
             
         return node
