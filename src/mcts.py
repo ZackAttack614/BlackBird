@@ -140,9 +140,8 @@ class MCTS:
             the exploration/regret factor.
         """
         assert root.Children is not None, 'The node has children to select.'
-
-        temp = 1 # Screw it, I'll fix this later.
-        allPlays = sum(root.ChildPlays())
+        
+        allPlays = sum([p**(1/temp) for p in root.ChildPlays()])
         if exploring:
             upperConfidence = root.ChildWinRates() + self.ExplorationRate * root.Priors * np.sqrt(1.0 + allPlays) / (1.0 + root.ChildPlays())
             return np.argmax(upperConfidence)
@@ -150,7 +149,7 @@ class MCTS:
             nChildren = len(root.ChildPlays())
             return np.random.choice(
                 range(nChildren), 
-                p=[c**(1/temp) / (allPlays**(1/temp)) for c in root.ChildPlays()])
+                p=[c**(1/temp) / allPlays for c in root.ChildPlays()])
 
     def AddChildren(self, node):
         """ Expands the node and adds children, actions and priors.
