@@ -54,7 +54,7 @@ class MCTS:
         if self.Threads > 1:
             self.Pool = mp.Pool(processes = self.Threads)
             
-    def FindMove(self, state, moveTime = None, playLimit = None):
+    def FindMove(self, state, temp, moveTime = None, playLimit = None):
         """ Given a game state, this will use a Monte Carlo Tree Search
             algorithm to pick the best next move. Returns (the chosen state, the
             decided value of input state, and the probabilities of choosing each
@@ -81,7 +81,7 @@ class MCTS:
         elif self.Threads > 1:
             self._runAsynch(state, endTime, playLimit)
 
-        action = self._selectAction(self.Root, exploring = False)
+        action = self._selectAction(self.Root, temp, exploring = False)
 
         return self._applyAction(state, action), self.Root.WinRate(), self.Root.ChildProbability()
 
@@ -133,7 +133,7 @@ class MCTS:
 
         return
 
-    def _selectAction(self, root, exploring = True):
+    def _selectAction(self, root, temp, exploring = True):
         """ Selects a child of the root using an upper confidence interval. If
             you are not exploring, setting the exploring flag to false will
             instead choose the one with the highest expected payout - ignoring 
@@ -149,7 +149,7 @@ class MCTS:
             nChildren = len(root.ChildPlays())
             return np.random.choice(
                 range(nChildren), 
-                p=[c ** (1/1) / allPlays for c in root.ChildPlays()])
+                p=[c**(1/temp) / (allPlays**(1/temp)) for c in root.ChildPlays()])
 
     def AddChildren(self, node):
         """ Expands the node and adds children, actions and priors.

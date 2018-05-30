@@ -36,7 +36,7 @@ class BlackBird(MCTS, Network):
         MCTS.__init__(self, **parameters)
         Network.__init__(self, saver, tfLog, **parameters)
 
-    def GenerateTrainingSamples(self, nGames):
+    def GenerateTrainingSamples(self, nGames, temp):
         assert nGames > 0, 'Use a positive integer for number of games.'
 
         examples = []
@@ -48,7 +48,7 @@ class BlackBird(MCTS, Network):
             winner = None
             self.DropRoot()
             while winner is None:
-                (nextState, v, currentProbabilties) = self.FindMove(state)
+                (nextState, v, currentProbabilties) = self.FindMove(state, temp)
                 childValues = self.Root.ChildWinRates()
                 example = self.TrainingExample(state, 1 - v, childValues, currentProbabilties, priors = self.Root.Priors)
                 state = nextState
@@ -112,10 +112,9 @@ if __name__ == '__main__':
     b = BlackBird(saver=True, tfLog=True, loadOld=True, **parameters)
 
     for i in range(parameters.get('selfplay').get('epochs')):
-        examples = b.GenerateTrainingSamples(parameters.get('selfplay').get('training_games'))
+        examples = b.GenerateTrainingSamples(
+            parameters.get('selfplay').get('training_games'),
+            parameters.get('mcts').get('temperature').get('exploration')
         for e in examples:
             print(e)
         b.LearnFromExamples(examples)
-    for t in b.GenerateTrainingSamples(1):
-        print(t.State)
-        print(t.Probabilities)

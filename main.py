@@ -7,7 +7,7 @@ sys.path.insert(0, './src/')
 from blackbird import BlackBird
 from TicTacToe import BoardState
 
-def TestRandom(blackbirdAI, numTests):
+def TestRandom(blackbirdAI, temp, numTests):
     wins = 0
     draws = 0
     losses = 0
@@ -22,7 +22,7 @@ def TestRandom(blackbirdAI, numTests):
         
         while winner is None:
             if blackbirdToMove:
-                (nextState, _, _) = blackbirdAI.FindMove(state)
+                (nextState, _, _) = blackbirdAI.FindMove(state, temp)
                 state = nextState
                 blackbirdAI.MoveRoot([state])
 
@@ -70,7 +70,10 @@ def main():
         BlackbirdInstance.LearnFromExamples(examples)
         print('Finished training for this epoch!')
 
-        (wins, draws, losses) = TestRandom(BlackbirdInstance, parameters.get('selfplay').get('random_tests'))
+        (wins, draws, losses) = TestRandom(
+            BlackbirdInstance,
+            parameters.get('mcts').get('temperature').get('exploitation'),
+            parameters.get('selfplay').get('random_tests'))
         print('Against a random player:')
         print('Wins = {0}'.format(wins))
         print('Draws = {0}'.format(draws))
