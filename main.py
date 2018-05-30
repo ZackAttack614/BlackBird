@@ -64,7 +64,9 @@ def main():
     for epoch in range(1, TrainingParameters.get('epochs') + 1):
         print('Starting epoch {0}...'.format(epoch))
         nGames = parameters.get('selfplay').get('training_games')
-        examples = BlackbirdInstance.GenerateTrainingSamples(nGames)
+        examples = BlackbirdInstance.GenerateTrainingSamples(
+            nGames,
+            parameters.get('mcts').get('temperature').get('exploration'))
         BlackbirdInstance.LearnFromExamples(examples)
         print('Finished training for this epoch!')
 
