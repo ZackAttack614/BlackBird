@@ -30,13 +30,13 @@ class BlackBird(MCTS, Network):
                     str(self.Priors)
                     )
 
-    def __init__(self, **parameters):
+    def __init__(self, saver=False, tfLog=False, **parameters):
         self.batchSize = parameters.get('network').get('training').get('batch_size')
-        self.learningRate = parameters.get('selfplay').get('learning_rate')
+        self.learningRate = parameters.get('network').get('training').get('learning_rate')
         MCTS.__init__(self, **parameters)
-        Network.__init__(self, **parameters)
+        Network.__init__(self, saver, tfLog, **parameters)
 
-    def GenerateTrainingSamples(self, nGames):
+    def GenerateTrainingSamples(self, nGames, temp):
         assert nGames > 0, 'Use a positive integer for number of games.'
 
         examples = []
@@ -48,7 +48,7 @@ class BlackBird(MCTS, Network):
             winner = None
             self.DropRoot()
             while winner is None:
-                (nextState, v, currentProbabilties) = self.FindMove(state)
+                (nextState, v, currentProbabilties) = self.FindMove(state, temp)
                 childValues = self.Root.ChildWinRates()
                 example = self.TrainingExample(state, 1 - v, childValues, currentProbabilties, priors = self.Root.Priors)
                 state = nextState
@@ -71,15 +71,9 @@ class BlackBird(MCTS, Network):
         return examples
 
     def LearnFromExamples(self, examples):
-        print('Caching worked! - \nSampleValues {}\nGetPriors {}'.format(
-                                                self.SampleValue.cache_info(),
-                                                self.GetPriors.cache_info()))
         self.SampleValue.cache_clear()
         self.GetPriors.cache_clear()
-        print('Cache is clear: \n{}\n{}'.format(
-            self.SampleValue.cache_info(),
-            self.GetPriors.cache_info()
-        ))
+        
         examples = np.random.choice(examples, 
                                     len(examples) - (len(examples) % self.batchSize), 
                                     replace = False)
@@ -115,13 +109,12 @@ class BlackBird(MCTS, Network):
 if __name__ == '__main__':
     with open('parameters.yaml', 'r') as param_file:
         parameters = yaml.load(param_file)
-    b = BlackBird(**parameters)
+    b = BlackBird(saver=True, tfLog=True, loadOld=True, **parameters)
 
-    for i in range(100):
-        examples = b.GenerateTrainingSamples(100)
+    for i in range(parameters.get('selfplay').get('epochs')):
+        examples = b.GenerateTrainingSamples(
+            parameters.get('selfplay').get('training_games'),
+            parameters.get('mcts').get('temperature').get('exploration'))
         for e in examples:
             print(e)
         b.LearnFromExamples(examples)
-    for t in b.GenerateTrainingSamples(1):
-        print(t.State)
-        print(t.Probabilities)

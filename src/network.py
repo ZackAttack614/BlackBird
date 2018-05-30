@@ -5,7 +5,7 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 class Network:
-    def __init__(self, dims=(3,3), load_old=False, writer=False, **kwargs):
+    def __init__(self, saver, tfLog, loadOld=False, dims=(3,3), **kwargs):
         self.parameters = kwargs['network']
         self.dims = dims
         gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.4)
@@ -25,12 +25,12 @@ class Network:
         self.default_alpha = self.parameters['policy']['dirichlet']['alpha']
         self.default_epsilon = self.parameters['policy']['dirichlet']['epsilon']
 
-        self.write_summary = writer
+        self.write_summary = tfLog
         
-        if writer:
+        if tfLog:
             self.writer = tf.summary.FileWriter(self.writer_loc, graph=self.sess.graph)
         
-        if load_old:
+        if loadOld:
             try:
                 self.loadModel()
             except:

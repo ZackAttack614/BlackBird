@@ -1,38 +1,84 @@
-import yaml
-from time import time
 import os
-import json
 import sys
+import yaml
+import random
 sys.path.insert(0, './src/')
-print(sys.path)
 
-from game import game
 from blackbird import BlackBird
+from TicTacToe import BoardState
+
+def TestRandom(blackbirdAI, temp, numTests):
+    wins = 0
+    draws = 0
+    losses = 0
+    gameNum = 0
+
+    while gameNum < numTests:
+        blackbirdToMove = random.choice([True, False])
+        blackbirdPlayer = 1 if blackbirdToMove else 2
+        winner = None
+        blackbirdAI.DropRoot()
+        state = BoardState()
+        
+        while winner is None:
+            print(state)
+            if blackbirdToMove:
+                (nextState, _, _) = blackbirdAI.FindMove(state, temp)
+                state = nextState
+                blackbirdAI.MoveRoot([state])
+
+            else:
+                legalMoves = state.LegalActions()
+                move = random.choice([
+                    i for i in range(len(legalMoves)) if legalMoves[i] == 1
+                    ])
+                state.ApplyAction(move)
+                blackbirdAI.MoveRoot([state])
+
+            blackbirdToMove = not blackbirdToMove
+            winner = state.Winner()
+
+        gameNum += 1
+        if winner == blackbirdPlayer:
+            wins += 1
+        elif winner == 0:
+            draws += 1
+        else:
+            losses += 1
+
+    return wins, draws, losses
 
 def main():
     assert os.path.isfile('parameters.yaml'), 'Copy the parameters_template.yaml file into parameters.yaml to test runs.'
     with open('parameters.yaml') as param_file:
         parameters = yaml.load(param_file.read().strip())
 
-    if parameters['logging']['log_dir'] is not None and os.path.isdir(parameters['logging']['log_dir']):
-        for file in os.listdir(os.path.join(os.curdir,parameters['logging']['log_dir'])):
-            os.remove(os.path.join(os.curdir,parameters['logging']['log_dir'],file))
-    training_parameters = parameters['selfplay']
-    blackbird_instance = BlackBird(game, parameters)
+    LogDir = parameters.get('logging').get('log_dir')
+    if LogDir is not None and os.path.isdir(LogDir):
+        for file in os.listdir(os.path.join(os.curdir, LogDir)):
+            os.remove(os.path.join(os.curdir, LogDir, file))
+            
+    TrainingParameters = parameters.get('selfplay')
+    BlackbirdInstance = BlackBird(saver=True, tfLog=True,
+                                  loadOld=True, **parameters)
 
-    for epoch in range(1, training_parameters['epochs'] + 1):
-        blackbird_instance.selfPlay(num_games=training_parameters['training_games'])
-        blackbird_instance.train(learning_rate=training_parameters['learning_rate'])
+    for epoch in range(1, TrainingParameters.get('epochs') + 1):
+        print('Starting epoch {0}...'.format(epoch))
+        nGames = parameters.get('selfplay').get('training_games')
+        examples = BlackbirdInstance.GenerateTrainingSamples(
+            nGames,
+            parameters.get('mcts').get('temperature').get('exploration'))
+        BlackbirdInstance.LearnFromExamples(examples)
+        print('Finished training for this epoch!')
 
-        selfplay_score = blackbird_instance.testNewNetwork(num_trials=training_parameters['selfplay_tests'])
-        simple_score = blackbird_instance.testNewNetwork(against_simple=True, num_trials=training_parameters['selfplay_tests'])
-        random_score = blackbird_instance.testNewNetwork(against_random=True, num_trials=training_parameters['random_tests'])
-
-        print('Self-play score: {}'.format(selfplay_score))
-        print('Self-play vs low-depth score: {}'.format(simple_score))
-        print('Random score: {}'.format(random_score))
-        print('Completed {} epoch(s).\n'.format(epoch))
-
+        (wins, draws, losses) = TestRandom(
+            BlackbirdInstance,
+            parameters.get('mcts').get('temperature').get('exploitation'),
+            parameters.get('selfplay').get('random_tests'))
+        print('Against a random player:')
+        print('Wins = {0}'.format(wins))
+        print('Draws = {0}'.format(draws))
+        print('Losses = {0}'.format(losses))
 
 if __name__ == '__main__':
     main()

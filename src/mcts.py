@@ -54,7 +54,7 @@ class MCTS:
         if self.Threads > 1:
             self.Pool = mp.Pool(processes = self.Threads)
             
-    def FindMove(self, state, moveTime = None, playLimit = None):
+    def FindMove(self, state, temp, moveTime = None, playLimit = None):
         """ Given a game state, this will use a Monte Carlo Tree Search
             algorithm to pick the best next move. Returns (the chosen state, the
             decided value of input state, and the probabilities of choosing each
@@ -77,20 +77,20 @@ class MCTS:
         assert endTime is not None or playLimit is not None, 'The MCTS algorithm has a cutoff point.'
         
         if self.Threads == 1:
-            self._runMCTS(self.Root, endTime, playLimit)
+            self._runMCTS(self.Root, temp, endTime, playLimit)
         elif self.Threads > 1:
-            self._runAsynch(state, endTime, playLimit)
+            self._runAsynch(state, temp, endTime, playLimit)
 
-        action = self._selectAction(self.Root, exploring = False)
+        action = self._selectAction(self.Root, temp, exploring = False)
 
         return self._applyAction(state, action), self.Root.WinRate(), self.Root.ChildProbability()
 
-    def _runAsynch(self, state, endTime = None, nPlays = None):
+    def _runAsynch(self, state, temp, endTime = None, nPlays = None):
         roots = []
         results = []
         for i in range(self.Threads):
             root = Node(state, state.LegalActions(), self.GetPriors(state))
-            results.append(self.Pool.apply_async(self._runMCTS, (root, endTime, nPlays)))
+            results.append(self.Pool.apply_async(self._runMCTS, (root, temp, endTime, nPlays)))
 
         for r in results:
             roots.append(r.get())
@@ -98,11 +98,11 @@ class MCTS:
         self._mergeAll(self.Root, roots)
         return
 
-    def _runMCTS(self, root, endTime = None, nPlays = None):
+    def _runMCTS(self, root, temp, endTime = None, nPlays = None):
         endPlays = root.Plays + (nPlays if nPlays is not None else 0)
         while (endTime is None or (time.time() < endTime or root.Children is None)) \
                 and (nPlays is None or root.Plays < endPlays):
-            node = self.FindLeaf(root)
+            node = self.FindLeaf(root, temp)
             
             val = self.SampleValue(node.State, node.State.PreviousPlayer)
             self.BackProp(node, val, node.State.PreviousPlayer)
@@ -133,7 +133,7 @@ class MCTS:
 
         return
 
-    def _selectAction(self, root, exploring = True):
+    def _selectAction(self, root, temp, exploring = True):
         """ Selects a child of the root using an upper confidence interval. If
             you are not exploring, setting the exploring flag to false will
             instead choose the one with the highest expected payout - ignoring 
@@ -141,13 +141,16 @@ class MCTS:
         """
         assert root.Children is not None, 'The node has children to select.'
 
+        temp = 1 # Screw it, I'll fix this later.
+        allPlays = sum(root.ChildPlays())
         if exploring:
-            allPlays = sum(root.ChildPlays())
             upperConfidence = root.ChildWinRates() + self.ExplorationRate * root.Priors * np.sqrt(1.0 + allPlays) / (1.0 + root.ChildPlays())
             return np.argmax(upperConfidence)
         else:
-            return np.argmax(root.ChildPlays())
-        return
+            nChildren = len(root.ChildPlays())
+            return np.random.choice(
+                range(nChildren), 
+                p=[c**(1/temp) / (allPlays**(1/temp)) for c in root.ChildPlays()])
 
     def AddChildren(self, node):
         """ Expands the node and adds children, actions and priors.
