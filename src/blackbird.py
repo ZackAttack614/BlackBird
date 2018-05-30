@@ -114,7 +114,7 @@ if __name__ == '__main__':
     for i in range(parameters.get('selfplay').get('epochs')):
         examples = b.GenerateTrainingSamples(
             parameters.get('selfplay').get('training_games'),
-            parameters.get('mcts').get('temperature').get('exploration')
+            parameters.get('mcts').get('temperature').get('exploration'))
         for e in examples:
             print(e)
         b.LearnFromExamples(examples)
