@@ -31,8 +31,6 @@ def TestRandom(blackbirdAI, temp, numTests):
                 move = random.choice([
                     i for i in range(len(legalMoves)) if legalMoves[i] == 1
                     ])
-                print(move)
-                print(state)
                 state.ApplyAction(move)
                 blackbirdAI.MoveRoot([state])
 
