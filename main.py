@@ -21,7 +21,6 @@ def TestRandom(blackbirdAI, temp, numTests):
         state = BoardState()
         
         while winner is None:
-            print(state)
             if blackbirdToMove:
                 (nextState, _, _) = blackbirdAI.FindMove(state, temp)
                 state = nextState
