@@ -141,11 +141,12 @@ class MCTS:
         """
         assert root.Children is not None, 'The node has children to select.'
         
-        allPlays = sum([p**(1/temp) for p in root.ChildPlays()])
         if exploring:
+            allPlays = sum(root.ChildPlays())
             upperConfidence = root.ChildWinRates() + self.ExplorationRate * root.Priors * np.sqrt(1.0 + allPlays) / (1.0 + root.ChildPlays())
             return np.argmax(upperConfidence)
         else:
+            allPlays = sum([p**(1/temp) for p in root.ChildPlays()])
             nChildren = len(root.ChildPlays())
             return np.random.choice(
                 range(nChildren), 
