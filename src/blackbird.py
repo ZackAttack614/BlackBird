@@ -1,6 +1,6 @@
 from DynamicMCTS import DynamicMCTS as MCTS
 from TicTacToe import BoardState
-from FFNetwork import Network
+from network import Network
 import functools
 
 import yaml
@@ -34,7 +34,7 @@ class BlackBird(MCTS, Network):
         self.batchSize = parameters.get('network').get('training').get('batch_size')
         self.learningRate = parameters.get('network').get('training').get('learning_rate')
         MCTS.__init__(self, **parameters)
-        Network.__init__(self, saver, tfLog, **parameters)
+        Network.__init__(self, saver = saver, tfLog = tfLog, **parameters)
 
     def GenerateTrainingSamples(self, nGames, temp):
         assert nGames > 0, 'Use a positive integer for number of games.'
