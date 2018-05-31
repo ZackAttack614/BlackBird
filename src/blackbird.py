@@ -1,6 +1,6 @@
 from DynamicMCTS import DynamicMCTS as MCTS
 from TicTacToe import BoardState
-from FFNetwork import Network
+from network import Network
 import functools
 
 import yaml
@@ -73,6 +73,8 @@ class BlackBird(MCTS, Network):
     def LearnFromExamples(self, examples):
         self.SampleValue.cache_clear()
         self.GetPriors.cache_clear()
+
+        assert len(examples) > self.batchSize, 'There are enough examples to train on'
         
         examples = np.random.choice(examples, 
                                     len(examples) - (len(examples) % self.batchSize), 
