@@ -98,8 +98,8 @@ class Network:
             self.loss_param = tf.tile(tf.expand_dims(tf.reduce_sum([tf.nn.l2_loss(v) for v in tf.trainable_variables()
                               if 'bias' not in v.name
                               ]) * self.parameters['loss']['L2_norm'], 0), [tf.shape(self.loss_policy)[0]])
-            self.loss = self.loss_evaluation - self.loss_policy + self.loss_param
-            tf.summary.scalar('total_loss', tf.reduce_sum(self.loss[0]))
+            self.loss = tf.reduce_sum(self.loss_evaluation - self.loss_policy + self.loss_param)
+            tf.summary.scalar('total_loss', self.loss))
             
         with tf.name_scope('summary') as scope:
             self.merged = tf.summary.merge_all()
