@@ -1,51 +1,10 @@
 import os
 import sys
 import yaml
-import random
 sys.path.insert(0, './src/')
 
 from blackbird import BlackBird
 from TicTacToe import BoardState
-
-def TestRandom(blackbirdAI, temp, numTests):
-    wins = 0
-    draws = 0
-    losses = 0
-    gameNum = 0
-
-    while gameNum < numTests:
-        blackbirdToMove = random.choice([True, False])
-        blackbirdPlayer = 1 if blackbirdToMove else 2
-        winner = None
-        blackbirdAI.DropRoot()
-        state = BoardState()
-        
-        while winner is None:
-            if blackbirdToMove:
-                (nextState, _, _) = blackbirdAI.FindMove(state, temp)
-                state = nextState
-                blackbirdAI.MoveRoot([state])
-
-            else:
-                legalMoves = state.LegalActions()
-                move = random.choice([
-                    i for i in range(len(legalMoves)) if legalMoves[i] == 1
-                    ])
-                state.ApplyAction(move)
-                blackbirdAI.MoveRoot([state])
-
-            blackbirdToMove = not blackbirdToMove
-            winner = state.Winner()
-
-        gameNum += 1
-        if winner == blackbirdPlayer:
-            wins += 1
-        elif winner == 0:
-            draws += 1
-        else:
-            losses += 1
-
-    return wins, draws, losses
 
 def main():
     assert os.path.isfile('parameters.yaml'), 'Copy the parameters_template.yaml file into parameters.yaml to test runs.'
@@ -70,8 +29,7 @@ def main():
         BlackbirdInstance.LearnFromExamples(examples)
         print('Finished training for this epoch!')
 
-        (wins, draws, losses) = TestRandom(
-            BlackbirdInstance,
+        (wins, draws, losses) = BlackbirdInstance.TestRandom(
             parameters.get('mcts').get('temperature').get('exploitation'),
             parameters.get('selfplay').get('random_tests'))
         print('Against a random player:')

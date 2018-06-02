@@ -1,8 +1,9 @@
 from DynamicMCTS import DynamicMCTS as MCTS
 from TicTacToe import BoardState
 from network import Network
-import functools
 
+import functools
+import random
 import yaml
 import numpy as np
 np.set_printoptions(precision=2)
@@ -34,7 +35,7 @@ class BlackBird(MCTS, Network):
         self.batchSize = parameters.get('network').get('training').get('batch_size')
         self.learningRate = parameters.get('network').get('training').get('learning_rate')
         MCTS.__init__(self, **parameters)
-        Network.__init__(self, saver = saver, tfLog = tfLog, **parameters)
+        Network.__init__(self, saver, tfLog, **parameters)
 
     def GenerateTrainingSamples(self, nGames, temp):
         assert nGames > 0, 'Use a positive integer for number of games.'
@@ -74,8 +75,6 @@ class BlackBird(MCTS, Network):
         self.SampleValue.cache_clear()
         self.GetPriors.cache_clear()
 
-        assert len(examples) > self.batchSize, 'There are enough examples to train on'
-        
         examples = np.random.choice(examples, 
                                     len(examples) - (len(examples) % self.batchSize), 
                                     replace = False)
@@ -90,6 +89,46 @@ class BlackBird(MCTS, Network):
                     self.learningRate
                     )
         return
+
+    def TestRandom(self, temp, numTests):
+        wins = 0
+        draws = 0
+        losses = 0
+        gameNum = 0
+
+        while gameNum < numTests:
+            blackbirdToMove = random.choice([True, False])
+            blackbirdPlayer = 1 if blackbirdToMove else 2
+            winner = None
+            self.DropRoot()
+            state = BoardState()
+            
+            while winner is None:
+                if blackbirdToMove:
+                    (nextState, *_) = self.FindMove(state, temp)
+                    state = nextState
+                    self.MoveRoot([state])
+
+                else:
+                    legalMoves = state.LegalActions()
+                    move = random.choice([
+                        i for i in range(len(legalMoves)) if legalMoves[i] == 1
+                        ])
+                    state.ApplyAction(move)
+                    self.MoveRoot([state])
+
+                blackbirdToMove = not blackbirdToMove
+                winner = state.Winner()
+
+            gameNum += 1
+            if winner == blackbirdPlayer:
+                wins += 1
+            elif winner == 0:
+                draws += 1
+            else:
+                losses += 1
+
+        return wins, draws, losses
 
     # Overriden from MCTS
     @functools.lru_cache(maxsize = 4096)
