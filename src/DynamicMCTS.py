@@ -1,0 +1,28 @@
+from mcts import MCTS,Node
+import numpy as np
+
+class DynamicMCTS(MCTS):
+    """ An implementation of Monte Carlo Tree Search that aggregates statistics
+        as it explores the tree
+    """
+    def __init__(self, **kwargs):
+        params = kwargs.get('mcts')
+        return super().__init__(**params, **kwargs)
+    
+    # Overriding from MCTS
+    def FindLeaf(self, node, temp):
+        lastAction = None
+        while True:
+            if node.Children is None:
+                if node.State.Winner(lastAction) is not None:
+                    break
+                self.AddChildren(node)
+                break
+            if np.sum(node.LegalActions) == 0:
+                break
+            lastAction = self._selectAction(node, temp)
+            node = node.Children[lastAction]
+            
+        return node
+
+

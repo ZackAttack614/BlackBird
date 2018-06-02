@@ -4,11 +4,12 @@ import os
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
-class network:
-    def __init__(self, parameters, dims=(3,3), load_old=False, writer=False):
-        self.parameters = parameters
+class Network:
+    def __init__(self, saver, tfLog, loadOld=False, dims=(3,3), **kwargs):
+        self.parameters = kwargs['network']
         self.dims = dims
-        self.sess = tf.Session()
+        gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.4)
+        self.sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
         
         self.createNetwork()
         self.init = tf.global_variables_initializer()
@@ -16,23 +17,31 @@ class network:
         self.batch_count = 0
         
         self.saver = tf.train.Saver()
-        self.network_name = '{0}_{1}.ckpt'.format(parameters['blocks'], parameters['filters'])
+        self.network_name = '{0}_{1}.ckpt'.format(self.parameters['blocks'], 
+            self.parameters['filters'])
         self.model_loc = 'blackbird_models/best_model_{0}.ckpt'.format(self.network_name)
         self.writer_loc = 'blackbird_summary/model_summary'
 
         self.default_alpha = self.parameters['policy']['dirichlet']['alpha']
         self.default_epsilon = self.parameters['policy']['dirichlet']['epsilon']
 
-        self.write_summary = writer
+        self.write_summary = tfLog
         
-        if writer:
+        if tfLog:
             self.writer = tf.summary.FileWriter(self.writer_loc, graph=self.sess.graph)
         
-        if load_old:
+        if loadOld:
             try:
                 self.loadModel()
             except:
                 self.saveModel()
+
+    def __del__(self):
+        self.sess.close()
+        try:
+            self.writer.close()
+        except:
+            pass
     
     def createNetwork(self):
         """ Build out the policy/evaluation combo network
@@ -84,19 +93,20 @@ class network:
             self.policy_rectifier = tf.nn.relu(self.policy_batch_norm, name='rect_norm')
             self.policy_dense = tf.layers.dense(self.policy_rectifier, units=9, activation=None, name='policy')
             self.policy_vector = tf.reduce_sum(self.policy_dense, axis=[1,2])
-            self.policy = tf.nn.softmax(self.policy_vector)
+            self.policy_base = tf.nn.softmax(self.policy_vector)
 
             self.dist = tf.distributions.Dirichlet([self.alpha[0], 1-self.alpha[0]])
-            self.policy_explore = (1-self.epsilon[0])*self.policy + self.epsilon[0] * self.dist.sample([1,9])[0][:,0]
+            self.policy = (1-self.epsilon[0])*self.policy_base + self.epsilon[0] * self.dist.sample([1,9])[0][:,0]
+            self.policy /= tf.reduce_sum(self.policy)
             
         with tf.variable_scope('loss', reuse=tf.AUTO_REUSE) as scope:
             self.loss_evaluation = tf.square(self.evaluation - self.mcts_evaluation)
             self.loss_policy = tf.reduce_sum(tf.tensordot( tf.log(self.policy), tf.transpose(self.correct_move_vec), axes=1), axis=1)
             self.loss_param = tf.tile(tf.expand_dims(tf.reduce_sum([tf.nn.l2_loss(v) for v in tf.trainable_variables()
-                              #if 'bias' not in v.name
+                              if 'bias' not in v.name
                               ]) * self.parameters['loss']['L2_norm'], 0), [tf.shape(self.loss_policy)[0]])
-            self.loss = self.loss_evaluation - self.loss_policy + self.loss_param
-            tf.summary.scalar('total_loss', tf.reduce_sum(self.loss[0]))
+            self.loss = tf.reduce_sum(self.loss_evaluation - self.loss_policy + self.loss_param)
+            tf.summary.scalar('total_loss', self.loss)
             
         with tf.name_scope('summary') as scope:
             self.merged = tf.summary.merge_all()
@@ -119,14 +129,11 @@ class network:
         evaluation = self.sess.run(self.evaluation, feed_dict={self.input:state})
         return evaluation[0]
     
-    def getPolicy(self, state, explore):
+    def getPolicy(self, state):
         """ Given a game state, return the network's policy.
             Random Dirichlet noise is applied to the policy output to ensure exploration, if training.
         """
-        if explore:
-            policy = self.sess.run(self.policy, feed_dict={self.input:state, self.epsilon:[self.default_epsilon], self.alpha:[self.default_alpha]})
-        else:
-            policy = self.sess.run(self.policy_explore, feed_dict={self.input:state, self.epsilon:[self.default_epsilon], self.alpha:[self.default_alpha]})
+        policy = self.sess.run(self.policy, feed_dict={self.input:state, self.epsilon:[self.default_epsilon], self.alpha:[self.default_alpha]})
         return policy[0]
     
     def train(self, state, evaluation, policy, learning_rate=0.01):
