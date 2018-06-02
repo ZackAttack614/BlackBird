@@ -45,6 +45,8 @@ def main():
         print('Draws = {0}'.format(draws))
         print('Losses = {0}'.format(losses))
 
+        print('\n')
+
         if wins > losses:
             BlackbirdInstance.saveModel()
 
