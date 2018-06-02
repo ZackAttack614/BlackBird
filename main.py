@@ -37,5 +37,16 @@ def main():
         print('Draws = {0}'.format(draws))
         print('Losses = {0}'.format(losses))
 
+        (wins, draws, losses) = BlackbirdInstance.TestPrevious(
+            parameters.get('mcts').get('temperature').get('exploitation'),
+            parameters.get('selfplay').get('selfplay_tests'))
+        print('Against the last best player:')
+        print('Wins = {0}'.format(wins))
+        print('Draws = {0}'.format(draws))
+        print('Losses = {0}'.format(losses))
+
+        if wins > losses:
+            BlackbirdInstance.saveModel()
+
 if __name__ == '__main__':
     main()

@@ -31,11 +31,12 @@ class BlackBird(MCTS, Network):
                     str(self.Priors)
                     )
 
-    def __init__(self, saver=False, tfLog=False, **parameters):
+    def __init__(self, saver=False, tfLog=False, loadOld=False, **parameters):
+        self.bbParameters = parameters
         self.batchSize = parameters.get('network').get('training').get('batch_size')
         self.learningRate = parameters.get('network').get('training').get('learning_rate')
         MCTS.__init__(self, **parameters)
-        Network.__init__(self, saver, tfLog, **parameters)
+        Network.__init__(self, saver, tfLog, loadOld=loadOld, **parameters)
 
     def GenerateTrainingSamples(self, nGames, temp):
         assert nGames > 0, 'Use a positive integer for number of games.'
@@ -128,6 +129,50 @@ class BlackBird(MCTS, Network):
             else:
                 losses += 1
 
+        return wins, draws, losses
+
+    def TestPrevious(self, temp, numTests):
+        oldBlackbird = BlackBird(saver=False, tfLog=False, loadOld=True,
+            **self.bbParameters)
+
+        wins = 0
+        draws = 0
+        losses = 0
+        gameNum = 0
+
+        while gameNum < numTests:
+            blackbirdToMove = random.choice([True, False])
+            blackbirdPlayer = 1 if blackbirdToMove else 2
+            winner = None
+            self.DropRoot()
+            oldBlackbird.DropRoot()
+            state = BoardState()
+            
+            while winner is None:
+                if blackbirdToMove:
+                    (nextState, *_) = self.FindMove(state, temp)
+                    state = nextState
+                    self.MoveRoot([state])
+                    oldBlackbird.MoveRoot([state])
+
+                else:
+                    (nextState, *_) = oldBlackbird.FindMove(state, temp)
+                    state = nextState
+                    self.MoveRoot([state])
+                    oldBlackbird.MoveRoot([state])
+
+                blackbirdToMove = not blackbirdToMove
+                winner = state.Winner()
+
+            gameNum += 1
+            if winner == blackbirdPlayer:
+                wins += 1
+            elif winner == 0:
+                draws += 1
+            else:
+                losses += 1
+
+        del oldBlackbird
         return wins, draws, losses
 
     # Overriden from MCTS

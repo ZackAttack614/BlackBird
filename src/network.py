@@ -35,6 +35,13 @@ class Network:
                 self.loadModel()
             except:
                 self.saveModel()
+
+    def __del__(self):
+        self.sess.close()
+        try:
+            self.writer.close()
+        except:
+            pass
     
     def createNetwork(self):
         """ Build out the policy/evaluation combo network
