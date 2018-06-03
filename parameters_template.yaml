@@ -6,7 +6,7 @@ mcts :
   playLimit : 250
   temperature :
     exploration : 1
-    exploitation: 0.01
+    exploitation: 0.1
 
 network :
   blocks : 4

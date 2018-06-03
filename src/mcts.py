@@ -141,16 +141,25 @@ class MCTS:
         """
         assert root.Children is not None, 'The node has children to select.'
         
-        if exploring:
+        if exploring or temp == 0:
             allPlays = sum(root.ChildPlays())
             upperConfidence = root.ChildWinRates() + self.ExplorationRate * root.Priors * np.sqrt(1.0 + allPlays) / (1.0 + root.ChildPlays())
-            return np.argmax(upperConfidence)
+            choice = np.argmax(upperConfidence)
+            p = None
         else:
             allPlays = sum([p**(1/temp) for p in root.ChildPlays()])
-            nChildren = len(root.ChildPlays())
-            return np.random.choice(
-                range(nChildren), 
-                p=[c**(1/temp) / allPlays for c in root.ChildPlays()])
+            p = [c**(1/temp) / allPlays for c in root.ChildPlays()]
+            choice = np.random.choice(len(root.ChildPlays()), p=p)
+        
+        assert root.LegalActions[choice] == 1, 'Tried to make an illegal move: \n{}\n{}\n{}\n{}\n{}\n{}'.format(
+            str(root.State),
+            str(root.ChildPlays()),
+            str(root.Priors),
+            str(root.LegalActions),
+            str(choice),
+            str(p)
+        )
+        return choice
 
     def AddChildren(self, node):
         """ Expands the node and adds children, actions and priors.
