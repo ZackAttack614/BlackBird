@@ -1,5 +1,7 @@
 from DynamicMCTS import DynamicMCTS as MCTS
+from RandomMCTS import RandomMCTS
 from TicTacToe import BoardState
+from FixedMCTS import FixedMCTS
 from network import Network
 
 import functools
@@ -51,7 +53,8 @@ class BlackBird(MCTS, Network):
         self.bbParameters = parameters
         self.batchSize = parameters.get('network').get('training').get('batch_size')
         self.learningRate = parameters.get('network').get('training').get('learning_rate')
-        MCTS.__init__(self, **parameters)
+        mctsParams = parameters.get('mcts')
+        MCTS.__init__(self, **mctsParams)
         Network.__init__(self, saver, tfLog, loadOld=loadOld, **parameters)
 
     def GenerateTrainingSamples(self, nGames, temp):
@@ -110,43 +113,45 @@ class BlackBird(MCTS, Network):
                 )
         return
 
-    def PlayAdversary(self, temp, numTests,
-        playRandom = False, playOld = False):
+    def TestRandom(self, temp, numTests):
+        return self.Test(RandomMCTS(), temp, numTests)
 
-        assert playRandom or playOld, 'Must play against someone.'
-        if playRandom:
-            adversary = self.RandomPlayer()
-        elif playOld:
-            adversary = BlackBird(saver=False, tfLog=False, loadOld=True,
-                **self.bbParameters)
+    def TestPrevious(self, temp, numTests):
+        oldBlackbird = BlackBird(saver=False, tfLog=False, loadOld=True,
+            **self.bbParameters)
 
-        wins = 0
-        draws = 0
-        losses = 0
-        gameNum = 0
+        wins, draws, losses = self.Test(oldBlackbird, temp, numTests)
 
-        while gameNum < numTests:
+        del oldBlackbird
+        return wins, draws, losses
+
+    def TestGood(self, temp, numTests):
+        good = FixedMCTS(maxDepth = 10, explorationRate = 0.85, timeLimit = 1)
+        return self.Test(good, temp, numTests)
+
+    def Test(self, other, temp, numTests):
+        wins = draws = losses = 0
+
+        for _ in range(numTests):
             blackbirdToMove = random.choice([True, False])
             blackbirdPlayer = 1 if blackbirdToMove else 2
             winner = None
             self.DropRoot()
-            adversary.DropRoot()
+            other.DropRoot()
             state = BoardState()
             
             while winner is None:
                 if blackbirdToMove:
                     (nextState, *_) = self.FindMove(state, temp)
                 else:
-                    (nextState, *_) = adversary.FindMove(state, temp)
-
+                    (nextState, *_) = other.FindMove(state, temp)
                 state = nextState
                 self.MoveRoot([state])
-                adversary.MoveRoot([state])
+                other.MoveRoot([state])
 
                 blackbirdToMove = not blackbirdToMove
                 winner = state.Winner()
 
-            gameNum += 1
             if winner == blackbirdPlayer:
                 wins += 1
             elif winner == 0:

@@ -29,19 +29,17 @@ def main():
         BlackbirdInstance.LearnFromExamples(examples)
         print('Finished training for this epoch!')
 
-        (wins, draws, losses) = BlackbirdInstance.PlayAdversary(
+        (wins, draws, losses) = BlackbirdInstance.TestRandom(
             parameters.get('mcts').get('temperature').get('exploitation'),
-            parameters.get('selfplay').get('random_tests'),
-            playRandom = True)
+            parameters.get('selfplay').get('random_tests'))
         print('Against a random player:')
         print('Wins = {0}'.format(wins))
         print('Draws = {0}'.format(draws))
         print('Losses = {0}'.format(losses))
 
-        (wins, draws, losses) = BlackbirdInstance.PlayAdversary(
+        (wins, draws, losses) = BlackbirdInstance.TestPrevious(
             parameters.get('mcts').get('temperature').get('exploitation'),
-            parameters.get('selfplay').get('selfplay_tests'),
-            playOld = True)
+            parameters.get('selfplay').get('selfplay_tests'))
         print('Against the last best player:')
         print('Wins = {0}'.format(wins))
         print('Draws = {0}'.format(draws))
