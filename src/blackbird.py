@@ -8,6 +8,8 @@ import functools
 import random
 import yaml
 import numpy as np
+
+np.seterr(divide='ignore', invalid='ignore')
 np.set_printoptions(precision=2)
 
 class BlackBird(MCTS, Network):
