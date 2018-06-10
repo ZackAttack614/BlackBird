@@ -1,9 +1,9 @@
 import numpy as np
-import time
+from time import time
 import multiprocessing as mp
 from GameState import GameState
 
-class Node:
+class Node(object):
     """ This is the abtract tree node class that is used to cache/organize
         game information during the search.
     """
@@ -14,10 +14,12 @@ class Node:
         self.LegalActions = np.array(legalActions)
         self.Children = None
         self.Parent = None
+        
         # Use the legal actions mask to ignore priors that don't make sense.
         self.Priors = np.multiply(priors, legalActions)
 
-        # Do some caching here. This is to reduce the strain on the CPU memory cache compared to receating a new array on every access.
+        # Do some caching here. This is to reduce the strain on the CPU memory
+        # cache compared to receating a new array on every access.
         self._childWinRates = np.zeros(len(legalActions))
         self._childPlays = np.zeros(len(legalActions))
         
@@ -26,7 +28,8 @@ class Node:
 
     def ChildProbability(self):
         allPlays = sum(self.ChildPlays())
-        return self.ChildPlays()/allPlays if allPlays > 0 else np.array([0] * len(self.ChildPlays()))
+        zeroProbs = np.zeros((len(self.ChildPlays())))
+        return self.ChildPlays() / allPlays if allPlays > 0 else zeroProbs
 
     def ChildWinRates(self):
         for i in range(len(self.Children)):
@@ -40,12 +43,14 @@ class Node:
                 self._childPlays[i] = self.Children[i].Plays
         return self._childPlays
 
-class MCTS:
+class MCTS(object):
     """ Base class for Monte Carlo Tree Search algorithms. Outlines all the 
         necessary operations for the core algorithm. Most operations will need
         to be overriden to avoid a NotImplemenetedError.
     """
-    def __init__(self, explorationRate, timeLimit = None, playLimit = None, threads = 1, **kwargs):
+    def __init__(self, explorationRate,
+        timeLimit = None, playLimit = None, threads = 1, **kwargs):
+        
         self.TimeLimit = timeLimit
         self.PlayLimit = playLimit
         self.ExplorationRate = explorationRate
@@ -60,21 +65,22 @@ class MCTS:
             decided value of input state, and the probabilities of choosing each
             of the children).
         """
-        assert isinstance(state, GameState), 'State type must inherit from GameState'
+        assert isinstance(state, GameState), 'State must inherit from GameState'
 
         endTime = None
         if moveTime is None:
             moveTime = self.TimeLimit
         if moveTime is not None:
-            endTime = time.time() + moveTime
+            endTime = time() + moveTime
         if playLimit is None:
             playLimit = self.PlayLimit
 
         if self.Root is None:
             self.Root = Node(state, state.LegalActions(), self.GetPriors(state))
 
-        assert self.Root.State == state, 'MCTS has been primed for the correct input state.'
-        assert endTime is not None or playLimit is not None, 'The MCTS algorithm has a cutoff point.'
+        assert self.Root.State == state, 'Primed for the correct input state.'
+        assert (endTime is not None or playLimit is not None, 
+            'MCTS algorithm has a cutoff.')
         
         if self.Threads == 1:
             self._runMCTS(self.Root, temp, endTime, playLimit)
@@ -83,14 +89,18 @@ class MCTS:
 
         action = self._selectAction(self.Root, temp, exploring = False)
 
-        return self._applyAction(state, action), self.Root.WinRate(), self.Root.ChildProbability()
+        return (self._applyAction(state, action), self.Root.WinRate(),
+            self.Root.ChildProbability())
 
     def _runAsynch(self, state, temp, endTime = None, nPlays = None):
         roots = []
         results = []
         for i in range(self.Threads):
             root = Node(state, state.LegalActions(), self.GetPriors(state))
-            results.append(self.Pool.apply_async(self._runMCTS, (root, temp, endTime, nPlays)))
+
+            results.append(
+                self.Pool.apply_async(
+                    self._runMCTS, (root, temp, endTime, nPlays)))
 
         for r in results:
             roots.append(r.get())
@@ -100,8 +110,8 @@ class MCTS:
 
     def _runMCTS(self, root, temp, endTime = None, nPlays = None):
         endPlays = root.Plays + (nPlays if nPlays is not None else 0)
-        while (endTime is None or (time.time() < endTime or root.Children is None)) \
-                and (nPlays is None or root.Plays < endPlays):
+        while ((endTime is None or (time() < endTime or root.Children is None))
+                and (nPlays is None or root.Plays < endPlays)):
             node = self.FindLeaf(root, temp)
             
             val = self.SampleValue(node.State, node.State.PreviousPlayer)
@@ -129,7 +139,8 @@ class MCTS:
         for i in range(len(target.Children)):
             if target.Children[i] is None:
                 continue
-            self._mergeAll(target.Children[i], [t.Children[i] for t in continuedTrees])
+            self._mergeAll(
+                target.Children[i], [t.Children[i] for t in continuedTrees])
 
         return
 
@@ -143,13 +154,15 @@ class MCTS:
         
         if exploring:
             allPlays = sum(root.ChildPlays())
-            upperConfidence = root.ChildWinRates() + self.ExplorationRate * root.Priors * np.sqrt(1.0 + allPlays) / (1.0 + root.ChildPlays())
+            upperConfidence = (root.ChildWinRates()
+                + self.ExplorationRate * root.Priors * np.sqrt(1.0 + allPlays)
+                / (1.0 + root.ChildPlays()))
             return np.argmax(upperConfidence)
+
         else:
             allPlays = sum([p**(1/temp) for p in root.ChildPlays()])
-            nChildren = len(root.ChildPlays())
             return np.random.choice(
-                range(nChildren), 
+                range(len(root.ChildPlays())), 
                 p=[c**(1/temp) / allPlays for c in root.ChildPlays()])
 
     def AddChildren(self, node):
