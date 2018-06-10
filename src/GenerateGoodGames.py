@@ -15,7 +15,7 @@ class JustTakeThatOneFunction(BlackBird):
         return np.array([1] * len(state.LegalActions()))
 
     def SampleValue(self, state, player):
-        """Samples the value of the state for the specified player.
+        """ Samples the value of the state for the specified player.
             Must return the value in [0, 1]
             Default is to randomly playout the game.
         """

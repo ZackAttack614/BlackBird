@@ -78,11 +78,17 @@ class BoardState(GameState):
         for dir in self.Dirs:
             inARow = 0
             r = 0
-            while r*dir[0] + i < self.Size and r*dir[1] + j < self.Size and r*dir[1] + j >= 0 and board[r*dir[0] + i, r*dir[1] + j] == p:
+            while (r*dir[0] + i < self.Size
+                    and r*dir[1] + j < self.Size
+                    and r*dir[1] + j >= 0
+                    and board[r*dir[0] + i, r*dir[1] + j] == p):
                 inARow += 1
                 r += 1
             r = -1
-            while r*dir[0] + i >= 0 and r*dir[1] + j < self.Size and r*dir[1] + j >= 0 and board[r*dir[0] + i, r*dir[1] + j] == p:
+            while (r*dir[0] + i >= 0
+                    and r*dir[1] + j < self.Size
+                    and r*dir[1] + j >= 0
+                    and board[r*dir[0] + i, r*dir[1] + j] == p):
                 inARow += 1
                 r -= 1
             if inARow >= self.InARow:
@@ -123,7 +129,9 @@ class BoardState(GameState):
         return "{0}{1}".format(self.Player,str(self)).__hash__()
 
 if __name__ == '__main__':
-    params = {'mcts' : {'maxDepth' : 10, 'explorationRate' : 1.414, 'playLimit' : 5000}}
+    params = {
+        'mcts' : {
+            'maxDepth' : 10, 'explorationRate' : 1.414, 'playLimit' : 5000}}
     player = FixedMCTS(**params)
     BoardState.Size = 3
     BoardState.InARow = 3
