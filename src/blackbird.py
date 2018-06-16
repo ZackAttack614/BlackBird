@@ -1,11 +1,15 @@
 from DynamicMCTS import DynamicMCTS as MCTS
+from RandomMCTS import RandomMCTS
 from TicTacToe import BoardState
+from FixedMCTS import FixedMCTS
 from network import Network
 
 import functools
 import random
 import yaml
 import numpy as np
+
+np.seterr(divide='ignore', invalid='ignore')
 np.set_printoptions(precision=2)
 
 class BlackBird(MCTS, Network):
@@ -13,7 +17,7 @@ class BlackBird(MCTS, Network):
     """
     class TrainingExample(object):
         def __init__(self, state, value, childValues, probabilities, priors):
-            self.State = state # state holds the player
+            self.State = state
             self.Value = value
             self.ChildValues = childValues.reshape((3,3)) if childValues is not None else None
             self.Reward = None
@@ -22,20 +26,37 @@ class BlackBird(MCTS, Network):
             return
 
         def __str__(self):
-            return '{}\nValue: {}\nChild Values:\n{}\nReward: {}\nProbabilites:\n{}\n\nPriors:\n{}\n'.format(
-                    str(self.State),
-                    str(self.Value),
-                    str(self.ChildValues),
-                    str(self.Reward), 
-                    str(self.Probabilities.reshape((3,3))),
-                    str(self.Priors)
-                    )
+            state = str(self.State)
+            value = 'Value: {}'.format(self.Value)
+            childValues = 'Child Values: \n{}'.format(self.ChildValues)
+            reward = 'Reward:\n{}'.format(self.Reward)
+            probs = 'Probabilities:\n{}'.format(
+                self.Probabilities.reshape((3,3)))
+            priors = '\nPriors:\n{}\n'.format(self.Priors)
+            
+            return '\n'.join([state, value, childValues, reward, probs, priors])
+
+    class RandomPlayer:
+        def FindMove(self, state, *args, **kwargs):
+            # Probably a numpy way to get indices of an array where element is 1
+            actions = state.LegalActions()
+            actions = [i for i in range(len(actions)) if actions[i]==1]
+            move = random.choice(actions)
+            state.ApplyAction(move)
+            return state, None, None
+
+        def MoveRoot(self, *args, **kwargs):
+            pass
+
+        def DropRoot(self):
+            pass
 
     def __init__(self, saver=False, tfLog=False, loadOld=False, **parameters):
         self.bbParameters = parameters
         self.batchSize = parameters.get('network').get('training').get('batch_size')
         self.learningRate = parameters.get('network').get('training').get('learning_rate')
-        MCTS.__init__(self, **parameters)
+        mctsParams = parameters.get('mcts')
+        MCTS.__init__(self, **mctsParams)
         Network.__init__(self, saver, tfLog, loadOld=loadOld, **parameters)
 
     def GenerateTrainingSamples(self, nGames, temp):
@@ -43,7 +64,7 @@ class BlackBird(MCTS, Network):
 
         examples = []
 
-        for i in range(nGames):
+        for _ in range(nGames):
             gameHistory = []
             state = BoardState()
             lastAction = None
@@ -52,14 +73,17 @@ class BlackBird(MCTS, Network):
             while winner is None:
                 (nextState, v, currentProbabilties) = self.FindMove(state, temp)
                 childValues = self.Root.ChildWinRates()
-                example = self.TrainingExample(state, 1 - v, childValues, currentProbabilties, priors = self.Root.Priors)
+                example = self.TrainingExample(state, 1 - v, childValues,
+                    currentProbabilties, priors = self.Root.Priors)
                 state = nextState
                 self.MoveRoot([state])
 
                 winner = state.Winner(lastAction)
                 gameHistory.append(example)
                 
-            example = self.TrainingExample(state, None, None, np.zeros([len(currentProbabilties)]), np.zeros([len(currentProbabilties)]))
+            example = self.TrainingExample(state, None, None,
+                np.zeros([len(currentProbabilties)]),
+                np.zeros([len(currentProbabilties)]))
             gameHistory.append(example)
             
             for example in gameHistory:
@@ -77,94 +101,59 @@ class BlackBird(MCTS, Network):
         self.GetPriors.cache_clear()
 
         examples = np.random.choice(examples, 
-                                    len(examples) - (len(examples) % self.batchSize), 
-                                    replace = False)
+            len(examples) - (len(examples) % self.batchSize), 
+            replace = False)
                             
         for i in range(len(examples) // self.batchSize):
             start = i * self.batchSize
             batch = examples[start : start + self.batchSize]
             self.train(
-                    np.stack([b.State.AsInputArray()[0] for b in batch], axis = 0),
-                    np.stack([b.Reward for b in batch], axis = 0),
-                    np.stack([b.Probabilities for b in batch], axis = 0),
-                    self.learningRate
-                    )
+                np.stack([b.State.AsInputArray()[0] for b in batch], axis = 0),
+                np.stack([b.Reward for b in batch], axis = 0),
+                np.stack([b.Probabilities for b in batch], axis = 0),
+                self.learningRate
+                )
         return
 
     def TestRandom(self, temp, numTests):
-        wins = 0
-        draws = 0
-        losses = 0
-        gameNum = 0
-
-        while gameNum < numTests:
-            blackbirdToMove = random.choice([True, False])
-            blackbirdPlayer = 1 if blackbirdToMove else 2
-            winner = None
-            self.DropRoot()
-            state = BoardState()
-            
-            while winner is None:
-                if blackbirdToMove:
-                    (nextState, *_) = self.FindMove(state, temp)
-                    state = nextState
-                    self.MoveRoot([state])
-
-                else:
-                    legalMoves = state.LegalActions()
-                    move = random.choice([
-                        i for i in range(len(legalMoves)) if legalMoves[i] == 1
-                        ])
-                    state.ApplyAction(move)
-                    self.MoveRoot([state])
-
-                blackbirdToMove = not blackbirdToMove
-                winner = state.Winner()
-
-            gameNum += 1
-            if winner == blackbirdPlayer:
-                wins += 1
-            elif winner == 0:
-                draws += 1
-            else:
-                losses += 1
-
-        return wins, draws, losses
+        return self.Test(RandomMCTS(), temp, numTests)
 
     def TestPrevious(self, temp, numTests):
         oldBlackbird = BlackBird(saver=False, tfLog=False, loadOld=True,
             **self.bbParameters)
 
-        wins = 0
-        draws = 0
-        losses = 0
-        gameNum = 0
+        wins, draws, losses = self.Test(oldBlackbird, temp, numTests)
 
-        while gameNum < numTests:
+        del oldBlackbird
+        return wins, draws, losses
+
+    def TestGood(self, temp, numTests):
+        good = FixedMCTS(maxDepth = 10, explorationRate = 0.85, timeLimit = 1)
+        return self.Test(good, temp, numTests)
+
+    def Test(self, other, temp, numTests):
+        wins = draws = losses = 0
+
+        for _ in range(numTests):
             blackbirdToMove = random.choice([True, False])
             blackbirdPlayer = 1 if blackbirdToMove else 2
             winner = None
             self.DropRoot()
-            oldBlackbird.DropRoot()
+            other.DropRoot()
             state = BoardState()
             
             while winner is None:
                 if blackbirdToMove:
                     (nextState, *_) = self.FindMove(state, temp)
-                    state = nextState
-                    self.MoveRoot([state])
-                    oldBlackbird.MoveRoot([state])
-
                 else:
-                    (nextState, *_) = oldBlackbird.FindMove(state, temp)
-                    state = nextState
-                    self.MoveRoot([state])
-                    oldBlackbird.MoveRoot([state])
+                    (nextState, *_) = other.FindMove(state, temp)
+                state = nextState
+                self.MoveRoot([state])
+                other.MoveRoot([state])
 
                 blackbirdToMove = not blackbirdToMove
                 winner = state.Winner()
 
-            gameNum += 1
             if winner == blackbirdPlayer:
                 wins += 1
             elif winner == 0:
@@ -172,17 +161,16 @@ class BlackBird(MCTS, Network):
             else:
                 losses += 1
 
-        del oldBlackbird
         return wins, draws, losses
 
     # Overriden from MCTS
     @functools.lru_cache(maxsize = 4096)
     def SampleValue(self, state, player):
-        value = self.getEvaluation(state.AsInputArray()) # Gets the value for the current player.
+        value = self.getEvaluation(state.AsInputArray())
         value = (value + 1 ) * 0.5 # [-1, 1] -> [0, 1]
         if state.Player != player:
             value = 1 - value
-        assert value >= 0, 'Value: {}'.format(value) # Just to make sure Im not dumb :).
+        assert value >= 0, 'Value: {}'.format(value)
         return value
 
     @functools.lru_cache(maxsize = 4096)

@@ -45,6 +45,14 @@ def main():
         print('Draws = {0}'.format(draws))
         print('Losses = {0}'.format(losses))
 
+        (wins, draws, losses) = BlackbirdInstance.TestGood(
+            parameters.get('mcts').get('temperature').get('exploitation'),
+            parameters.get('selfplay').get('selfplay_tests'))
+        print('Against a good player:')
+        print('Wins = {0}'.format(wins))
+        print('Draws = {0}'.format(draws))
+        print('Losses = {0}'.format(losses))
+
         print('\n')
 
         if wins > losses:

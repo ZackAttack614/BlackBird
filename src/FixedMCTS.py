@@ -6,13 +6,11 @@ class FixedMCTS(MCTS):
         statistics up to a fixed depth.
     """
     def __init__(self, **kwargs):
-        self.parameters = kwargs.get('mcts')
-        self.MaxDepth = self.parameters.get('maxDepth')
-        explorationRate = self.parameters.get('explorationRate')
-        timeLimit = self.parameters.get('timeLimit')
-        playLimit = self.parameters.get('playLimit')
-        threads = self.parameters.get('threads')
-        if threads is None: threads =1 
+        self.MaxDepth = kwargs.get('maxDepth')
+        explorationRate = kwargs.get('explorationRate')
+        timeLimit = kwargs.get('timeLimit')
+        playLimit = kwargs.get('playLimit')
+        threads = kwargs.get('threads', 1) 
 
         assert self.MaxDepth > 0, 'MaxDepth for MCTS must be > 0.'
 
@@ -21,7 +19,7 @@ class FixedMCTS(MCTS):
     # Overriding from MCTS
     def FindLeaf(self, node, temp):
         lastAction = None
-        for i in range(self.MaxDepth):
+        for _ in range(self.MaxDepth):
             if node.Children is None:
                 if node.State.Winner(lastAction) is not None:
                     break
@@ -30,6 +28,6 @@ class FixedMCTS(MCTS):
                 break
             lastAction = self._selectAction(node, temp)
             node = node.Children[lastAction]
-        assert lastAction is not None, 'When requesting a move from the MCTS, there is at least one legal option.'
+        assert lastAction is not None, 'There is at least one legal option.'
             
         return node
