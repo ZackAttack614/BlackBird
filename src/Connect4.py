@@ -5,12 +5,13 @@ import numpy as np
 
 class BoardState(GameState):
     Players = {0: ' ', 1 : 'X', 2 : 'O'}
-    Size = 3
-    InARow = 3
+    Width = 7
+    Height = 6
+    InARow = 4
     Dirs = [(0,1),(1,1),(1,0),(1,-1)]
 
     def __init__(self):
-        self.Board = np.zeros((self.Size,self.Size,2))
+        self.Board = np.zeros((self.Height,self.Width,2))
         self.Player = 1
         self.PreviousPlayer = None
         return 
@@ -22,22 +23,22 @@ class BoardState(GameState):
         return copy
 
     def LegalActions(self):
-        actions = np.zeros(self.Size * self.Size)
-        for i in range(self.Size):
-            for j in range(self.Size):
-                if np.sum(self.Board[i, j, :]) == 0:
-                    actions[self._coordsToIndex((i,j))] = 1
+        actions = np.zeros(self.Width)
+        for j in range(self.Width):
+            if np.sum(self.Board[self.Height-1, j, :]) == 0:
+                actions[j] = 1
 
         return actions
 
     def ApplyAction(self, action):
-        coords = self._indexToCoords(action)
-        assert np.sum(self.Board[coords[0], coords[1], :]) == 0, \
-            'Ahh. Can\'t go there! {}\n{}\n{}'.format(
-                action,
-                str(self),
-                str(self.LegalActions()))
-        self.Board[coords[0], coords[1], self.Player - 1] = 1
+        assert np.sum(self.Board[self.Height -1, action, :]) == 0, 'Ahh! Can\'t go there! {}'.format(action)
+        top = -1
+        for i in reversed(range(self.Height)):
+            if np.sum(self.Board[i, action, :]) != 0:
+                top = i
+                break
+
+        self.Board[top + 1, action, self.Player - 1] = 1
         self.PreviousPlayer = self.Player
         self.Player = 1 if self.Player == 2 else 2
         return
@@ -53,13 +54,15 @@ class BoardState(GameState):
         board = self._collapsed()
 
         if prevAction is not None:
-            coords = self._indexToCoords(prevAction)
-            win = self._checkVictory(board, coords[0], coords[1])
+            for i in reversed(range(self.Height)):
+                if np.sum(self.Board[i, prevAction, :]) != 0:
+                    break
+            win = self._checkVictory(board, i, prevAction)
             if win is not None: 
                 return win
         else:
-            for i in range(self.Size):
-                for j in range(self.Size):
+            for i in range(self.Height):
+                for j in range(self.Width):
                     if board[i,j] == 0:
                         continue
                     win = self._checkVictory(board, i, j)
@@ -71,30 +74,27 @@ class BoardState(GameState):
         return None
 
     def _isOver(self, board):
-        return np.sum(board > 0) == self.Size * self.Size
+        for j in range(self.Width):
+            if np.sum(self.Board[self.Height-1, j, :]) == 0:
+                return False
+        return True
 
     def _checkVictory(self, board, i, j):
         p = board[i,j]
         for dir in self.Dirs:
             inARow = 0
             r = 0
-            while r*dir[0] + i < self.Size and r*dir[1] + j < self.Size and r*dir[1] + j >= 0 and board[r*dir[0] + i, r*dir[1] + j] == p:
+            while r*dir[0] + i < self.Height and r*dir[1] + j < self.Width and r*dir[1] + j >= 0 and board[r*dir[0] + i, r*dir[1] + j] == p:
                 inARow += 1
                 r += 1
             r = -1
-            while r*dir[0] + i >= 0 and r*dir[1] + j < self.Size and r*dir[1] + j >= 0 and board[r*dir[0] + i, r*dir[1] + j] == p:
+            while r*dir[0] + i >= 0 and r*dir[1] + j < self.Width and r*dir[1] + j >= 0 and board[r*dir[0] + i, r*dir[1] + j] == p:
                 inARow += 1
                 r -= 1
             if inARow >= self.InARow:
                 return p
         return None
-    
-    def _coordsToIndex(self, coords):
-        return coords[0]*self.Size + coords[1]
 
-    def _indexToCoords(self, index):
-        return (index//self.Size, index % self.Size)
-    
     def _collapsed(self):
         array = np.zeros(self.Board.shape[:2])
         for p in BoardState.Players:
@@ -104,7 +104,7 @@ class BoardState(GameState):
     def __str__(self):
         array = self._collapsed()
         s = ''
-        for i in range(array.shape[0]):
+        for i in reversed(range(array.shape[0])):
             s += '[ '
             for j in range(array.shape[1]):
                 s += ' {} '.format(BoardState.Players[array[i, j]])
@@ -123,10 +123,11 @@ class BoardState(GameState):
         return "{0}{1}".format(self.Player,str(self)).__hash__()
 
 if __name__ == '__main__':
-    params = {'maxDepth' : 10, 'explorationRate' : 1.414, 'playLimit' : 5000}
+    params = {'maxDepth' : 10, 'explorationRate' : 1, 'playLimit' : 1000}
     player = FixedMCTS(**params)
-    BoardState.Size = 3
-    BoardState.InARow = 3
+    BoardState.Width = 7
+    BoardState.Height = 6
+    BoardState.InARow = 4
 
     state = BoardState()
     while state.Winner() is None:
