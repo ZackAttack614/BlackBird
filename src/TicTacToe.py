@@ -78,11 +78,17 @@ class BoardState(GameState):
         for dir in self.Dirs:
             inARow = 0
             r = 0
-            while r*dir[0] + i < self.Size and r*dir[1] + j < self.Size and r*dir[1] + j >= 0 and board[r*dir[0] + i, r*dir[1] + j] == p:
+            while (r*dir[0] + i < self.Size
+                    and r*dir[1] + j < self.Size
+                    and r*dir[1] + j >= 0
+                    and board[r*dir[0] + i, r*dir[1] + j] == p):
                 inARow += 1
                 r += 1
             r = -1
-            while r*dir[0] + i >= 0 and r*dir[1] + j < self.Size and r*dir[1] + j >= 0 and board[r*dir[0] + i, r*dir[1] + j] == p:
+            while (r*dir[0] + i >= 0
+                    and r*dir[1] + j < self.Size
+                    and r*dir[1] + j >= 0
+                    and board[r*dir[0] + i, r*dir[1] + j] == p):
                 inARow += 1
                 r -= 1
             if inARow >= self.InARow:

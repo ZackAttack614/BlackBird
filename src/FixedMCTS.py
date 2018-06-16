@@ -19,7 +19,7 @@ class FixedMCTS(MCTS):
     # Overriding from MCTS
     def FindLeaf(self, node, temp):
         lastAction = None
-        for i in range(self.MaxDepth):
+        for _ in range(self.MaxDepth):
             if node.Children is None:
                 if node.State.Winner(lastAction) is not None:
                     break
@@ -28,6 +28,6 @@ class FixedMCTS(MCTS):
                 break
             lastAction = self._selectAction(node, temp)
             node = node.Children[lastAction]
-        assert lastAction is not None, 'When requesting a move from the MCTS, there is at least one legal option.'
+        assert lastAction is not None, 'There is at least one legal option.'
             
         return node
