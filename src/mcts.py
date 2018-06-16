@@ -59,7 +59,7 @@ class MCTS(object):
         if self.Threads > 1:
             self.Pool = mp.Pool(processes = self.Threads)
             
-    def FindMove(self, state, temp, moveTime = None, playLimit = None):
+    def FindMove(self, state, temp = 0.1, moveTime = None, playLimit = None):
         """ Given a game state, this will use a Monte Carlo Tree Search
             algorithm to pick the best next move. Returns (the chosen state, the
             decided value of input state, and the probabilities of choosing each
