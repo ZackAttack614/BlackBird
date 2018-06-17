@@ -53,6 +53,7 @@ class Network:
     def buildNetwork(self, hasTeacher):
         """ Build out the policy/evaluation combo network
         """
+        numFilters = self.parameters['filters']
         with tf.variable_scope('inputs', reuse=tf.AUTO_REUSE) as _:
             self.input = tf.placeholder(
                 shape=[None, self.dim, self.dim, 3],
@@ -65,7 +66,7 @@ class Network:
             self.mcts_evaluation = tf.placeholder(
                 shape=[None], name='mcts_evaluation', dtype=tf.float32)
             
-        with tf.variable_scope('res_tower', reuse=tf.AUTO_REUSE) as _:
+        with tf.variable_scope('{}_res_tower'.format(numFilters), reuse=tf.AUTO_REUSE) as _:
             self.res_tower = [self.input]
 
             with tf.variable_scope('conv_block', reuse=tf.AUTO_REUSE) as _:
@@ -133,7 +134,7 @@ class Network:
                             features=self.res_tower[-1],
                             name='rectifier_nonlinearity_2'))
                     
-        with tf.variable_scope('value', reuse=tf.AUTO_REUSE) as _:
+        with tf.variable_scope('value_{}'.format(numFilters), reuse=tf.AUTO_REUSE) as _:
             """ AlphaZero's value head is...
                 1) Convolutional layer of 2 1x1 filters, stride of 1
                 2) Batch normalization
@@ -175,7 +176,7 @@ class Network:
             self.evaluation = tf.tanh(
                 self.eval_scalar, name='value')
             
-        with tf.variable_scope('policy', reuse=tf.AUTO_REUSE) as _:
+        with tf.variable_scope('policy_{}'.format(numFilters), reuse=tf.AUTO_REUSE) as _:
             """ AlphaZero's policy head is...
                 1) Convolutional layer of 2 1x1 filters, stride of 1
                 2) Batch normalization
@@ -214,6 +215,9 @@ class Network:
             self.policy /= tf.reduce_sum(self.policy)
             
         with tf.variable_scope('loss', reuse=tf.AUTO_REUSE) as _:
+            self.teacherPolicy = tf.placeholder(
+                shape=[self.policy.shape[1]], dtype=tf.float32)
+
             self.loss_evaluation = tf.square(
                 self.evaluation - self.mcts_evaluation)
 
@@ -239,9 +243,6 @@ class Network:
                 self.loss_evaluation - self.loss_policy + self.loss_param)
 
             if hasTeacher:
-                self.teacherPolicy = tf.placeholder(
-                    shape=self.policy.shape, dtype=tf.float32)
-
                 self.policy_xentropy = -tf.reduce_sum(
                     tf.tensordot(
                         tf.log(self.teacherPolicy),

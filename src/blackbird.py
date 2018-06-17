@@ -85,7 +85,7 @@ class BlackBird(MCTS, Network):
 
         return examples
 
-    def LearnFromExamples(self, examples):
+    def LearnFromExamples(self, examples, teacher=None):
         self.SampleValue.cache_clear()
         self.GetPriors.cache_clear()
 
@@ -100,7 +100,8 @@ class BlackBird(MCTS, Network):
                 np.stack([b.State.AsInputArray()[0] for b in batch], axis = 0),
                 np.stack([b.Reward for b in batch], axis = 0),
                 np.stack([b.Probabilities for b in batch], axis = 0),
-                self.learningRate
+                self.learningRate,
+                teacher
                 )
         return
 

@@ -270,6 +270,7 @@ BlackBirdEnvironment/
 parameters.yaml
 kTest.py
 parameters.yaml
+NextNetworkParams.yaml
 .vscode/*
 logDir/*
 src/goodGames.txt
