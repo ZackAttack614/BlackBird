@@ -9,6 +9,7 @@ mcts :
     exploitation: 0.1
 
 network :
+  gpu_frac : 0.2
   blocks : 4
   filters : 16
   eval :

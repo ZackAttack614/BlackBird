@@ -10,8 +10,9 @@ class Network:
         self.dim = dim
         self.squares = dim ** 2
 
-        gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.4)
-        self.sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
+        gpuFrac = kwargs.get('gpu_frac')
+        gpuOptions = tf.GPUOptions(per_process_gpu_memory_fraction=gpuFrac)
+        self.sess = tf.Session(config=tf.ConfigProto(gpu_options=gpuOptions))
         
         self.buildNetwork(teacher)
         self.init = tf.global_variables_initializer()
