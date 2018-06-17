@@ -6,7 +6,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 class Network:
     def __init__(self, tfLog, teacher=False, loadOld=False, dim=3, **kwargs):
-        self.parameters = kwargs['network']
+        self.parameters = kwargs
         self.dim = dim
         self.squares = dim ** 2
 

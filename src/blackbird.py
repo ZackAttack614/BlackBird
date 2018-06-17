@@ -36,13 +36,17 @@ class BlackBird(MCTS, Network):
             
             return '\n'.join([state, value, childValues, reward, probs, priors])
 
-    def __init__(self, tfLog=False, loadOld=False, **parameters):
+    def __init__(self, tfLog=False, loadOld=False, teacher=False, **parameters):
         self.bbParameters = parameters
         self.batchSize = parameters.get('network').get('training').get('batch_size')
         self.learningRate = parameters.get('network').get('training').get('learning_rate')
+        
         mctsParams = parameters.get('mcts')
         MCTS.__init__(self, **mctsParams)
-        Network.__init__(self, tfLog, loadOld=loadOld, **parameters)
+        
+        networkParams = parameters.get('network')
+        Network.__init__(self, tfLog, loadOld=loadOld, teacher=teacher,
+            **networkParams)
 
     def GenerateTrainingSamples(self, nGames, temp):
         assert nGames > 0, 'Use a positive integer for number of games.'
