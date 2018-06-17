@@ -3,7 +3,7 @@ import sys
 import yaml
 sys.path.insert(0, './src/')
 
-from blackbird import BlackBird
+from Blackbird import BlackBird
 from TicTacToe import BoardState
 
 def main():

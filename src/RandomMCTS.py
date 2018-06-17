@@ -1,4 +1,4 @@
-from mcts import MCTS
+from MCTS import MCTS
 import numpy as np
 
 class RandomMCTS(MCTS):

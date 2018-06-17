@@ -2,7 +2,7 @@ from DynamicMCTS import DynamicMCTS as MCTS
 from RandomMCTS import RandomMCTS
 from TicTacToe import BoardState
 from FixedMCTS import FixedMCTS
-from network import Network
+from Network import Network
 
 import functools
 import random

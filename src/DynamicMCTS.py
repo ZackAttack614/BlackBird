@@ -1,4 +1,4 @@
-from mcts import MCTS, Node
+from MCTS import MCTS, Node
 import numpy as np
 
 class DynamicMCTS(MCTS):
