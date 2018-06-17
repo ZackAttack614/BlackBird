@@ -17,8 +17,7 @@ def main():
             os.remove(os.path.join(os.curdir, LogDir, file))
             
     TrainingParameters = parameters.get('selfplay')
-    BlackbirdInstance = BlackBird(saver=True, tfLog=True,
-                                  loadOld=True, **parameters)
+    BlackbirdInstance = BlackBird(tfLog=True, loadOld=True, **parameters)
 
     for epoch in range(1, TrainingParameters.get('epochs') + 1):
         print('Starting epoch {0}...'.format(epoch))
