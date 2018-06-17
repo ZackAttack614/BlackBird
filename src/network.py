@@ -5,7 +5,7 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 class Network:
-    def __init__(self, saver, tfLog, loadOld=False, dim=3, **kwargs):
+    def __init__(self, tfLog, teacher=False, loadOld=False, dim=3, **kwargs):
         self.parameters = kwargs['network']
         self.dim = dim
         self.squares = dim ** 2
@@ -13,7 +13,7 @@ class Network:
         gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.4)
         self.sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
         
-        self.buildNetwork()
+        self.buildNetwork(teacher)
         self.init = tf.global_variables_initializer()
         self.sess.run(self.init)
         self.batch_count = 0
@@ -49,7 +49,7 @@ class Network:
         except:
             pass
     
-    def buildNetwork(self):
+    def buildNetwork(self, hasTeacher):
         """ Build out the policy/evaluation combo network
         """
         with tf.variable_scope('inputs', reuse=tf.AUTO_REUSE) as _:
@@ -237,6 +237,19 @@ class Network:
             self.loss = tf.reduce_sum(
                 self.loss_evaluation - self.loss_policy + self.loss_param)
 
+            if hasTeacher:
+                self.teacherPolicy = tf.placeholder(
+                    shape=self.policy.shape, dtype=tf.float32)
+
+                self.policy_xentropy = -tf.reduce_sum(
+                    tf.tensordot(
+                        tf.log(self.teacherPolicy),
+                        tf.transpose(self.policy),
+                        axes=1),
+                    axis=1)
+
+                self.loss += self.policy_xentropy
+
             tf.summary.scalar('total_loss', self.loss)
             
         with tf.name_scope('summary') as _:
@@ -279,17 +292,21 @@ class Network:
 
         return policy[0]
     
-    def train(self, state, evaluation, policy, learning_rate=0.01):
+    def train(self, state, eval, policy, learning_rate=0.01, teacher=None):
         """ Train the network
         """
         feed_dict={
             self.input:state,
-            self.mcts_evaluation:evaluation,
+            self.mcts_evaluation:eval,
             self.correct_move_vec:policy,
             self.learning_rate:[learning_rate],
             self.epsilon:[self.default_epsilon],
             self.alpha:[self.default_alpha]
         }
+
+        if teacher is not None:
+            assert isinstance(teacher, Network), 'teacher can generate policies'
+            feed_dict[self.teacherPolicy] = teacher.getPolicy(state)
         
         self.sess.run(self.training_op, feed_dict=feed_dict)
         self.batch_count += 1

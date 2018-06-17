@@ -36,28 +36,13 @@ class BlackBird(MCTS, Network):
             
             return '\n'.join([state, value, childValues, reward, probs, priors])
 
-    class RandomPlayer:
-        def FindMove(self, state, *args, **kwargs):
-            # Probably a numpy way to get indices of an array where element is 1
-            actions = state.LegalActions()
-            actions = [i for i in range(len(actions)) if actions[i]==1]
-            move = random.choice(actions)
-            state.ApplyAction(move)
-            return state, None, None
-
-        def MoveRoot(self, *args, **kwargs):
-            pass
-
-        def DropRoot(self):
-            pass
-
-    def __init__(self, saver=False, tfLog=False, loadOld=False, **parameters):
+    def __init__(self, tfLog=False, loadOld=False, **parameters):
         self.bbParameters = parameters
         self.batchSize = parameters.get('network').get('training').get('batch_size')
         self.learningRate = parameters.get('network').get('training').get('learning_rate')
         mctsParams = parameters.get('mcts')
         MCTS.__init__(self, **mctsParams)
-        Network.__init__(self, saver, tfLog, loadOld=loadOld, **parameters)
+        Network.__init__(self, tfLog, loadOld=loadOld, **parameters)
 
     def GenerateTrainingSamples(self, nGames, temp):
         assert nGames > 0, 'Use a positive integer for number of games.'
@@ -119,7 +104,7 @@ class BlackBird(MCTS, Network):
         return self.Test(RandomMCTS(), temp, numTests)
 
     def TestPrevious(self, temp, numTests):
-        oldBlackbird = BlackBird(saver=False, tfLog=False, loadOld=True,
+        oldBlackbird = BlackBird(tfLog=False, loadOld=True,
             **self.bbParameters)
 
         wins, draws, losses = self.Test(oldBlackbird, temp, numTests)
@@ -183,7 +168,7 @@ class BlackBird(MCTS, Network):
 if __name__ == '__main__':
     with open('parameters.yaml', 'r') as param_file:
         parameters = yaml.load(param_file)
-    b = BlackBird(saver=True, tfLog=True, loadOld=True, **parameters)
+    b = BlackBird(tfLog=True, loadOld=True, **parameters)
 
     for i in range(parameters.get('selfplay').get('epochs')):
         examples = b.GenerateTrainingSamples(
