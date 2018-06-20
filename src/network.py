@@ -1,6 +1,7 @@
 import numpy as np
 import tensorflow as tf
 import os
+import shutil
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
@@ -53,7 +54,6 @@ class Network:
     def buildNetwork(self, hasTeacher):
         """ Build out the policy/evaluation combo network
         """
-        numFilters = self.parameters['filters']
         with tf.variable_scope('inputs', reuse=tf.AUTO_REUSE) as _:
             self.input = tf.placeholder(
                 shape=[None, self.dim, self.dim, 3],
@@ -66,7 +66,7 @@ class Network:
             self.mcts_evaluation = tf.placeholder(
                 shape=[None], name='mcts_evaluation', dtype=tf.float32)
             
-        with tf.variable_scope('{}_res_tower'.format(numFilters), reuse=tf.AUTO_REUSE) as _:
+        with tf.variable_scope('res_tower', reuse=tf.AUTO_REUSE) as _:
             self.res_tower = [self.input]
 
             with tf.variable_scope('conv_block', reuse=tf.AUTO_REUSE) as _:
@@ -134,7 +134,7 @@ class Network:
                             features=self.res_tower[-1],
                             name='rectifier_nonlinearity_2'))
                     
-        with tf.variable_scope('value_{}'.format(numFilters), reuse=tf.AUTO_REUSE) as _:
+        with tf.variable_scope('value', reuse=tf.AUTO_REUSE) as _:
             """ AlphaZero's value head is...
                 1) Convolutional layer of 2 1x1 filters, stride of 1
                 2) Batch normalization
@@ -176,7 +176,7 @@ class Network:
             self.evaluation = tf.tanh(
                 self.eval_scalar, name='value')
             
-        with tf.variable_scope('policy_{}'.format(numFilters), reuse=tf.AUTO_REUSE) as _:
+        with tf.variable_scope('policy', reuse=tf.AUTO_REUSE) as _:
             """ AlphaZero's policy head is...
                 1) Convolutional layer of 2 1x1 filters, stride of 1
                 2) Batch normalization
@@ -216,31 +216,27 @@ class Network:
             
         with tf.variable_scope('loss', reuse=tf.AUTO_REUSE) as _:
             self.teacherPolicy = tf.placeholder(
-                shape=[self.policy.shape[1]], dtype=tf.float32)
+                shape=[self.policy.shape[1]], dtype=tf.float32,
+                name='teacher_policy')
 
-            self.loss_evaluation = tf.square(
-                self.evaluation - self.mcts_evaluation)
+            self.loss_evaluation = tf.reduce_sum(tf.square(
+                self.evaluation - self.mcts_evaluation))
 
             self.loss_policy = tf.reduce_sum(
                 tf.tensordot(
                     tf.log(self.policy),
                     tf.transpose(self.correct_move_vec),
-                    axes=1),
-                axis=1)
+                    axes=1))
 
-            self.loss_param = tf.tile(
-                tf.expand_dims(
-                    tf.reduce_sum(
-                        [
-                            tf.nn.l2_loss(v) for v in tf.trainable_variables()
+            self.loss_param = tf.reduce_sum(
+                [
+                    tf.nn.l2_loss(v) for v in tf.trainable_variables()
 
-                            # I don't know if this filter is a good idea...
-                            if 'bias' not in v.name
-                        ]) * self.parameters['loss']['L2_norm'], 0),
-                [tf.shape(self.loss_policy)[0]])
+                    # I don't know if this filter is a good idea...
+                    if 'bias' not in v.name
+                ])
 
-            self.loss = tf.reduce_sum(
-                self.loss_evaluation - self.loss_policy + self.loss_param)
+            self.loss = self.loss_evaluation - self.loss_policy + self.loss_param
 
             if hasTeacher:
                 self.policy_xentropy = -tf.reduce_sum(
@@ -321,6 +317,24 @@ class Network:
             This should be reserved for "best" networks.
         """
         self.saver.save(self.sess, self.model_loc)
+        try:
+            shutil.rmtree('blackbird_models/SavedModel/')
+        except:
+            pass
+
+        tf.saved_model.simple_save(
+            session=self.sess,
+            export_dir='blackbird_models/SavedModel/',
+            inputs={
+                'board_input': self.input,
+                'correct_move_from_mcts': self.correct_move_vec,
+                'mcts_evaluation': self.mcts_evaluation,
+                'teacher_policy': self.teacherPolicy,
+                'learning_rate': self.learning_rate},
+            outputs={
+                'value': self.evaluation,
+                'policy': self.policy}
+        )
         
     def loadModel(self):
         """ Load an old version of the network.
