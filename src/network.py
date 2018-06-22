@@ -228,8 +228,7 @@ class Network:
                     tf.transpose(self.correct_move_vec),
                     axes=1))
 
-            self.loss_param = tf.reduce_sum(
-                [
+            self.loss_param = tf.reduce_sum([
                     tf.nn.l2_loss(v) for v in tf.trainable_variables()
 
                     # I don't know if this filter is a good idea...
@@ -317,24 +316,6 @@ class Network:
             This should be reserved for "best" networks.
         """
         self.saver.save(self.sess, self.model_loc)
-        try:
-            shutil.rmtree('blackbird_models/SavedModel/')
-        except:
-            pass
-
-        tf.saved_model.simple_save(
-            session=self.sess,
-            export_dir='blackbird_models/SavedModel/',
-            inputs={
-                'board_input': self.input,
-                'correct_move_from_mcts': self.correct_move_vec,
-                'mcts_evaluation': self.mcts_evaluation,
-                'teacher_policy': self.teacherPolicy,
-                'learning_rate': self.learning_rate},
-            outputs={
-                'value': self.evaluation,
-                'policy': self.policy}
-        )
         
     def loadModel(self):
         """ Load an old version of the network.
