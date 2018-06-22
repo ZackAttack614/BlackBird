@@ -219,16 +219,16 @@ class Network:
                 shape=[self.policy.shape[1]], dtype=tf.float32,
                 name='teacher_policy')
 
-            self.loss_evaluation = tf.reduce_sum(tf.square(
+            self.loss_evaluation = tf.reduce_mean(tf.square(
                 self.evaluation - self.mcts_evaluation))
 
-            self.loss_policy = tf.reduce_sum(
+            self.loss_policy = tf.reduce_mean(
                 tf.tensordot(
                     tf.log(self.policy),
                     tf.transpose(self.correct_move_vec),
                     axes=1))
 
-            self.loss_param = tf.reduce_sum([
+            self.loss_param = tf.reduce_mean([
                     tf.nn.l2_loss(v) for v in tf.trainable_variables()
 
                     # I don't know if this filter is a good idea...
@@ -238,7 +238,7 @@ class Network:
             self.loss = self.loss_evaluation - self.loss_policy + self.loss_param
 
             if hasTeacher:
-                self.policy_xentropy = -tf.reduce_sum(
+                self.policy_xentropy = -tf.reduce_mean(
                     tf.tensordot(
                         tf.log(self.teacherPolicy),
                         tf.transpose(self.policy),
@@ -247,7 +247,10 @@ class Network:
 
                 self.loss += self.policy_xentropy
 
-            tf.summary.scalar('total_loss', self.loss)
+            tf.summary.scalar('average_loss', self.loss)
+            tf.summary.scalar('policy_loss', self.loss_policy)
+            tf.summary.scalar('eval_loss', self.loss_evaluation)
+            tf.summary.scalar('L2_Loss', self.loss_param)
             
         with tf.name_scope('summary') as _:
             self.merged = tf.summary.merge_all()
