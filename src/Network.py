@@ -251,10 +251,10 @@ class Network:
             tf.summary.scalar('policy_loss', self.loss_policy)
             tf.summary.scalar('eval_loss', self.loss_evaluation)
             tf.summary.scalar('L2_Loss', self.loss_param)
-            
-        with tf.name_scope('summary') as _:
-            self.merged = tf.summary.merge_all()
-            
+
+            self.loss_merged = tf.summary.merge(['average_loss', 'policy_loss',
+                                                 'eval_loss', 'L2_loss'])
+
         with tf.variable_scope('training', reuse=tf.AUTO_REUSE) as _:
             self.learning_rate = tf.placeholder(
                 shape=[1], dtype=tf.float32, name='learning_rate')
@@ -311,7 +311,7 @@ class Network:
         self.sess.run(self.training_op, feed_dict=feed_dict)
         self.batch_count += 1
         if self.batch_count % 10 == 0 and self.write_summary:
-            summary = self.sess.run(self.merged, feed_dict=feed_dict)
+            summary = self.sess.run(self.loss_merged, feed_dict=feed_dict)
             self.writer.add_summary(summary, self.batch_count)
         
     def saveModel(self):
