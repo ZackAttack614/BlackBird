@@ -3,13 +3,17 @@ import tensorflow as tf
 import os
 import shutil
 
+from functools import reduce
+
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 class Network:
-    def __init__(self, tfLog, teacher=False, loadOld=False, dim=3, **kwargs):
+    def __init__(self, tfLog, dims, legalActions, teacher=False,
+            loadOld=False, *args, **kwargs):
+
         self.parameters = kwargs
-        self.dim = dim
-        self.squares = dim ** 2
+        self.dims = dims
+        self.legalActions = legalActions
 
         gpuFrac = kwargs.get('gpu_frac')
         gpuOptions = tf.GPUOptions(per_process_gpu_memory_fraction=gpuFrac)
@@ -56,11 +60,11 @@ class Network:
         """
         with tf.variable_scope('inputs', reuse=tf.AUTO_REUSE) as _:
             self.input = tf.placeholder(
-                shape=[None, self.dim, self.dim, 3],
+                shape=[None] + self.dims + [3],
                 name='board_input', dtype=tf.float32)
 
             self.correct_move_vec = tf.placeholder(
-                shape=[None, self.squares],
+                shape=[None, self.legalActions],
                 name='correct_move_from_mcts', dtype=tf.float32)
 
             self.mcts_evaluation = tf.placeholder(
@@ -194,7 +198,7 @@ class Network:
                 self.policy_batch_norm, name='rect_norm')
 
             self.policy_dense = tf.layers.dense(
-                self.policy_rectifier, units=self.squares, name='policy')
+                self.policy_rectifier, units=self.legalActions, name='policy')
 
             self.policy_vector = tf.reduce_sum(
                 self.policy_dense, axis=[1,2])
@@ -210,7 +214,7 @@ class Network:
                 [self.alpha[0], 1-self.alpha[0]])
 
             self.policy = ((1 - self.epsilon[0]) * self.policy_base
-                + self.epsilon[0] * self.dist.sample([1, self.squares])[0][:,0])
+                + self.epsilon[0] * self.dist.sample([1, self.legalActions])[0][:,0])
 
             self.policy /= tf.reduce_sum(self.policy)
             

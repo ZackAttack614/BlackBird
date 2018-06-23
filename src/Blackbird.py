@@ -45,8 +45,8 @@ class BlackBird(MCTS, Network):
         MCTS.__init__(self, **mctsParams)
         
         networkParams = parameters.get('network')
-        Network.__init__(self, tfLog, loadOld=loadOld, teacher=teacher,
-            **networkParams)
+        Network.__init__(self, tfLog, [3,3], 9, teacher=teacher,
+            loadOld=loadOld, **networkParams)
 
     def GenerateTrainingSamples(self, nGames, temp):
         assert nGames > 0, 'Use a positive integer for number of games.'
