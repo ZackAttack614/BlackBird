@@ -222,7 +222,7 @@ class Network:
             self.loss_evaluation = tf.reduce_mean(tf.square(
                 self.evaluation - self.mcts_evaluation))
 
-            self.loss_policy = tf.reduce_mean(
+            self.loss_policy = -tf.reduce_mean(
                 tf.tensordot(
                     tf.log(self.policy),
                     tf.transpose(self.correct_move_vec),
@@ -235,7 +235,7 @@ class Network:
                     if 'bias' not in v.name
                 ])
 
-            self.loss = self.loss_evaluation - self.loss_policy + self.loss_param
+            self.loss = self.loss_evaluation + self.loss_policy + self.loss_param
 
             if hasTeacher:
                 self.policy_xentropy = -tf.reduce_mean(
