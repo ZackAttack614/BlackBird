@@ -1,9 +1,6 @@
 import numpy as np
 import tensorflow as tf
 import os
-import shutil
-
-from functools import reduce
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
