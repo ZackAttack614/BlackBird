@@ -1,6 +1,5 @@
 from DynamicMCTS import DynamicMCTS as MCTS
 from RandomMCTS import RandomMCTS
-from TicTacToe import BoardState
 from FixedMCTS import FixedMCTS
 from Network import Network
 
@@ -36,7 +35,10 @@ class BlackBird(MCTS, Network):
             
             return '\n'.join([state, value, childValues, reward, probs, priors])
 
-    def __init__(self, tfLog=False, loadOld=False, teacher=False, **parameters):
+    def __init__(self, boardState, tfLog=False, loadOld=False, teacher=False,
+            **parameters):
+            
+        self.BoardState = boardState
         self.bbParameters = parameters
         self.batchSize = parameters.get('network').get('training').get('batch_size')
         self.learningRate = parameters.get('network').get('training').get('learning_rate')
@@ -55,7 +57,7 @@ class BlackBird(MCTS, Network):
 
         for _ in range(nGames):
             gameHistory = []
-            state = BoardState()
+            state = self.BoardState()
             lastAction = None
             winner = None
             self.DropRoot()
@@ -109,7 +111,7 @@ class BlackBird(MCTS, Network):
         return self.Test(RandomMCTS(), temp, numTests)
 
     def TestPrevious(self, temp, numTests):
-        oldBlackbird = BlackBird(tfLog=False, loadOld=True,
+        oldBlackbird = BlackBird(self.BoardState, tfLog=False, loadOld=True,
             **self.bbParameters)
 
         wins, draws, losses = self.Test(oldBlackbird, temp, numTests)
@@ -130,7 +132,7 @@ class BlackBird(MCTS, Network):
             winner = None
             self.DropRoot()
             other.DropRoot()
-            state = BoardState()
+            state = self.BoardState()
             
             while winner is None:
                 if blackbirdToMove:
