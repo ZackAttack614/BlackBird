@@ -251,13 +251,13 @@ class Network:
 
                 self.loss += self.policy_xentropy
 
-            tf.summary.scalar('average_loss', self.loss)
-            tf.summary.scalar('policy_loss', self.loss_policy)
-            tf.summary.scalar('eval_loss', self.loss_evaluation)
-            tf.summary.scalar('L2_Loss', self.loss_param)
+            avg_loss = tf.summary.scalar('average_loss', self.loss)
+            policy_loss = tf.summary.scalar('policy_loss', self.loss_policy)
+            eval_loss = tf.summary.scalar('eval_loss', self.loss_evaluation)
+            l2_loss = tf.summary.scalar('L2_Loss', self.loss_param)
 
-            self.loss_merged = tf.summary.merge(['average_loss', 'policy_loss',
-                                                 'eval_loss', 'L2_loss'])
+            self.loss_merged = tf.summary.merge([avg_loss, policy_loss,
+                                                 eval_loss, l2_loss])
 
         with tf.variable_scope('training', reuse=tf.AUTO_REUSE) as _:
             self.learning_rate = tf.placeholder(

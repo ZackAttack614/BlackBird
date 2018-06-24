@@ -107,7 +107,7 @@ class BlackBird(MCTS, Network):
                 np.stack([b.State.AsInputArray()[0] for b in batch], axis = 0),
                 np.stack([b.Reward for b in batch], axis = 0),
                 np.stack([b.Probabilities for b in batch], axis = 0),
-                self.parameters.get('network').get('training').get('learning_rate'),
+                self.bbParameters.get('network').get('training').get('learning_rate'),
                 teacher
                 )
         return
