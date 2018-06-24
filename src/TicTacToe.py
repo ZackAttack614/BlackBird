@@ -32,6 +32,9 @@ class BoardState(GameState):
 
         return actions
 
+    def LegalActionShape(self):
+        return self.BoardShape
+
     def ApplyAction(self, action):
         coords = self._indexToCoords(action)
         assert np.sum(self.Board[coords[0], coords[1], :]) == 0, \

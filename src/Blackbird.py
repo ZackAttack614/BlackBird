@@ -68,7 +68,8 @@ class BlackBird(MCTS, Network):
                 (nextState, v, currentProbabilties) = self.FindMove(state, temp)
                 childValues = self.Root.ChildWinRates()
                 example = self.TrainingExample(state, 1 - v, childValues,
-                    currentProbabilties, self.Root.Priors, self.boardShape)
+                    currentProbabilties, self.Root.Priors, 
+                    state.LegalActionShape())
                 state = nextState
                 self.MoveRoot([state])
 
@@ -78,7 +79,7 @@ class BlackBird(MCTS, Network):
             example = self.TrainingExample(state, None, None,
                 np.zeros([len(currentProbabilties)]),
                 np.zeros([len(currentProbabilties)]),
-                self.boardShape)
+                state.LegalActionShape())
             gameHistory.append(example)
             
             for example in gameHistory:
@@ -177,7 +178,7 @@ class BlackBird(MCTS, Network):
         return policy
 
 if __name__ == '__main__':
-    from TicTacToe import BoardState
+    from Connect4 import BoardState
     with open('parameters.yaml', 'r') as param_file:
         parameters = yaml.load(param_file)
     b = BlackBird(BoardState, tfLog=True, loadOld=True, **parameters)
