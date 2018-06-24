@@ -8,9 +8,11 @@ class BoardState(GameState):
     Size = 3
     InARow = 3
     Dirs = [(0,1),(1,1),(1,0),(1,-1)]
+    BoardShape = [Size, Size]
+    LegalMoves = Size ** 2
 
     def __init__(self):
-        self.Board = np.zeros((self.Size,self.Size,2))
+        self.Board = np.zeros((self.Size, self.Size, 2))
         self.Player = 1
         self.PreviousPlayer = None
         return 

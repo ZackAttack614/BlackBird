@@ -15,12 +15,15 @@ class BlackBird(MCTS, Network):
     """ Class to train a network using an MCTS driver to improve decision making
     """
     class TrainingExample(object):
-        def __init__(self, state, value, childValues, probabilities, priors):
+        def __init__(self, state, value, childValues,
+                probabilities, priors, boardShape):
+            
             self.State = state
             self.Value = value
-            self.ChildValues = childValues.reshape((3,3)) if childValues is not None else None
+            self.BoardShape = boardShape
+            self.ChildValues = childValues.reshape(boardShape) if childValues is not None else None
             self.Reward = None
-            self.Priors = priors.reshape((3,3))
+            self.Priors = priors.reshape(boardShape)
             self.Probabilities = probabilities
             return
 
@@ -30,7 +33,7 @@ class BlackBird(MCTS, Network):
             childValues = 'Child Values: \n{}'.format(self.ChildValues)
             reward = 'Reward:\n{}'.format(self.Reward)
             probs = 'Probabilities:\n{}'.format(
-                self.Probabilities.reshape((3,3)))
+                self.Probabilities.reshape(self.BoardShape))
             priors = '\nPriors:\n{}\n'.format(self.Priors)
             
             return '\n'.join([state, value, childValues, reward, probs, priors])
@@ -41,14 +44,14 @@ class BlackBird(MCTS, Network):
         self.BoardState = boardState
         self.bbParameters = parameters
         self.batchSize = parameters.get('network').get('training').get('batch_size')
-        self.learningRate = parameters.get('network').get('training').get('learning_rate')
-        
+        self.boardShape = boardState().BoardShape
+
         mctsParams = parameters.get('mcts')
         MCTS.__init__(self, **mctsParams)
         
         networkParams = parameters.get('network')
-        Network.__init__(self, tfLog, [3,3], 9, teacher=teacher,
-            loadOld=loadOld, **networkParams)
+        Network.__init__(self, tfLog, self.boardShape, boardState.LegalMoves,
+            teacher=teacher, loadOld=loadOld, **networkParams)
 
     def GenerateTrainingSamples(self, nGames, temp):
         assert nGames > 0, 'Use a positive integer for number of games.'
@@ -65,7 +68,7 @@ class BlackBird(MCTS, Network):
                 (nextState, v, currentProbabilties) = self.FindMove(state, temp)
                 childValues = self.Root.ChildWinRates()
                 example = self.TrainingExample(state, 1 - v, childValues,
-                    currentProbabilties, priors = self.Root.Priors)
+                    currentProbabilties, self.Root.Priors, self.boardShape)
                 state = nextState
                 self.MoveRoot([state])
 
@@ -74,7 +77,8 @@ class BlackBird(MCTS, Network):
                 
             example = self.TrainingExample(state, None, None,
                 np.zeros([len(currentProbabilties)]),
-                np.zeros([len(currentProbabilties)]))
+                np.zeros([len(currentProbabilties)]),
+                self.boardShape)
             gameHistory.append(example)
             
             for example in gameHistory:
@@ -102,7 +106,7 @@ class BlackBird(MCTS, Network):
                 np.stack([b.State.AsInputArray()[0] for b in batch], axis = 0),
                 np.stack([b.Reward for b in batch], axis = 0),
                 np.stack([b.Probabilities for b in batch], axis = 0),
-                self.learningRate,
+                self.parameters.get('network').get('training').get('learning_rate'),
                 teacher
                 )
         return
@@ -173,9 +177,10 @@ class BlackBird(MCTS, Network):
         return policy
 
 if __name__ == '__main__':
+    from TicTacToe import BoardState
     with open('parameters.yaml', 'r') as param_file:
         parameters = yaml.load(param_file)
-    b = BlackBird(tfLog=True, loadOld=True, **parameters)
+    b = BlackBird(BoardState, tfLog=True, loadOld=True, **parameters)
 
     for i in range(1):
         examples = b.GenerateTrainingSamples(
