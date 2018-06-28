@@ -9,9 +9,11 @@ class BoardState(GameState):
     Height = 6
     InARow = 4
     Dirs = [(0,1),(1,1),(1,0),(1,-1)]
+    BoardShape = [Height, Width]
+    LegalMoves = Width
 
     def __init__(self):
-        self.Board = np.zeros((self.Height,self.Width,2))
+        self.Board = np.zeros((self.Height, self.Width, 2))
         self.Player = 1
         self.PreviousPlayer = None
         return 
@@ -30,6 +32,9 @@ class BoardState(GameState):
 
         return actions
 
+    def LegalActionShape(self):
+        return [self.LegalMoves]
+
     def ApplyAction(self, action):
         assert np.sum(self.Board[self.Height -1, action, :]) == 0, 'Ahh! Can\'t go there! {}'.format(action)
         top = -1
@@ -44,8 +49,8 @@ class BoardState(GameState):
         return
 
     def AsInputArray(self):
-        player = np.full((self.Size, self.Size), 1 if self.Player == 1 else -1)
-        array = np.zeros((1, self.Size, self.Size, 3))
+        player = np.full((self.Height, self.Width), 1 if self.Player == 1 else -1)
+        array = np.zeros((1, self.Height, self.Width, 3))
         array[0, :, :, 0:2] = self.Board
         array[0, :, :, 2] = player
         return array
@@ -72,6 +77,9 @@ class BoardState(GameState):
         if self._isOver(board):
             return 0
         return None
+
+    def EvalToString(self, eval):
+        return str(eval)
 
     def _isOver(self, board):
         for j in range(self.Width):

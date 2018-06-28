@@ -5,10 +5,12 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 class Network:
-    def __init__(self, tfLog, teacher=False, loadOld=False, dim=3, **kwargs):
+    def __init__(self, tfLog, dims, legalActions, teacher=False,
+            loadOld=False, *args, **kwargs):
+
         self.parameters = kwargs
-        self.dim = dim
-        self.squares = dim ** 2
+        self.dims = dims
+        self.legalActions = legalActions
 
         gpuFrac = kwargs.get('gpu_frac')
         gpuOptions = tf.GPUOptions(per_process_gpu_memory_fraction=gpuFrac)
@@ -53,20 +55,19 @@ class Network:
     def buildNetwork(self, hasTeacher):
         """ Build out the policy/evaluation combo network
         """
-        numFilters = self.parameters['filters']
         with tf.variable_scope('inputs', reuse=tf.AUTO_REUSE) as _:
             self.input = tf.placeholder(
-                shape=[None, self.dim, self.dim, 3],
+                shape=[None] + self.dims + [3],
                 name='board_input', dtype=tf.float32)
 
             self.correct_move_vec = tf.placeholder(
-                shape=[None, self.squares],
+                shape=[None, self.legalActions],
                 name='correct_move_from_mcts', dtype=tf.float32)
 
             self.mcts_evaluation = tf.placeholder(
                 shape=[None], name='mcts_evaluation', dtype=tf.float32)
             
-        with tf.variable_scope('{}_res_tower'.format(numFilters), reuse=tf.AUTO_REUSE) as _:
+        with tf.variable_scope('res_tower', reuse=tf.AUTO_REUSE) as _:
             self.res_tower = [self.input]
 
             with tf.variable_scope('conv_block', reuse=tf.AUTO_REUSE) as _:
@@ -134,7 +135,7 @@ class Network:
                             features=self.res_tower[-1],
                             name='rectifier_nonlinearity_2'))
                     
-        with tf.variable_scope('value_{}'.format(numFilters), reuse=tf.AUTO_REUSE) as _:
+        with tf.variable_scope('value', reuse=tf.AUTO_REUSE) as _:
             """ AlphaZero's value head is...
                 1) Convolutional layer of 2 1x1 filters, stride of 1
                 2) Batch normalization
@@ -176,7 +177,7 @@ class Network:
             self.evaluation = tf.tanh(
                 self.eval_scalar, name='value')
             
-        with tf.variable_scope('policy_{}'.format(numFilters), reuse=tf.AUTO_REUSE) as _:
+        with tf.variable_scope('policy', reuse=tf.AUTO_REUSE) as _:
             """ AlphaZero's policy head is...
                 1) Convolutional layer of 2 1x1 filters, stride of 1
                 2) Batch normalization
@@ -194,7 +195,7 @@ class Network:
                 self.policy_batch_norm, name='rect_norm')
 
             self.policy_dense = tf.layers.dense(
-                self.policy_rectifier, units=self.squares, name='policy')
+                self.policy_rectifier, units=self.legalActions, name='policy')
 
             self.policy_vector = tf.reduce_sum(
                 self.policy_dense, axis=[1,2])
@@ -210,40 +211,35 @@ class Network:
                 [self.alpha[0], 1-self.alpha[0]])
 
             self.policy = ((1 - self.epsilon[0]) * self.policy_base
-                + self.epsilon[0] * self.dist.sample([1, self.squares])[0][:,0])
+                + self.epsilon[0] * self.dist.sample([1, self.legalActions])[0][:,0])
 
             self.policy /= tf.reduce_sum(self.policy)
             
         with tf.variable_scope('loss', reuse=tf.AUTO_REUSE) as _:
             self.teacherPolicy = tf.placeholder(
-                shape=[self.policy.shape[1]], dtype=tf.float32)
+                shape=[self.policy.shape[1]], dtype=tf.float32,
+                name='teacher_policy')
 
-            self.loss_evaluation = tf.square(
-                self.evaluation - self.mcts_evaluation)
+            self.loss_evaluation = tf.reduce_mean(tf.square(
+                self.evaluation - self.mcts_evaluation))
 
-            self.loss_policy = tf.reduce_sum(
+            self.loss_policy = -tf.reduce_mean(
                 tf.tensordot(
                     tf.log(self.policy),
                     tf.transpose(self.correct_move_vec),
-                    axes=1),
-                axis=1)
+                    axes=1))
 
-            self.loss_param = tf.tile(
-                tf.expand_dims(
-                    tf.reduce_sum(
-                        [
-                            tf.nn.l2_loss(v) for v in tf.trainable_variables()
+            self.loss_param = tf.reduce_mean([
+                    tf.nn.l2_loss(v) for v in tf.trainable_variables()
 
-                            # I don't know if this filter is a good idea...
-                            if 'bias' not in v.name
-                        ]) * self.parameters['loss']['L2_norm'], 0),
-                [tf.shape(self.loss_policy)[0]])
+                    # I don't know if this filter is a good idea...
+                    if 'bias' not in v.name
+                ])
 
-            self.loss = tf.reduce_sum(
-                self.loss_evaluation - self.loss_policy + self.loss_param)
+            self.loss = self.loss_evaluation + self.loss_policy + self.loss_param
 
             if hasTeacher:
-                self.policy_xentropy = -tf.reduce_sum(
+                self.policy_xentropy = -tf.reduce_mean(
                     tf.tensordot(
                         tf.log(self.teacherPolicy),
                         tf.transpose(self.policy),
@@ -252,11 +248,14 @@ class Network:
 
                 self.loss += self.policy_xentropy
 
-            tf.summary.scalar('total_loss', self.loss)
-            
-        with tf.name_scope('summary') as _:
-            self.merged = tf.summary.merge_all()
-            
+            avg_loss = tf.summary.scalar('average_loss', self.loss)
+            policy_loss = tf.summary.scalar('policy_loss', self.loss_policy)
+            eval_loss = tf.summary.scalar('eval_loss', self.loss_evaluation)
+            l2_loss = tf.summary.scalar('L2_Loss', self.loss_param)
+
+            self.loss_merged = tf.summary.merge([avg_loss, policy_loss,
+                                                 eval_loss, l2_loss])
+
         with tf.variable_scope('training', reuse=tf.AUTO_REUSE) as _:
             self.learning_rate = tf.placeholder(
                 shape=[1], dtype=tf.float32, name='learning_rate')
@@ -313,7 +312,7 @@ class Network:
         self.sess.run(self.training_op, feed_dict=feed_dict)
         self.batch_count += 1
         if self.batch_count % 10 == 0 and self.write_summary:
-            summary = self.sess.run(self.merged, feed_dict=feed_dict)
+            summary = self.sess.run(self.loss_merged, feed_dict=feed_dict)
             self.writer.add_summary(summary, self.batch_count)
         
     def saveModel(self):

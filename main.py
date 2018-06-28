@@ -7,7 +7,8 @@ from Blackbird import BlackBird
 from TicTacToe import BoardState
 
 def main():
-    assert os.path.isfile('parameters.yaml'), 'Copy the parameters_template.yaml file into parameters.yaml to test runs.'
+    assert os.path.isfile('parameters.yaml'), \
+        'Copy parameters_template.yaml into parameters.yaml to run'
     with open('parameters.yaml') as param_file:
         parameters = yaml.load(param_file.read().strip())
 
@@ -16,14 +17,14 @@ def main():
         for file in os.listdir(os.path.join(os.curdir, LogDir)):
             os.remove(os.path.join(os.curdir, LogDir, file))
             
-    TrainingParameters = parameters.get('selfplay')
-    BlackbirdInstance = BlackBird(tfLog=True, loadOld=True, **parameters)
+    numEpochs = parameters.get('selfplay').get('epochs')
+    BlackbirdInstance = BlackBird(BoardState, tfLog=True, loadOld=True,
+        **parameters)
 
-    for epoch in range(1, TrainingParameters.get('epochs') + 1):
+    for epoch in range(1, numEpochs + 1):
         print('Starting epoch {0}...'.format(epoch))
-        nGames = parameters.get('selfplay').get('training_games')
         examples = BlackbirdInstance.GenerateTrainingSamples(
-            nGames,
+            parameters.get('selfplay').get('training_games'),
             parameters.get('mcts').get('temperature').get('exploration'))
         BlackbirdInstance.LearnFromExamples(examples)
         print('Finished training for this epoch!')
@@ -44,6 +45,9 @@ def main():
         print('Draws = {0}'.format(draws))
         print('Losses = {0}'.format(losses))
 
+        if wins > losses:
+            BlackbirdInstance.saveModel()
+
         (wins, draws, losses) = BlackbirdInstance.TestGood(
             parameters.get('mcts').get('temperature').get('exploitation'),
             parameters.get('selfplay').get('selfplay_tests'))
@@ -53,9 +57,6 @@ def main():
         print('Losses = {0}'.format(losses))
 
         print('\n')
-
-        if wins > losses:
-            BlackbirdInstance.saveModel()
 
 if __name__ == '__main__':
     main()

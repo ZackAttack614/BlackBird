@@ -11,6 +11,9 @@ class GameState(object):
     def LegalActions(self):
         raise NotImplementedError
 
+    def LegalActionShape(self):
+        raise NotImplementedError
+
     def ApplyAction(self, action):
         raise NotImplementedError
     
@@ -19,3 +22,6 @@ class GameState(object):
 
     def NumericRepresentation(self):
         raise NotImplementedError
+
+    def EvalToString(self, eval):
+        return str(eval)

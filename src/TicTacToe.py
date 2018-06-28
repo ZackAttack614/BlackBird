@@ -8,9 +8,11 @@ class BoardState(GameState):
     Size = 3
     InARow = 3
     Dirs = [(0,1),(1,1),(1,0),(1,-1)]
+    BoardShape = [Size, Size]
+    LegalMoves = Size ** 2
 
     def __init__(self):
-        self.Board = np.zeros((self.Size,self.Size,2))
+        self.Board = np.zeros((self.Size, self.Size, 2))
         self.Player = 1
         self.PreviousPlayer = None
         return 
@@ -29,6 +31,9 @@ class BoardState(GameState):
                     actions[self._coordsToIndex((i,j))] = 1
 
         return actions
+
+    def LegalActionShape(self):
+        return self.BoardShape
 
     def ApplyAction(self, action):
         coords = self._indexToCoords(action)
@@ -69,6 +74,10 @@ class BoardState(GameState):
         if self._isOver(board):
             return 0
         return None
+
+    def EvalToString(self, eval):
+        reshapedEval = eval.reshape(3, 3)
+        return str(reshapedEval)
 
     def _isOver(self, board):
         return np.sum(board > 0) == self.Size * self.Size

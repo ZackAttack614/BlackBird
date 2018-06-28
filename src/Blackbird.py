@@ -1,6 +1,5 @@
 from DynamicMCTS import DynamicMCTS as MCTS
 from RandomMCTS import RandomMCTS
-from TicTacToe import BoardState
 from FixedMCTS import FixedMCTS
 from Network import Network
 
@@ -16,37 +15,45 @@ class BlackBird(MCTS, Network):
     """ Class to train a network using an MCTS driver to improve decision making
     """
     class TrainingExample(object):
-        def __init__(self, state, value, childValues, probabilities, priors):
+        def __init__(self, state, value, childValues, childValuesStr,
+                probabilities, priors, priorsStr, boardShape):
+            
             self.State = state
             self.Value = value
-            self.ChildValues = childValues.reshape((3,3)) if childValues is not None else None
+            self.BoardShape = boardShape
+            self.ChildValues = childValues if childValues is not None else None
+            self.ChildValuesStr = childValuesStr if childValuesStr is not None else None
             self.Reward = None
-            self.Priors = priors.reshape((3,3))
+            self.Priors = priors
+            self.PriorsStr = priorsStr
             self.Probabilities = probabilities
             return
 
         def __str__(self):
             state = str(self.State)
             value = 'Value: {}'.format(self.Value)
-            childValues = 'Child Values: \n{}'.format(self.ChildValues)
+            childValues = 'Child Values: \n{}'.format(self.ChildValuesStr)
             reward = 'Reward:\n{}'.format(self.Reward)
             probs = 'Probabilities:\n{}'.format(
-                self.Probabilities.reshape((3,3)))
-            priors = '\nPriors:\n{}\n'.format(self.Priors)
+                self.Probabilities.reshape(self.BoardShape))
+            priors = '\nPriors:\n{}\n'.format(self.PriorsStr)
             
             return '\n'.join([state, value, childValues, reward, probs, priors])
 
-    def __init__(self, tfLog=False, loadOld=False, teacher=False, **parameters):
+    def __init__(self, boardState, tfLog=False, loadOld=False, teacher=False,
+            **parameters):
+            
+        self.BoardState = boardState
         self.bbParameters = parameters
         self.batchSize = parameters.get('network').get('training').get('batch_size')
-        self.learningRate = parameters.get('network').get('training').get('learning_rate')
-        
+        self.boardShape = boardState().BoardShape
+
         mctsParams = parameters.get('mcts')
         MCTS.__init__(self, **mctsParams)
         
         networkParams = parameters.get('network')
-        Network.__init__(self, tfLog, loadOld=loadOld, teacher=teacher,
-            **networkParams)
+        Network.__init__(self, tfLog, self.boardShape, boardState.LegalMoves,
+            teacher=teacher, loadOld=loadOld, **networkParams)
 
     def GenerateTrainingSamples(self, nGames, temp):
         assert nGames > 0, 'Use a positive integer for number of games.'
@@ -55,7 +62,7 @@ class BlackBird(MCTS, Network):
 
         for _ in range(nGames):
             gameHistory = []
-            state = BoardState()
+            state = self.BoardState()
             lastAction = None
             winner = None
             self.DropRoot()
@@ -63,16 +70,19 @@ class BlackBird(MCTS, Network):
                 (nextState, v, currentProbabilties) = self.FindMove(state, temp)
                 childValues = self.Root.ChildWinRates()
                 example = self.TrainingExample(state, 1 - v, childValues,
-                    currentProbabilties, priors = self.Root.Priors)
+                    state.EvalToString(childValues), currentProbabilties, self.Root.Priors, 
+                    state.EvalToString(self.Root.Priors), state.LegalActionShape())
                 state = nextState
                 self.MoveRoot([state])
 
                 winner = state.Winner(lastAction)
                 gameHistory.append(example)
                 
-            example = self.TrainingExample(state, None, None,
+            example = self.TrainingExample(state, None, None, None,
                 np.zeros([len(currentProbabilties)]),
-                np.zeros([len(currentProbabilties)]))
+                np.zeros([len(currentProbabilties)]),
+                np.zeros([len(currentProbabilties)]),
+                state.LegalActionShape())
             gameHistory.append(example)
             
             for example in gameHistory:
@@ -100,7 +110,7 @@ class BlackBird(MCTS, Network):
                 np.stack([b.State.AsInputArray()[0] for b in batch], axis = 0),
                 np.stack([b.Reward for b in batch], axis = 0),
                 np.stack([b.Probabilities for b in batch], axis = 0),
-                self.learningRate,
+                self.bbParameters.get('network').get('training').get('learning_rate'),
                 teacher
                 )
         return
@@ -109,7 +119,7 @@ class BlackBird(MCTS, Network):
         return self.Test(RandomMCTS(), temp, numTests)
 
     def TestPrevious(self, temp, numTests):
-        oldBlackbird = BlackBird(tfLog=False, loadOld=True,
+        oldBlackbird = BlackBird(self.BoardState, tfLog=False, loadOld=True,
             **self.bbParameters)
 
         wins, draws, losses = self.Test(oldBlackbird, temp, numTests)
@@ -130,7 +140,7 @@ class BlackBird(MCTS, Network):
             winner = None
             self.DropRoot()
             other.DropRoot()
-            state = BoardState()
+            state = self.BoardState()
             
             while winner is None:
                 if blackbirdToMove:
@@ -171,14 +181,14 @@ class BlackBird(MCTS, Network):
         return policy
 
 if __name__ == '__main__':
+    from Connect4 import BoardState
     with open('parameters.yaml', 'r') as param_file:
         parameters = yaml.load(param_file)
-    b = BlackBird(tfLog=True, loadOld=True, **parameters)
+    b = BlackBird(BoardState, tfLog=True, loadOld=True, **parameters)
 
-    for i in range(parameters.get('selfplay').get('epochs')):
+    for i in range(1):
         examples = b.GenerateTrainingSamples(
-            parameters.get('selfplay').get('training_games'),
+            1,
             parameters.get('mcts').get('temperature').get('exploration'))
         for e in examples:
             print(e)
-        b.LearnFromExamples(examples)
