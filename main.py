@@ -1,13 +1,12 @@
 import os
-import sys
 import yaml
-sys.path.insert(0, './src/')
 
-from Blackbird import BlackBird
-from TicTacToe import BoardState
+from src.Blackbird import BlackBird
+from src.TicTacToe import BoardState
 
 def main():
-    assert os.path.isfile('parameters.yaml'), 'Copy parameters_template.yaml into parameters.yaml to run'
+    assert os.path.isfile('parameters.yaml'), \
+        'Copy parameters_template.yaml into parameters.yaml to run'
     with open('parameters.yaml') as param_file:
         parameters = yaml.load(param_file.read().strip())
 
@@ -17,7 +16,8 @@ def main():
             os.remove(os.path.join(os.curdir, LogDir, file))
             
     numEpochs = parameters.get('selfplay').get('epochs')
-    BlackbirdInstance = BlackBird(BoardState, tfLog=True, loadOld=True, **parameters)
+    BlackbirdInstance = BlackBird(BoardState, tfLog=True, loadOld=True,
+        **parameters)
 
     for epoch in range(1, numEpochs + 1):
         print('Starting epoch {0}...'.format(epoch))
