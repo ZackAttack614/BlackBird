@@ -3,8 +3,8 @@ import sys
 import yaml
 sys.path.insert(0, './src/')
 
-from src.Blackbird import BlackBird
-from src.TicTacToe import BoardState
+from Blackbird import BlackBird
+from TicTacToe import BoardState
 
 def main():
     assert os.path.isfile('parameters.yaml'), \
