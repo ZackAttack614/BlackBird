@@ -75,6 +75,10 @@ class BoardState(GameState):
             return 0
         return None
 
+    def EvalToString(self, eval):
+        reshapedEval = eval.reshape(3, 3)
+        return str(reshapedEval)
+
     def _isOver(self, board):
         return np.sum(board > 0) == self.Size * self.Size
 

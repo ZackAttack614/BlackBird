@@ -22,3 +22,6 @@ class GameState(object):
 
     def NumericRepresentation(self):
         raise NotImplementedError
+
+    def EvalToString(self, eval):
+        return str(eval)

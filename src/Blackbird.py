@@ -15,26 +15,28 @@ class BlackBird(MCTS, Network):
     """ Class to train a network using an MCTS driver to improve decision making
     """
     class TrainingExample(object):
-        def __init__(self, state, value, childValues,
-                probabilities, priors, boardShape):
+        def __init__(self, state, value, childValues, childValuesStr,
+                probabilities, priors, priorsStr, boardShape):
             
             self.State = state
             self.Value = value
             self.BoardShape = boardShape
-            self.ChildValues = childValues.reshape(boardShape) if childValues is not None else None
+            self.ChildValues = childValues if childValues is not None else None
+            self.ChildValuesStr = childValuesStr if childValuesStr is not None else None
             self.Reward = None
-            self.Priors = priors.reshape(boardShape)
+            self.Priors = priors
+            self.PriorsStr = priorsStr
             self.Probabilities = probabilities
             return
 
         def __str__(self):
             state = str(self.State)
             value = 'Value: {}'.format(self.Value)
-            childValues = 'Child Values: \n{}'.format(self.ChildValues)
+            childValues = 'Child Values: \n{}'.format(self.ChildValuesStr)
             reward = 'Reward:\n{}'.format(self.Reward)
             probs = 'Probabilities:\n{}'.format(
                 self.Probabilities.reshape(self.BoardShape))
-            priors = '\nPriors:\n{}\n'.format(self.Priors)
+            priors = '\nPriors:\n{}\n'.format(self.PriorsStr)
             
             return '\n'.join([state, value, childValues, reward, probs, priors])
 
@@ -68,15 +70,16 @@ class BlackBird(MCTS, Network):
                 (nextState, v, currentProbabilties) = self.FindMove(state, temp)
                 childValues = self.Root.ChildWinRates()
                 example = self.TrainingExample(state, 1 - v, childValues,
-                    currentProbabilties, self.Root.Priors, 
-                    state.LegalActionShape())
+                    state.EvalToString(childValues), currentProbabilties, self.Root.Priors, 
+                    state.EvalToString(self.Root.Priors), state.LegalActionShape())
                 state = nextState
                 self.MoveRoot([state])
 
                 winner = state.Winner(lastAction)
                 gameHistory.append(example)
                 
-            example = self.TrainingExample(state, None, None,
+            example = self.TrainingExample(state, None, None, None,
+                np.zeros([len(currentProbabilties)]),
                 np.zeros([len(currentProbabilties)]),
                 np.zeros([len(currentProbabilties)]),
                 state.LegalActionShape())

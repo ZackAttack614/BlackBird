@@ -78,6 +78,9 @@ class BoardState(GameState):
             return 0
         return None
 
+    def EvalToString(self, eval):
+        return str(eval)
+
     def _isOver(self, board):
         for j in range(self.Width):
             if np.sum(self.Board[self.Height-1, j, :]) == 0:
