@@ -56,7 +56,8 @@ class BlackBird(MCTS, Network):
             teacher=teacher, loadOld=loadOld, **networkParams)
 
     def GenerateTrainingSamples(self, nGames, temp):
-        assert nGames > 0, 'Use a positive integer for number of games.'
+        if nGames <= 0:
+            raise ValueError('Use a positive integer for number of games.')
 
         examples = []
 

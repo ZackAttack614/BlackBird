@@ -79,7 +79,8 @@ class MCTS(object):
             self.Root = Node(state, state.LegalActions(), self.GetPriors(state))
 
         assert self.Root.State == state, 'Primed for the correct input state.'
-        assert endTime is not None or playLimit is not None, 'MCTS algorithm has a cutoff.'
+        if endTime is None and playLimit is None
+            raise ValueError('You must provide either an endTime or playLimit.')
         
         if self.Threads == 1:
             self._runMCTS(self.Root, temp, endTime, playLimit)

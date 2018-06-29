@@ -36,7 +36,9 @@ class BoardState(GameState):
         return [self.LegalMoves]
 
     def ApplyAction(self, action):
-        assert np.sum(self.Board[self.Height -1, action, :]) == 0, 'Ahh! Can\'t go there! {}'.format(action)
+        if np.sum(self.Board[self.Height -1, action, :]) != 0:
+            raise ValueError('Ahh! Can\'t go there! {}'.format(action))
+            
         top = -1
         for i in reversed(range(self.Height)):
             if np.sum(self.Board[i, action, :]) != 0:

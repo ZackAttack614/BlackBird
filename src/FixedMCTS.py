@@ -12,7 +12,8 @@ class FixedMCTS(MCTS):
         playLimit = kwargs.get('playLimit')
         threads = kwargs.get('threads', 1) 
 
-        assert self.MaxDepth > 0, 'MaxDepth for MCTS must be > 0.'
+        if self.MaxDepth <= 0
+            raise ValueError('MaxDepth for MCTS must be > 0.')
 
         super().__init__(explorationRate, timeLimit, playLimit, threads)
     
