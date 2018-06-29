@@ -106,7 +106,6 @@ class MCTS(object):
             roots.append(r.get())
 
         self._mergeAll(self.Root, roots)
-        return
 
     def _runMCTS(self, root, temp, endTime = None, nPlays = None):
         endPlays = root.Plays + (nPlays if nPlays is not None else 0)
@@ -141,8 +140,6 @@ class MCTS(object):
                 continue
             self._mergeAll(
                 target.Children[i], [t.Children[i] for t in continuedTrees])
-
-        return
 
     def _selectAction(self, root, temp, exploring = True):
         """ Selects a child of the root using an upper confidence interval. If
@@ -186,7 +183,6 @@ class MCTS(object):
                 s = self._applyAction(node.State, i)
                 node.Children[i] = Node(s, s.LegalActions(), self.GetPriors(s))
                 node.Children[i].Parent = node
-        return
 
     def MoveRoot(self, states):
         """ Function that is used to move the root of the tree to the next
@@ -195,7 +191,6 @@ class MCTS(object):
         """
         for s in states: 
             self._moveRoot(s)
-        return
 
     def _moveRoot(self, state):
         if self.Root is None:
@@ -209,18 +204,15 @@ class MCTS(object):
             if child.State == state:
                 self.Root = child
                 break
-        return
 
     def ResetRoot(self):
         if self.Root is None:
             return
         while self.Root.Parent is not None:
             self.Root = self.Root.Parent
-        return
 
     def DropRoot(self):
         self.Root = None
-        return
 
     def BackProp(self, leaf, stateValue, playerForValue):
         leaf.Plays += 1
@@ -231,7 +223,6 @@ class MCTS(object):
                 leaf.Value += 1 - stateValue
 
             self.BackProp(leaf.Parent, stateValue, playerForValue)
-        return
 
     def _applyAction(self, state, action):
         s = state.Copy()

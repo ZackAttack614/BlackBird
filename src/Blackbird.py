@@ -27,7 +27,6 @@ class BlackBird(MCTS, Network):
             self.Priors = priors
             self.PriorsStr = priorsStr
             self.Probabilities = probabilities
-            return
 
         def __str__(self):
             state = str(self.State)
@@ -114,7 +113,6 @@ class BlackBird(MCTS, Network):
                 self.bbParameters.get('network').get('training').get('learning_rate'),
                 teacher
                 )
-        return
 
     def TestRandom(self, temp, numTests):
         return self.Test(RandomMCTS(), temp, numTests)
@@ -164,7 +162,6 @@ class BlackBird(MCTS, Network):
 
         return wins, draws, losses
 
-    # Overriden from MCTS
     @functools.lru_cache(maxsize = 4096)
     def SampleValue(self, state, player):
         value = self.getEvaluation(state.AsInputArray())

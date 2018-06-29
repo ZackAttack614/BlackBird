@@ -6,7 +6,7 @@ class DynamicMCTS(MCTS):
         as it explores the tree
     """
     def __init__(self, **kwargs):
-        return super().__init__(**kwargs)
+        super().__init__(**kwargs)
 
     # Overriding from MCTS
     def FindLeaf(self, node, temp):

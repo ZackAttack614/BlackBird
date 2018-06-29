@@ -16,7 +16,6 @@ class BoardState(GameState):
         self.Board = np.zeros((self.Height, self.Width, 2))
         self.Player = 1
         self.PreviousPlayer = None
-        return 
 
     def Copy(self):
         copy = BoardState()
@@ -48,7 +47,6 @@ class BoardState(GameState):
         self.Board[top + 1, action, self.Player - 1] = 1
         self.PreviousPlayer = self.Player
         self.Player = 1 if self.Player == 2 else 2
-        return
 
     def AsInputArray(self):
         player = np.full((self.Height, self.Width), 1 if self.Player == 1 else -1)

@@ -3,7 +3,6 @@ class GameState(object):
         self.Board = None
         self.Player = None
         self.PreviousPlayer = None
-        return 
 
     def Copy(self):
         raise NotImplementedError
