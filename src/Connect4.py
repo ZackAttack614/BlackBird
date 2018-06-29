@@ -38,7 +38,7 @@ class BoardState(GameState):
     def ApplyAction(self, action):
         if np.sum(self.Board[self.Height -1, action, :]) != 0:
             raise ValueError('Tried to make an illegal move.')
-            
+
         top = -1
         for i in reversed(range(self.Height)):
             if np.sum(self.Board[i, action, :]) != 0:
@@ -152,8 +152,3 @@ if __name__ == '__main__':
         player.MoveRoot([state])
     print(state)
     print(state.Winner())
-
-
-
-
-

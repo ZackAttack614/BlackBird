@@ -15,30 +15,30 @@ class Network:
         gpuFrac = kwargs.get('gpu_frac')
         gpuOptions = tf.GPUOptions(per_process_gpu_memory_fraction=gpuFrac)
         self.sess = tf.Session(config=tf.ConfigProto(gpu_options=gpuOptions))
-        
+
         self.buildNetwork(teacher)
         init = tf.global_variables_initializer()
         self.sess.run(init)
         self.batchCount = 0
-        
+
         self.saver = tf.train.Saver()
         self.network_name = '{0}_{1}.ckpt'.format(self.parameters['blocks'], 
             self.parameters['filters'])
 
         self.modelLoc = 'blackbird_models/best_model_{0}.ckpt'.format(
             self.network_name)
-            
+
         self.writerLoc = 'blackbird_summary/model_summary'
 
         self.defaultAlpha = self.parameters.get('policy').get('dirichlet').get('alpha')
         self.defaultEpsilon = self.parameters.get('policy').get('dirichlet').get('epsilon')
 
         self.write_summary = tfLog
-        
+
         if tfLog:
             self.writer = tf.summary.FileWriter(
                 self.writerLoc, graph=self.sess.graph)
-        
+
         if loadOld:
             try:
                 self.loadModel()
@@ -51,7 +51,7 @@ class Network:
             self.writer.close()
         except:
             pass
-    
+
     def buildNetwork(self, hasTeacher):
         """ Build out the policy/evaluation combo network
         """
@@ -66,7 +66,7 @@ class Network:
 
             self.mctsEvaluation = tf.placeholder(
                 shape=[None], name='mctsEvaluation', dtype=tf.float32)
-            
+
         with tf.variable_scope('resTower', reuse=tf.AUTO_REUSE) as _:
             self.resTower = [self.input]
 
@@ -84,11 +84,11 @@ class Network:
                 self.resTower.append(
                     tf.layers.batch_normalization(
                         inputs=self.resTower[-1],name='batch_norm'))
-                
+
                 self.resTower.append(
                     tf.nn.relu(
                         features=self.resTower[-1], name='rect_nonlinearity'))
-            
+
             for block in range(self.parameters['blocks']):
                 with tf.variable_scope('block_{}'.format(block), reuse=tf.AUTO_REUSE) as _:
                     """ AlphaZero residual blocks are...
@@ -134,7 +134,7 @@ class Network:
                         tf.nn.relu(
                             features=self.resTower[-1],
                             name='rectifier_nonlinearity_2'))
-                    
+
         with tf.variable_scope('value', reuse=tf.AUTO_REUSE) as _:
             """ AlphaZero's value head is...
                 1) Convolutional layer of 2 1x1 filters, stride of 1
@@ -176,7 +176,7 @@ class Network:
 
             self.evaluation = tf.tanh(
                 evalScalar, name='value')
-            
+
         with tf.variable_scope('policy', reuse=tf.AUTO_REUSE) as _:
             """ AlphaZero's policy head is...
                 1) Convolutional layer of 2 1x1 filters, stride of 1
@@ -271,15 +271,15 @@ class Network:
                     self.learningRate[0])
 
             self.trainingOp = optimizer.minimize(self.loss)
-            
+
     def getEvaluation(self, state):
         """ Given a game state, return the network's evaluation.
         """
         evaluation = self.sess.run(
             self.evaluation, feed_dict={self.input:state})
-        
+
         return evaluation[0]
-    
+
     def getPolicy(self, state):
         """ Given a game state, return the network's policy.
             Random Dirichlet noise is applied to the policy output
@@ -292,7 +292,7 @@ class Network:
                 self.alpha:[self.defaultAlpha]})
 
         return policy[0]
-    
+
     def train(self, state, eval, policy, learningRate=0.01, teacher=None):
         """ Train the network
         """
@@ -308,19 +308,19 @@ class Network:
         if teacher is not None:
             assert isinstance(teacher, Network), 'teacher can generate policies'
             feed_dict[self.teacherPolicy] = teacher.getPolicy(state)
-        
+
         self.sess.run(self.trainingOp, feed_dict=feed_dict)
         self.batchCount += 1
         if self.batchCount % 10 == 0 and self.write_summary:
             summary = self.sess.run(self.lossMerged, feed_dict=feed_dict)
             self.writer.add_summary(summary, self.batchCount)
-        
+
     def saveModel(self):
         """ Write the state of the network to a file.
             This should be reserved for "best" networks.
         """
         self.saver.save(self.sess, self.modelLoc)
-        
+
     def loadModel(self):
         """ Load an old version of the network.
         """

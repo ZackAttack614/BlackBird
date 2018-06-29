@@ -7,7 +7,7 @@ class DynamicMCTS(MCTS):
     """
     def __init__(self, **kwargs):
         return super().__init__(**kwargs)
-    
+
     # Overriding from MCTS
     def FindLeaf(self, node, temp):
         lastAction = None
@@ -21,7 +21,5 @@ class DynamicMCTS(MCTS):
                 break
             lastAction = self._selectAction(node, temp)
             node = node.Children[lastAction]
-            
+
         return node
-
-

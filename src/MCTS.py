@@ -14,7 +14,7 @@ class Node(object):
         self.LegalActions = np.array(legalActions)
         self.Children = None
         self.Parent = None
-        
+
         # Use the legal actions mask to ignore priors that don't make sense.
         self.Priors = np.multiply(priors, legalActions)
 
@@ -22,7 +22,7 @@ class Node(object):
         # cache compared to receating a new array on every access.
         self._childWinRates = np.zeros(len(legalActions))
         self._childPlays = np.zeros(len(legalActions))
-        
+
     def WinRate(self):
         return self.Value/self.Plays if self.Plays > 0 else 0
 
@@ -50,7 +50,7 @@ class MCTS(object):
     """
     def __init__(self, explorationRate,
         timeLimit = None, playLimit = None, threads = 1, **kwargs):
-        
+
         self.TimeLimit = timeLimit
         self.PlayLimit = playLimit
         self.ExplorationRate = explorationRate
@@ -58,7 +58,7 @@ class MCTS(object):
         self.Threads = threads
         if self.Threads > 1:
             self.Pool = mp.Pool(processes = self.Threads)
-            
+
     def FindMove(self, state, temp = 0.1, moveTime = None, playLimit = None):
         """ Given a game state, this will use a Monte Carlo Tree Search
             algorithm to pick the best next move. Returns (the chosen state, the
@@ -81,7 +81,7 @@ class MCTS(object):
         assert self.Root.State == state, 'Primed for the correct input state.'
         if endTime is None and playLimit is None:
             raise ValueError('You must provide either an endTime or playLimit.')
-        
+
         if self.Threads == 1:
             self._runMCTS(self.Root, temp, endTime, playLimit)
         elif self.Threads > 1:
@@ -113,7 +113,7 @@ class MCTS(object):
         while ((endTime is None or (time() < endTime or root.Children is None))
                 and (nPlays is None or root.Plays < endPlays)):
             node = self.FindLeaf(root, temp)
-            
+
             val = self.SampleValue(node.State, node.State.PreviousPlayer)
             self.BackProp(node, val, node.State.PreviousPlayer)
 
@@ -123,7 +123,7 @@ class MCTS(object):
         for t in trees:
             target.Plays += t.Plays
             target.Value += t.Value
-        
+
         continuedTrees = [t for t in trees if t.Children is not None]
         if len(continuedTrees) == 0:
             return
@@ -151,7 +151,7 @@ class MCTS(object):
             the exploration/regret factor.
         """
         assert root.Children is not None, 'The node has children to select.'
-        
+
         if exploring or temp == 0:
             allPlays = sum(root.ChildPlays())
             upperConfidence = (root.ChildWinRates()
@@ -163,7 +163,7 @@ class MCTS(object):
             allPlays = sum([p**(1/temp) for p in root.ChildPlays()])
             p = [c**(1/temp) / allPlays for c in root.ChildPlays()]
             choice = np.random.choice(len(root.ChildPlays()), p=p)
-        
+
         assert root.LegalActions[choice] == 1, 'Illegal move: \n{}'.format(
             '\n'.join([
                 str(root.State),
@@ -232,7 +232,7 @@ class MCTS(object):
 
             self.BackProp(leaf.Parent, stateValue, playerForValue)
         return
-    
+
     def _applyAction(self, state, action):
         s = state.Copy()
         s.ApplyAction(action)

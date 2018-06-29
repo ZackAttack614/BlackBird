@@ -4,9 +4,9 @@ import numpy as np
 class RandomMCTS(MCTS):
     def __init__(self, *args, **kwargs):
         return
-    
+
     def FindMove(self, state, *args, **kwargs):
-        
+
         action = np.random.choice([i for i in range(len(state.LegalActions())) 
                                     if state.LegalActions()[i] == 1])
         winRate = np.random.random()

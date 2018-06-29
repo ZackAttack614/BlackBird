@@ -101,13 +101,13 @@ class BoardState(GameState):
             if inARow >= self.InARow:
                 return p
         return None
-    
+
     def _coordsToIndex(self, coords):
         return coords[0]*self.Size + coords[1]
 
     def _indexToCoords(self, index):
         return (index//self.Size, index % self.Size)
-    
+
     def _collapsed(self):
         array = np.zeros(self.Board.shape[:2])
         for p in BoardState.Players:
@@ -154,8 +154,3 @@ if __name__ == '__main__':
         player.MoveRoot([state])
     print(state)
     print(state.Winner())
-
-
-
-
-

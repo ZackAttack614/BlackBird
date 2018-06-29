@@ -17,7 +17,7 @@ class BlackBird(MCTS, Network):
     class TrainingExample(object):
         def __init__(self, state, value, childValues, childValuesStr,
                 probabilities, priors, priorsStr, boardShape):
-            
+
             self.State = state
             self.Value = value
             self.BoardShape = boardShape
@@ -37,12 +37,12 @@ class BlackBird(MCTS, Network):
             probs = 'Probabilities:\n{}'.format(
                 self.Probabilities.reshape(self.BoardShape))
             priors = '\nPriors:\n{}\n'.format(self.PriorsStr)
-            
+
             return '\n'.join([state, value, childValues, reward, probs, priors])
 
     def __init__(self, boardState, tfLog=False, loadOld=False, teacher=False,
             **parameters):
-            
+
         self.BoardState = boardState
         self.bbParameters = parameters
         self.batchSize = parameters.get('network').get('training').get('batch_size')
@@ -50,7 +50,7 @@ class BlackBird(MCTS, Network):
 
         mctsParams = parameters.get('mcts')
         MCTS.__init__(self, **mctsParams)
-        
+
         networkParams = parameters.get('network')
         Network.__init__(self, tfLog, self.boardShape, boardState.LegalMoves,
             teacher=teacher, loadOld=loadOld, **networkParams)
@@ -78,14 +78,14 @@ class BlackBird(MCTS, Network):
 
                 winner = state.Winner(lastAction)
                 gameHistory.append(example)
-                
+
             example = self.TrainingExample(state, None, None, None,
                 np.zeros([len(currentProbabilties)]),
                 np.zeros([len(currentProbabilties)]),
                 np.zeros([len(currentProbabilties)]),
                 state.LegalActionShape())
             gameHistory.append(example)
-            
+
             for example in gameHistory:
                 if winner == 0:
                     example.Reward = 0
@@ -103,7 +103,7 @@ class BlackBird(MCTS, Network):
         examples = np.random.choice(examples, 
             len(examples) - (len(examples) % self.batchSize), 
             replace = False)
-                            
+
         for i in range(len(examples) // self.batchSize):
             start = i * self.batchSize
             batch = examples[start : start + self.batchSize]
@@ -142,7 +142,7 @@ class BlackBird(MCTS, Network):
             self.DropRoot()
             other.DropRoot()
             state = self.BoardState()
-            
+
             while winner is None:
                 if blackbirdToMove:
                     (nextState, *_) = self.FindMove(state, temp)
@@ -178,7 +178,7 @@ class BlackBird(MCTS, Network):
     def GetPriors(self, state):
         policy = self.getPolicy(state.AsInputArray()) * state.LegalActions()
         policy /= np.sum(policy)
-        
+
         return policy
 
 if __name__ == '__main__':

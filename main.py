@@ -11,7 +11,7 @@ def main():
         raise IOError('Copy parameters_template.yaml into parameters.yaml')
     with open('parameters.yaml') as param_file:
         parameters = yaml.load(param_file.read().strip())
-            
+
     numEpochs = parameters.get('selfplay').get('epochs')
     BlackbirdInstance = BlackBird(BoardState, tfLog=True, loadOld=True,
         **parameters)

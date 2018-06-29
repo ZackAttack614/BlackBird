@@ -16,7 +16,7 @@ class FixedMCTS(MCTS):
             raise ValueError('MaxDepth for MCTS must be > 0.')
 
         super().__init__(explorationRate, timeLimit, playLimit, threads)
-    
+
     # Overriding from MCTS
     def FindLeaf(self, node, temp):
         lastAction = None
@@ -30,5 +30,5 @@ class FixedMCTS(MCTS):
             lastAction = self._selectAction(node, temp)
             node = node.Children[lastAction]
         assert lastAction is not None, 'There is at least one legal option.'
-            
+
         return node
