@@ -17,8 +17,8 @@ class Network:
         self.sess = tf.Session(config=tf.ConfigProto(gpu_options=gpuOptions))
         
         self.buildNetwork(teacher)
-        self.init = tf.global_variables_initializer()
-        self.sess.run(self.init)
+        init = tf.global_variables_initializer()
+        self.sess.run(init)
         self.batchCount = 0
         
         self.saver = tf.train.Saver()
@@ -145,37 +145,37 @@ class Network:
                 6) Fully connected layer of size 1
                 7) tanh activation
             """
-            self.evalConv = tf.layers.conv2d(
+            evalConv = tf.layers.conv2d(
                 self.resTower[-1], filters=1, kernel_size=(1,1), strides=1,
                 name='convolution')
 
-            self.evalBatchNorm = tf.layers.batch_normalization(
-                self.evalConv, name='batch_norm')
+            evalBatchNorm = tf.layers.batch_normalization(
+                evalConv, name='batch_norm')
 
-            self.evalRectifier1 = tf.nn.relu(
-                self.evalBatchNorm, name='rect_norm_1')
+            evalRectifier1 = tf.nn.relu(
+                evalBatchNorm, name='rect_norm_1')
 
-            self.evalDense = tf.layers.dense(
-                inputs=self.evalRectifier1,
+            evalDense = tf.layers.dense(
+                inputs=evalRectifier1,
                 units=self.parameters.get('eval').get('dense'), name='dense_1')
 
-            self.evalDenseReduced = tf.reduce_sum(
-                self.evalDense,
+            evalDenseReduced = tf.reduce_sum(
+                evalDense,
                 axis=[1,2], name='reduced_dense')
 
-            self.evalRectifier2 = tf.nn.relu(
-                self.evalDenseReduced, name='rect_norm_2')
+            evalRectifier2 = tf.nn.relu(
+                evalDenseReduced, name='rect_norm_2')
 
-            self.evalDenseScalar = tf.layers.dense(
-                inputs=self.evalRectifier2,
+            evalDenseScalar = tf.layers.dense(
+                inputs=evalRectifier2,
                 units=1, name='dense_2')
 
-            self.evalScalar = tf.reduce_sum(
-                self.evalDenseScalar,
+            evalScalar = tf.reduce_sum(
+                evalDenseScalar,
                 axis=[1], name='reduced_scalar')
 
             self.evaluation = tf.tanh(
-                self.evalScalar, name='value')
+                evalScalar, name='value')
             
         with tf.variable_scope('policy', reuse=tf.AUTO_REUSE) as _:
             """ AlphaZero's policy head is...
@@ -184,74 +184,74 @@ class Network:
                 3) Rectifier nonlinearity
                 4) Fully connected layer of size |legal actions|
             """
-            self.policyConv = tf.layers.conv2d(
+            policyConv = tf.layers.conv2d(
                 self.resTower[-1], filters=2, kernel_size=(1,1), strides=1,
                 name='convolution')
 
-            self.policyBatchNorm = tf.layers.batch_normalization(
-                self.policyConv, name='batch_norm')
+            policyBatchNorm = tf.layers.batch_normalization(
+                policyConv, name='batch_norm')
 
-            self.policyRectifier = tf.nn.relu(
-                self.policyBatchNorm, name='rect_norm')
+            policyRectifier = tf.nn.relu(
+                policyBatchNorm, name='rect_norm')
 
-            self.policyDense = tf.layers.dense(
-                self.policyRectifier, units=self.legalActions, name='policy')
+            policyDense = tf.layers.dense(
+                policyRectifier, units=self.legalActions, name='policy')
 
-            self.policyVector = tf.reduce_sum(
-                self.policyDense, axis=[1,2])
+            policyVector = tf.reduce_sum(
+                policyDense, axis=[1,2])
 
-            self.policyBase = tf.nn.softmax(
-                self.policyVector)
+            policyBase = tf.nn.softmax(
+                policyVector)
 
             # Generate Dirichlet noise to add to the network policy
             self.epsilon = tf.placeholder(shape=[1], dtype=tf.float32)
             self.alpha = tf.placeholder(shape=[1], dtype=tf.float32)
 
-            self.dist = tf.distributions.Dirichlet(
+            dist = tf.distributions.Dirichlet(
                 [self.alpha[0], 1-self.alpha[0]])
 
-            self.policy = ((1 - self.epsilon[0]) * self.policyBase
-                + self.epsilon[0] * self.dist.sample([1, self.legalActions])[0][:,0])
+            self.policy = ((1 - self.epsilon[0]) * policyBase
+                + self.epsilon[0] * dist.sample([1, self.legalActions])[0][:,0])
 
             self.policy /= tf.reduce_sum(self.policy)
             
         with tf.variable_scope('loss', reuse=tf.AUTO_REUSE) as _:
-            self.teacherPolicy = tf.placeholder(
+            teacherPolicy = tf.placeholder(
                 shape=[self.policy.shape[1]], dtype=tf.float32,
                 name='teacher_policy')
 
-            self.lossEvaluation = tf.reduce_mean(tf.square(
+            lossEvaluation = tf.reduce_mean(tf.square(
                 self.evaluation - self.mctsEvaluation))
 
-            self.lossPolicy = -tf.reduce_mean(
+            lossPolicy = -tf.reduce_mean(
                 tf.tensordot(
                     tf.log(self.policy),
                     tf.transpose(self.mctsPolicy),
                     axes=1))
 
-            self.lossParam = tf.reduce_mean([
-                    tf.nn.l2Loss(v) for v in tf.trainable_variables()
+            lossParam = tf.reduce_mean([
+                    tf.nn.l2_loss(v) for v in tf.trainable_variables()
 
                     # I don't know if this filter is a good idea...
                     if 'bias' not in v.name
                 ])
 
-            self.loss = self.lossEvaluation + self.lossPolicy + self.lossParam
+            self.loss = lossEvaluation + lossPolicy + lossParam
 
             if hasTeacher:
-                self.policyXentropy = -tf.reduce_mean(
+                policyXentropy = -tf.reduce_mean(
                     tf.tensordot(
                         tf.log(self.teacherPolicy),
                         tf.transpose(self.policy),
                         axes=1),
                     axis=1)
 
-                self.loss += self.policyXentropy
+                self.loss += policyXentropy
 
             avgLoss = tf.summary.scalar('average_loss', self.loss)
-            policyLoss = tf.summary.scalar('policyLoss', self.lossPolicy)
-            evalLoss = tf.summary.scalar('evalLoss', self.lossEvaluation)
-            l2Loss = tf.summary.scalar('l2Loss', self.lossParam)
+            policyLoss = tf.summary.scalar('policyLoss', lossPolicy)
+            evalLoss = tf.summary.scalar('evalLoss', lossEvaluation)
+            l2Loss = tf.summary.scalar('l2Loss', lossParam)
 
             self.lossMerged = tf.summary.merge([avgLoss, policyLoss,
                                                  evalLoss, l2Loss])
@@ -261,16 +261,16 @@ class Network:
                 shape=[1], dtype=tf.float32, name='learningRate')
 
             if self.parameters['training']['optimizer'] == 'adam':
-                self.optimizer = tf.train.AdamOptimizer(self.learningRate[0])
+                optimizer = tf.train.AdamOptimizer(self.learningRate[0])
             elif self.parameters['training']['optimizer'] == 'momentum':
-                self.optimizer = tf.train.MomentumOptimizer(
+                optimizer = tf.train.MomentumOptimizer(
                     self.learningRate[0],
                     momentum=self.parameters['training']['momentum'])
             else:
-                self.optimizer = tf.train.GradientDescentOptimizer(
+                optimizer = tf.train.GradientDescentOptimizer(
                     self.learningRate[0])
 
-            self.trainingOp = self.optimizer.minimize(self.loss)
+            self.trainingOp = optimizer.minimize(self.loss)
             
     def getEvaluation(self, state):
         """ Given a game state, return the network's evaluation.
