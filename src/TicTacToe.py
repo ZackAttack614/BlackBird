@@ -38,7 +38,7 @@ class BoardState(GameState):
     def ApplyAction(self, action):
         coords = self._indexToCoords(action)
         if np.sum(self.Board[coords[0], coords[1], :]) != 0:
-            raise ValueError('Tried to make an illegal move.'))
+            raise ValueError('Tried to make an illegal move.')
 
         self.Board[coords[0], coords[1], self.Player - 1] = 1
         self.PreviousPlayer = self.Player

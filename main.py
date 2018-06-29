@@ -7,7 +7,7 @@ from Blackbird import BlackBird
 from TicTacToe import BoardState
 
 def main():
-    if not os.path.isfile('parameters.yaml')
+    if not os.path.isfile('parameters.yaml'):
         raise IOError('Copy parameters_template.yaml into parameters.yaml')
     with open('parameters.yaml') as param_file:
         parameters = yaml.load(param_file.read().strip())

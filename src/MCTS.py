@@ -79,7 +79,7 @@ class MCTS(object):
             self.Root = Node(state, state.LegalActions(), self.GetPriors(state))
 
         assert self.Root.State == state, 'Primed for the correct input state.'
-        if endTime is None and playLimit is None
+        if endTime is None and playLimit is None:
             raise ValueError('You must provide either an endTime or playLimit.')
         
         if self.Threads == 1:
