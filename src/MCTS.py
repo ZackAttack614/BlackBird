@@ -48,18 +48,15 @@ class MCTS(object):
         necessary operations for the core algorithm. Most operations will need
         to be overriden to avoid a NotImplemenetedError.
     """
-    def __init__(self, explorationRate,
-        timeLimit = None, playLimit = None, threads = 1, **kwargs):
+    def __init__(self, explorationRate, timeLimit=None, playLimit=None,
+            **kwargs):
 
         self.TimeLimit = timeLimit
         self.PlayLimit = playLimit
         self.ExplorationRate = explorationRate
         self.Root = None
-        self.Threads = threads
-        if self.Threads > 1:
-            self.Pool = mp.Pool(processes = self.Threads)
 
-    def FindMove(self, state, temp = 0.1, moveTime = None, playLimit = None):
+    def FindMove(self, state, temp=0.1, moveTime=None, playLimit=None):
         """ Given a game state, this will use a Monte Carlo Tree Search
             algorithm to pick the best next move. Returns (the chosen state, the
             decided value of input state, and the probabilities of choosing each
@@ -82,32 +79,14 @@ class MCTS(object):
         if endTime is None and playLimit is None:
             raise ValueError('You must provide either an endTime or playLimit.')
 
-        if self.Threads == 1:
-            self._runMCTS(self.Root, temp, endTime, playLimit)
-        elif self.Threads > 1:
-            self._runAsynch(state, temp, endTime, playLimit)
+        self._runMCTS(self.Root, temp, endTime, playLimit)
 
         action = self._selectAction(self.Root, temp, exploring = False)
 
         return (self._applyAction(state, action), self.Root.WinRate(),
             self.Root.ChildProbability())
 
-    def _runAsynch(self, state, temp, endTime = None, nPlays = None):
-        roots = []
-        results = []
-        for i in range(self.Threads):
-            root = Node(state, state.LegalActions(), self.GetPriors(state))
-
-            results.append(
-                self.Pool.apply_async(
-                    self._runMCTS, (root, temp, endTime, nPlays)))
-
-        for r in results:
-            roots.append(r.get())
-
-        self._mergeAll(self.Root, roots)
-
-    def _runMCTS(self, root, temp, endTime = None, nPlays = None):
+    def _runMCTS(self, root, temp, endTime=None, nPlays=None):
         endPlays = root.Plays + (nPlays if nPlays is not None else 0)
         while ((endTime is None or (time() < endTime or root.Children is None))
                 and (nPlays is None or root.Plays < endPlays)):
@@ -141,7 +120,7 @@ class MCTS(object):
             self._mergeAll(
                 target.Children[i], [t.Children[i] for t in continuedTrees])
 
-    def _selectAction(self, root, temp, exploring = True):
+    def _selectAction(self, root, temp, exploring=True):
         """ Selects a child of the root using an upper confidence interval. If
             you are not exploring, setting the exploring flag to false will
             instead choose the one with the highest expected payout - ignoring 
@@ -157,32 +136,24 @@ class MCTS(object):
             choice = np.argmax(upperConfidence)
             p = None
         else:
-            allPlays = sum([p**(1/temp) for p in root.ChildPlays()])
-            p = [c**(1/temp) / allPlays for c in root.ChildPlays()]
+            allPlays = sum([p ** (1 / temp) for p in root.ChildPlays()])
+            p = [c ** (1 / temp) / allPlays for c in root.ChildPlays()]
             choice = np.random.choice(len(root.ChildPlays()), p=p)
 
-        assert root.LegalActions[choice] == 1, 'Illegal move: \n{}'.format(
-            '\n'.join([
-                str(root.State),
-                str(root.ChildPlays()),
-                str(root.Priors),
-                str(root.LegalActions),
-                str(choice),
-                str(p)
-            ])
-        )
+        assert root.LegalActions[choice] == 1, 'Selected move is legal.'
         return choice
 
     def AddChildren(self, node):
         """ Expands the node and adds children, actions and priors.
         """
-        l = len(node.LegalActions)
-        node.Children = [None] * l
-        for i in range(l):
-            if node.LegalActions[i] == 1:
-                s = self._applyAction(node.State, i)
-                node.Children[i] = Node(s, s.LegalActions(), self.GetPriors(s))
-                node.Children[i].Parent = node
+        numLegalMoves = len(node.LegalActions)
+        node.Children = [None] * numLegalMoves
+        for actionIndex in range(numLegalMoves):
+            if node.LegalActions[actionIndex] == 1:
+                s = self._applyAction(node.State, actionIndex)
+                node.Children[actionIndex] = Node(s, s.LegalActions(),
+                    self.GetPriors(s))
+                node.Children[actionIndex].Parent = node
 
     def MoveRoot(self, states):
         """ Function that is used to move the root of the tree to the next
