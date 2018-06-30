@@ -73,7 +73,7 @@ class BlackBird(MCTS, Network):
                     state.EvalToString(childValues), currentProbabilties, self.Root.Priors, 
                     state.EvalToString(self.Root.Priors), state.LegalActionShape())
                 state = nextState
-                self.MoveRoot([state])
+                self.MoveRoot(state)
 
                 winner = state.Winner(lastAction)
                 gameHistory.append(example)
@@ -147,8 +147,8 @@ class BlackBird(MCTS, Network):
                 else:
                     (nextState, *_) = other.FindMove(state, temp)
                 state = nextState
-                self.MoveRoot([state])
-                other.MoveRoot([state])
+                self.MoveRoot(state)
+                other.MoveRoot(state)
 
                 blackbirdToMove = not blackbirdToMove
                 winner = state.Winner()

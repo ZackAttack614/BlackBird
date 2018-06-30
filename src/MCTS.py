@@ -213,7 +213,7 @@ class MCTS(object):
                     self.GetPriors(s))
                 node.Children[actionIndex].Parent = node
 
-    def MoveRoot(self, states):
+    def MoveRoot(self, state):
         """ Updates the root of the tree.
 
             Move the root of the tree to the provided state. Use this to update
@@ -225,8 +225,7 @@ class MCTS(object):
                 states: A list of Node objects to cycle through, updating the
                     Root as it is iterated over.
         """
-        for s in states: 
-            self._moveRoot(s)
+        self._moveRoot(state)
 
     def _moveRoot(self, state):
         if self.Root is None:
