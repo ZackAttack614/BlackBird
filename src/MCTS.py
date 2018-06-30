@@ -87,7 +87,6 @@ class MCTS(object):
                 TypeError: state was not an object of type GameState.
                 ValueError: The function was not able to determine a stop time.
         """
-
         if not isinstance(state, GameState):
             raise TypeError('State not of type GameState')
 
@@ -125,7 +124,6 @@ class MCTS(object):
                 endTime: (optional) The maximum time to spend on searching.
                 nPlays: (optional) The maximum number of positions to evaluate.
         """
-
         endPlays = self.Root.Plays + (nPlays if nPlays is not None else 0)
         while ((endTime is None or (time() < endTime or self.Root.Children is None))
                 and (nPlays is None or self.Root.Plays < endPlays)):
@@ -133,29 +131,6 @@ class MCTS(object):
 
             val = self.SampleValue(node.State, node.State.PreviousPlayer)
             self._backProp(node, val, node.State.PreviousPlayer)
-
-    def _mergeAll(self, target, trees):
-        for t in trees:
-            target.Plays += t.Plays
-            target.Value += t.Value
-
-        continuedTrees = [t for t in trees if t.Children is not None]
-        if len(continuedTrees) == 0:
-            return
-        if target.Children is None:
-            t = continuedTrees[0]
-            target.Children = t.Children
-            t.Children = None
-            for c in target.Children:
-                if c is not None:
-                    c.Parent = target
-            del continuedTrees[0]
-
-        for i in range(len(target.Children)):
-            if target.Children[i] is None:
-                continue
-            self._mergeAll(
-                target.Children[i], [t.Children[i] for t in continuedTrees])
 
     def _selectAction(self, root, temp, exploring=True):
         """ Chooses an action from an explored root.
@@ -214,6 +189,19 @@ class MCTS(object):
                 node.Children[actionIndex].Parent = node
 
     def MoveRoot(self, state):
+        """ This is the public API of MCTS._moveRoot.
+
+            Move the root of the tree to the provided state. Use this to update
+            the root so that tree integrity can be maintained between moves if
+            necessary. Does nothing if Root is None, for example after running
+            DropRoot().
+
+            Args:
+                state: A GameState object which self.Root should be updated to.
+        """
+        self._moveRoot(state)
+
+    def _moveRoot(self, state):
         """ Updates the root of the tree.
 
             Move the root of the tree to the provided state. Use this to update
@@ -222,12 +210,8 @@ class MCTS(object):
             DropRoot().
 
             Args:
-                states: A list of Node objects to cycle through, updating the
-                    Root as it is iterated over.
+                state: A GameState object which self.Root should be updated to.
         """
-        self._moveRoot(state)
-
-    def _moveRoot(self, state):
         if self.Root is None:
             return
         if self.Root.Children is None:
@@ -241,6 +225,13 @@ class MCTS(object):
                 break
 
     def ResetRoot(self):
+        """ Set self.Root to the appropriate initial state.
+
+            Reset the state of self.Root to an appropriate initial state.  If
+            self.Root was already None, then there is nothing to do, and it will
+            remain None.  Otherwise, ResetRoot will apply an iterative backup to
+            self.Root until its parent is None.
+        """
         if self.Root is None:
             return
         while self.Root.Parent is not None:
