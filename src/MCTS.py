@@ -98,7 +98,7 @@ class MCTS(object):
             endTime = time() + moveTime
         if playLimit is None:
             playLimit = self.PlayLimit
-        
+
         if endTime is None and playLimit is None:
             raise ValueError('Not enough information to decide a stop time.')
 
@@ -227,19 +227,6 @@ class MCTS(object):
         """
         for s in states: 
             self._moveRoot(s)
-
-    def _moveRoot(self, state):
-        if self.Root is None:
-            return
-        if self.Root.Children is None:
-            self.Root = None
-            return
-        for child in self.Root.Children:
-            if child is None:
-                continue
-            if child.State == state:
-                self.Root = child
-                break
 
     def ResetRoot(self):
         if self.Root is None:
