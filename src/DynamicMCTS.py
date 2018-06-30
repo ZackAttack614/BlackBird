@@ -2,14 +2,23 @@ from MCTS import MCTS, Node
 import numpy as np
 
 class DynamicMCTS(MCTS):
-    """ An implementation of Monte Carlo Tree Search that aggregates statistics
-        as it explores the tree
+    """ An extension of the MCTS class that aggregates statistics as it
+        explores.
+
+        This class is identical to base MCTS, with the class function FindLeaf
+        defined.
     """
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-    # Overriding from MCTS
     def FindLeaf(self, node, temp):
+        """ Applies MCTS to a supplied node until a leaf is found.
+
+            Args:
+                node: A Node object to find a leaf of.
+                temp: The temperature to apply to action selection after tree
+                    search has been applied to the node.
+        """
         lastAction = None
         while True:
             if node.Children is None:
