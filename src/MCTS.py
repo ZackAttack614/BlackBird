@@ -57,12 +57,32 @@ class MCTS(object):
         self.Root = None
 
     def FindMove(self, state, temp=0.1, moveTime=None, playLimit=None):
-        """ Given a game state, this will use a Monte Carlo Tree Search
-            algorithm to pick the best next move. Returns (the chosen state, the
-            decided value of input state, and the probabilities of choosing each
-            of the children).
+        """ Finds the optimal move in a position.
+        
+            Given a game state, this will use a Monte Carlo Tree Search
+            algorithm to pick the best next move.
+            
+            Args:
+                state: A GameState object which the function will evaluate.
+                temp: A float determining the temperature to apply in move
+                    selection.
+                moveTime: An optional float determining the allowed search time.
+                playLimit: An optional float determining the allowed number of
+                    positions to evaluate.
+
+            Returns:
+                A tuple providing, in order...
+                    - The board state after applying the selected move
+                    - The decided value of input state
+                    - The probabilities of choosing each of the children
+
+            Raises:
+                ValueError: state was not an object of type GameState.
+                ValueError: The function was not able to determine a stop time.
         """
-        assert isinstance(state, GameState), 'State must inherit from GameState'
+        
+        if not isinstance(state, GameState):
+            raise ValueError('State not of type GameState')
 
         endTime = None
         if moveTime is None:
@@ -71,16 +91,15 @@ class MCTS(object):
             endTime = time() + moveTime
         if playLimit is None:
             playLimit = self.PlayLimit
+        
+        if endTime is None and playLimit is None:
+            raise ValueError('Not enough information to decide a stop time.')
 
+        assert self.Root.State == state, 'Primed for the correct input state.'
         if self.Root is None:
             self.Root = Node(state, state.LegalActions(), self.GetPriors(state))
 
-        assert self.Root.State == state, 'Primed for the correct input state.'
-        if endTime is None and playLimit is None:
-            raise ValueError('You must provide either an endTime or playLimit.')
-
         self._runMCTS(self.Root, temp, endTime, playLimit)
-
         action = self._selectAction(self.Root, temp, exploring = False)
 
         return (self._applyAction(state, action), self.Root.WinRate(),
