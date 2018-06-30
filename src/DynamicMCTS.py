@@ -11,7 +11,7 @@ class DynamicMCTS(MCTS):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-    def FindLeaf(self, node, temp):
+    def _findLeaf(self, node, temp):
         """ Applies MCTS to a supplied node until a leaf is found.
 
             Args:

@@ -18,7 +18,7 @@ class FixedMCTS(MCTS):
         super().__init__(explorationRate, timeLimit, playLimit)
 
     # Overriding from MCTS
-    def FindLeaf(self, node, temp):
+    def _findLeaf(self, node, temp):
         lastAction = None
         for _ in range(self.MaxDepth):
             if node.Children is None:

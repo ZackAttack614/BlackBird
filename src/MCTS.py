@@ -99,7 +99,7 @@ class MCTS(object):
     """ Base class for Monte Carlo Tree Search algorithms.
 
         Outlines all the necessary operations for the core MCTS algorithm.
-        FindLeaf() will need to be overriden to avoid a NotImplemenetedError.
+        _findLeaf() will need to be overriden to avoid a NotImplemenetedError.
 
         Attributes:
             TimeLimit: The default max move time in seconds.
@@ -273,7 +273,7 @@ class MCTS(object):
         """ Run the MCTS algorithm on the current Root Node.
 
             Given the current game state, represented by self.Root, a child node
-            is seleted using the FindLeaf method. This method will apply temp to
+            is seleted using the _findLeaf method. This method will apply temp to
             all child node move selection proportions, compute the sampled value
             of the action, and backpropogate the value through the tree.
 
@@ -285,7 +285,7 @@ class MCTS(object):
         endPlays = self.Root.Plays + (nPlays if nPlays is not None else 0)
         while ((endTime is None or (time() < endTime or self.Root.Children is None))
                 and (nPlays is None or self.Root.Plays < endPlays)):
-            node = self.FindLeaf(self.Root, temp)
+            node = self._findLeaf(self.Root, temp)
 
             val = self.SampleValue(node.State, node.State.PreviousPlayer)
             self._backProp(node, val, node.State.PreviousPlayer)
@@ -367,7 +367,7 @@ class MCTS(object):
             winner = rolloutState.Winner(action)
         return 0.5 if winner == 0 else int(player == winner)
 
-    def FindLeaf(self, node):
+    def _findLeaf(self, node):
         """ Applies MCTS to a supplied node until a leaf is found.
 
             Args:
