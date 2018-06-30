@@ -238,9 +238,23 @@ class MCTS(object):
             self.Root = self.Root.Parent
 
     def DropRoot(self):
+        """ Resets self.Root to None
+        """
         self.Root = None
 
     def _backProp(self, leaf, stateValue, playerForValue):
+        """ Backs up a value from a leaf through to self.Root.
+
+            Given a leaf node and a value, this function will back-propogate the
+            value to its parent node, and propogate that all the way through the
+            tree to its root, self.Root
+
+            Args:
+                leaf: A Node object which is the leaf of the current tree to
+                    apply back-propogation to.
+                stateValue: The MCTS-created evaluation to back-propogate.
+                playerForValue: The player which stateValue applies to.
+        """
         leaf.Plays += 1
         if leaf.Parent is not None:
             if leaf.Parent.State.Player == playerForValue:
@@ -251,22 +265,46 @@ class MCTS(object):
             self._backProp(leaf.Parent, stateValue, playerForValue)
 
     def _applyAction(self, state, action):
+        """ Applies an action to a provided state.
+
+            Args:
+                state: A GameState object which needs to be updated.
+                action: An int which indicates the action to apply to state.
+        """
         s = state.Copy()
         s.ApplyAction(action)
         return s
 
-    '''Can override these'''
-    '''Algorithm implementation functions'''
+    '''Functions to override'''
     def GetPriors(self, state):
-        """ Gets the array of prior search probabilities. 
-            Default is just 1 for each possible move.
+        """ Gets the array of prior search probabilities.
+
+            This is the default GetPriors for MCTS. The return value is always
+            an array of ones. This should be overridden to get actual utility.
+
+            Args:
+                state: A GameState object to get the priors of.
+
+            Returns:
+                A numpy array of ones of shape [num_legal_actions_of_state].
         """
         return np.array([1] * len(state.LegalActions()))
 
     def SampleValue(self, state, player):
-        """Samples the value of the state for the specified player.
-            Must return the value in [0, 1]
-            Default is to randomly playout the game.
+        """ Samples the value of a state for a specified player.
+            
+            This applies a set of Monte Carlo random rollouts to a state until a
+            game terminates, and returns the determined evaluation.
+
+            Args:
+                state: A GameState object which the function will obtain the
+                    evaluation of.
+                player: An integer representing the current player in state.
+
+            Returns:
+                A float representing the value of the state. It is 0 if it was
+                    determined to be a loss, 1 if it was determined to be a win,
+                    and 0.5 if it was determined to be a draw.
         """
         rolloutState = state
         winner = rolloutState.Winner()
@@ -277,8 +315,12 @@ class MCTS(object):
             winner = rolloutState.Winner(action)
         return 0.5 if winner == 0 else int(player == winner)
 
-    '''Must override these'''
     def FindLeaf(self, node):
+        """ Applies MCTS to a supplied node until a leaf is found.
+
+            Args:
+                node: A Node object to find a leaf of.
+        """
         raise NotImplementedError
 
     '''Overriden from Object'''
