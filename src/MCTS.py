@@ -44,9 +44,16 @@ class Node(object):
         return self._childPlays
 
 class MCTS(object):
-    """ Base class for Monte Carlo Tree Search algorithms. Outlines all the 
-        necessary operations for the core algorithm. Most operations will need
-        to be overriden to avoid a NotImplemenetedError.
+    """ Base class for Monte Carlo Tree Search algorithms.
+
+        Outlines all the necessary operations for the core MCTS algorithm.
+        FindLeaf() will need to be overriden to avoid a NotImplemenetedError.
+
+        Attributes:
+            TimeLimit: The default max move time in seconds.
+            PlayLimit: The default number of positions to evaluate per move.
+            ExplorationRate: The exploration parameter for MCTS.
+            Root: The Node object representing the root of the MCTS.
     """
     def __init__(self, explorationRate, timeLimit=None, playLimit=None,
             **kwargs):
@@ -77,12 +84,12 @@ class MCTS(object):
                     - The probabilities of choosing each of the children
 
             Raises:
-                ValueError: state was not an object of type GameState.
+                TypeError: state was not an object of type GameState.
                 ValueError: The function was not able to determine a stop time.
         """
 
         if not isinstance(state, GameState):
-            raise ValueError('State not of type GameState')
+            raise TypeError('State not of type GameState')
 
         endTime = None
         if moveTime is None:
@@ -192,9 +199,16 @@ class MCTS(object):
                 node.Children[actionIndex].Parent = node
 
     def MoveRoot(self, states):
-        """ Function that is used to move the root of the tree to the next
-            state. Use this to update the root so that tree integrity can be
-            maintained between moves if necessary.
+        """ Updates the root of the tree.
+
+            Move the root of the tree to the provided state. Use this to update
+            the root so that tree integrity can be maintained between moves if
+            necessary. Does nothing if Root is None, for example after running
+            DropRoot().
+
+            Args:
+                states: A list of Node objects to cycle through, updating the
+                    Root as it is iterated over.
         """
         for s in states: 
             self._moveRoot(s)
