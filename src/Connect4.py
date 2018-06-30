@@ -55,7 +55,7 @@ class BoardState(GameState):
         array[0, :, :, 2] = player
         return array
 
-    def Winner(self, prevAction = None):
+    def Winner(self, prevAction=None):
         board = self._collapsed()
 
         if prevAction is not None:

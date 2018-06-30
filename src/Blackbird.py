@@ -162,7 +162,7 @@ class BlackBird(MCTS, Network):
 
         return wins, draws, losses
 
-    @functools.lru_cache(maxsize = 4096)
+    @functools.lru_cache(maxsize=4096)
     def SampleValue(self, state, player):
         value = self.getEvaluation(state.AsInputArray())
         value = (value + 1 ) * 0.5 # [-1, 1] -> [0, 1]
@@ -171,7 +171,7 @@ class BlackBird(MCTS, Network):
         assert value >= 0, 'Value: {}'.format(value)
         return value
 
-    @functools.lru_cache(maxsize = 4096)
+    @functools.lru_cache(maxsize=4096)
     def GetPriors(self, state):
         policy = self.getPolicy(state.AsInputArray()) * state.LegalActions()
         policy /= np.sum(policy)
