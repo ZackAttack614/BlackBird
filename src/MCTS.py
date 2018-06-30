@@ -58,10 +58,10 @@ class MCTS(object):
 
     def FindMove(self, state, temp=0.1, moveTime=None, playLimit=None):
         """ Finds the optimal move in a position.
-        
+
             Given a game state, this will use a Monte Carlo Tree Search
             algorithm to pick the best next move.
-            
+
             Args:
                 state: A GameState object which the function will evaluate.
                 temp: A float determining the temperature to apply in move
@@ -80,7 +80,7 @@ class MCTS(object):
                 ValueError: state was not an object of type GameState.
                 ValueError: The function was not able to determine a stop time.
         """
-        
+
         if not isinstance(state, GameState):
             raise ValueError('State not of type GameState')
 
@@ -140,10 +140,24 @@ class MCTS(object):
                 target.Children[i], [t.Children[i] for t in continuedTrees])
 
     def _selectAction(self, root, temp, exploring=True):
-        """ Selects a child of the root using an upper confidence interval. If
+        """ Chooses an action from an explored root.
+
+            Selects a child of the root using an upper confidence interval. If
             you are not exploring, setting the exploring flag to false will
             instead choose the one with the highest expected payout - ignoring 
             the exploration/regret factor.
+
+            Args:
+                root: A Node object which must have children Nodes.
+                temp: The temperature to apply to the children Node visit
+                    counts. If temp is 0, _selectAction will return the child
+                    Node with the greatest visit count.
+                exploring: A boolean toggle for overriding the selection type to
+                    a simple argmax.  If True, _selectAction will return the
+                    child Node with the greatest visit count.
+
+            Returns:
+                choice: An int representing the index of the selected action.
         """
         assert root.Children is not None, 'The node has children to select.'
 
@@ -164,6 +178,9 @@ class MCTS(object):
 
     def AddChildren(self, node):
         """ Expands the node and adds children, actions and priors.
+
+            Args:
+                node: A Node object to expand.
         """
         numLegalMoves = len(node.LegalActions)
         node.Children = [None] * numLegalMoves
