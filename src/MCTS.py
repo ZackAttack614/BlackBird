@@ -4,8 +4,27 @@ import multiprocessing as mp
 from GameState import GameState
 
 class Node(object):
-    """ This is the abtract tree node class that is used to cache/organize
-        game information during the search.
+    """ Base class for storing game state information in tree searches.
+
+        This is the abtract tree node class that is used to cache/organize game
+        information during the search.
+
+        Attributes:
+            State: A GameState object holding the Node's state representation.
+            Value: A float holding the Node's state valuation.
+            Plays: A counter holding the number of times the Node has been used.
+            LegalActions: An int holding the number of legal actions for the
+                Node.
+            Children: A list of Nodes holding all legal states for the Node.
+            Parent: A Node object representing the Node's parent.
+            Priors: A numpy array of size [num_legal_actions] that holds the
+                Node's prior probabilities.  At instantiation, the provided
+                prior is filtered on only legal moves.
+
+            _childWinRates: A numpy array of size [num_legal_actions] used for
+                storing the win rates of the Node's children in MCTS.
+            _childPlays: A numpy array of size [num_legal_actions] used for
+                storing the play counts of the Node's children in MCTS.
     """
     def __init__(self, state, legalActions, priors, **kwargs):
         self.State = state
@@ -14,30 +33,63 @@ class Node(object):
         self.LegalActions = np.array(legalActions)
         self.Children = None
         self.Parent = None
-
-        # Use the legal actions mask to ignore priors that don't make sense.
         self.Priors = np.multiply(priors, legalActions)
 
-        # Do some caching here. This is to reduce the strain on the CPU memory
-        # cache compared to receating a new array on every access.
         self._childWinRates = np.zeros(len(legalActions))
         self._childPlays = np.zeros(len(legalActions))
 
     def WinRate(self):
+        """ Samples the win rate of the Node after MCTS.
+
+            This is a simple API which provides the win rate of the Node after
+            applying MCTS.
+
+            Returns:
+                A float representing the win rate for the Node. If no plays have
+                been applied to this Node, the default value of 0 is returned.
+        """
         return self.Value/self.Plays if self.Plays > 0 else 0
 
     def ChildProbability(self):
+        """ Samples the probabilities of sampling each child Node.
+
+            Samples the play rate for each of the Node's children Node objects.
+            If no children have been sampled in MCTS, this returns zeros.
+
+            Returns:
+                A numpy array representing the play rate for each of the Node's
+                children. Defaults to an array of zeros if no children have been
+                sampled.
+        """
         allPlays = sum(self.ChildPlays())
         zeroProbs = np.zeros((len(self.ChildPlays())))
         return self.ChildPlays() / allPlays if allPlays > 0 else zeroProbs
 
     def ChildWinRates(self):
+        """ Samples the win rate of each child Node object.
+
+            Samples the win rates for each of the Node's children. Not helpful
+            if none of the children have been evaluated in MCTS.
+
+            Returns:
+                A numpy array representing the win rate for each of the Node's
+                children.
+        """
         for i in range(len(self.Children)):
             if self.Children[i] is not None:
                 self._childWinRates[i] = self.Children[i].WinRate()
         return self._childWinRates
 
     def ChildPlays(self):
+        """ Samples the play rate of each child Node object.
+
+            Samples the play rates for each of the Node's children. Not helpful
+            if none of the children have been evaluated in MCTS.
+
+            Returns:
+                A numpy array representing the play rate for each of the Node's
+                children.
+        """
         for i in range(len(self.Children)):
             if self.Children[i] is not None:
                 self._childPlays[i] = self.Children[i].Plays
