@@ -63,6 +63,30 @@ class MCTS(object):
         self.ExplorationRate = explorationRate
         self.Root = None
 
+    def AddChildren(self, node):
+        """ Expands a node and adds children, actions and priors.
+
+            Given a node, MCTS will evaluate the node's children, if they exist.
+            The evaluation and prior policy are supplied in the creation of the
+            child Node object.
+
+            Args:
+                node: A Node object to expand.
+        """
+        numLegalMoves = len(node.LegalActions)
+        node.Children = [None] * numLegalMoves
+        for actionIndex in range(numLegalMoves):
+            if node.LegalActions[actionIndex] == 1:
+                s = self._applyAction(node.State, actionIndex)
+                node.Children[actionIndex] = Node(s, s.LegalActions(),
+                    self.GetPriors(s))
+                node.Children[actionIndex].Parent = node
+
+    def DropRoot(self):
+        """ Resets self.Root to None
+        """
+        self.Root = None
+
     def FindMove(self, state, temp=0.1, moveTime=None, playLimit=None):
         """ Finds the optimal move in a position.
 
@@ -97,7 +121,7 @@ class MCTS(object):
             endTime = time() + moveTime
         if playLimit is None:
             playLimit = self.PlayLimit
-        
+
         if endTime is None and playLimit is None:
             raise ValueError('Not enough information to decide a stop time.')
 
@@ -110,6 +134,88 @@ class MCTS(object):
 
         return (self._applyAction(state, action), self.Root.WinRate(),
             self.Root.ChildProbability())
+
+    def MoveRoot(self, state):
+        """ This is the public API of MCTS._moveRoot.
+
+            Move the root of the tree to the provided state. Use this to update
+            the root so that tree integrity can be maintained between moves if
+            necessary. Does nothing if Root is None, for example after running
+            DropRoot().
+
+            Args:
+                state: A GameState object which self.Root should be updated to.
+        """
+        self._moveRoot(state)
+
+    def ResetRoot(self):
+        """ Set self.Root to the appropriate initial state.
+
+            Reset the state of self.Root to an appropriate initial state.  If
+            self.Root was already None, then there is nothing to do, and it will
+            remain None.  Otherwise, ResetRoot will apply an iterative backup to
+            self.Root until its parent is None.
+        """
+        if self.Root is None:
+            return
+        while self.Root.Parent is not None:
+            self.Root = self.Root.Parent
+
+    def _applyAction(self, state, action):
+        """ Applies an action to a provided state.
+
+            Args:
+                state: A GameState object which needs to be updated.
+                action: An int which indicates the action to apply to state.
+        """
+        s = state.Copy()
+        s.ApplyAction(action)
+        return s
+
+    def _backProp(self, leaf, stateValue, playerForValue):
+        """ Backs up a value from a leaf through to self.Root.
+
+            Given a leaf node and a value, this function will back-propogate the
+            value to its parent node, and propogate that all the way through the
+            tree to its root, self.Root
+
+            Args:
+                leaf: A Node object which is the leaf of the current tree to
+                    apply back-propogation to.
+                stateValue: The MCTS-created evaluation to back-propogate.
+                playerForValue: The player which stateValue applies to.
+        """
+        leaf.Plays += 1
+        if leaf.Parent is not None:
+            if leaf.Parent.State.Player == playerForValue:
+                leaf.Value += stateValue
+            else:
+                leaf.Value += 1 - stateValue
+
+            self._backProp(leaf.Parent, stateValue, playerForValue)
+
+    def _moveRoot(self, state):
+        """ Updates the root of the tree.
+
+            Move the root of the tree to the provided state. Use this to update
+            the root so that tree integrity can be maintained between moves if
+            necessary. Does nothing if Root is None, for example after running
+            DropRoot().
+
+            Args:
+                state: A GameState object which self.Root should be updated to.
+        """
+        if self.Root is None:
+            return
+        if self.Root.Children is None:
+            self.Root = None
+            return
+        for child in self.Root.Children:
+            if child is None:
+                continue
+            if child.State == state:
+                self.Root = child
+                break
 
     def _runMCTS(self, temp, endTime=None, nPlays=None):
         """ Run the MCTS algorithm on the current Root Node.
@@ -168,112 +274,6 @@ class MCTS(object):
 
         assert root.LegalActions[choice] == 1, 'Selected move is legal.'
         return choice
-
-    def AddChildren(self, node):
-        """ Expands a node and adds children, actions and priors.
-
-            Given a node, MCTS will evaluate the node's children, if they exist.
-            The evaluation and prior policy are supplied in the creation of the
-            child Node object.
-
-            Args:
-                node: A Node object to expand.
-        """
-        numLegalMoves = len(node.LegalActions)
-        node.Children = [None] * numLegalMoves
-        for actionIndex in range(numLegalMoves):
-            if node.LegalActions[actionIndex] == 1:
-                s = self._applyAction(node.State, actionIndex)
-                node.Children[actionIndex] = Node(s, s.LegalActions(),
-                    self.GetPriors(s))
-                node.Children[actionIndex].Parent = node
-
-    def MoveRoot(self, state):
-        """ This is the public API of MCTS._moveRoot.
-
-            Move the root of the tree to the provided state. Use this to update
-            the root so that tree integrity can be maintained between moves if
-            necessary. Does nothing if Root is None, for example after running
-            DropRoot().
-
-            Args:
-                state: A GameState object which self.Root should be updated to.
-        """
-        self._moveRoot(state)
-
-    def _moveRoot(self, state):
-        """ Updates the root of the tree.
-
-            Move the root of the tree to the provided state. Use this to update
-            the root so that tree integrity can be maintained between moves if
-            necessary. Does nothing if Root is None, for example after running
-            DropRoot().
-
-            Args:
-                state: A GameState object which self.Root should be updated to.
-        """
-        if self.Root is None:
-            return
-        if self.Root.Children is None:
-            self.Root = None
-            return
-        for child in self.Root.Children:
-            if child is None:
-                continue
-            if child.State == state:
-                self.Root = child
-                break
-
-    def ResetRoot(self):
-        """ Set self.Root to the appropriate initial state.
-
-            Reset the state of self.Root to an appropriate initial state.  If
-            self.Root was already None, then there is nothing to do, and it will
-            remain None.  Otherwise, ResetRoot will apply an iterative backup to
-            self.Root until its parent is None.
-        """
-        if self.Root is None:
-            return
-        while self.Root.Parent is not None:
-            self.Root = self.Root.Parent
-
-    def DropRoot(self):
-        """ Resets self.Root to None
-        """
-        self.Root = None
-
-    def _backProp(self, leaf, stateValue, playerForValue):
-        """ Backs up a value from a leaf through to self.Root.
-
-            Given a leaf node and a value, this function will back-propogate the
-            value to its parent node, and propogate that all the way through the
-            tree to its root, self.Root
-
-            Args:
-                leaf: A Node object which is the leaf of the current tree to
-                    apply back-propogation to.
-                stateValue: The MCTS-created evaluation to back-propogate.
-                playerForValue: The player which stateValue applies to.
-        """
-        leaf.Plays += 1
-        if leaf.Parent is not None:
-            if leaf.Parent.State.Player == playerForValue:
-                leaf.Value += stateValue
-            else:
-                leaf.Value += 1 - stateValue
-
-            self._backProp(leaf.Parent, stateValue, playerForValue)
-
-    def _applyAction(self, state, action):
-        """ Applies an action to a provided state.
-
-            Args:
-                state: A GameState object which needs to be updated.
-                action: An int which indicates the action to apply to state.
-        """
-        s = state.Copy()
-        s.ApplyAction(action)
-        return s
 
     '''Functions to override'''
     def GetPriors(self, state):
