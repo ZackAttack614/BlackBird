@@ -15,7 +15,7 @@ class FixedMCTS(MCTS):
         if self.MaxDepth <= 0:
             raise ValueError('MaxDepth for MCTS must be > 0.')
 
-        super().__init__(explorationRate, timeLimit, playLimit, threads)
+        super().__init__(explorationRate, timeLimit, playLimit)
 
     # Overriding from MCTS
     def FindLeaf(self, node, temp):

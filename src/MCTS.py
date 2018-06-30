@@ -102,26 +102,29 @@ class MCTS(object):
         if endTime is None and playLimit is None:
             raise ValueError('Not enough information to decide a stop time.')
 
-        assert self.Root.State == state, 'Primed for the correct input state.'
         if self.Root is None:
             self.Root = Node(state, state.LegalActions(), self.GetPriors(state))
+        assert self.Root.State == state, 'Primed for the correct input state.'
 
-        self._runMCTS(self.Root, temp, endTime, playLimit)
-        action = self._selectAction(self.Root, temp, exploring = False)
+        self._runMCTS(temp, endTime, playLimit)
+        action = self._selectAction(self.Root, temp, exploring=False)
 
         return (self._applyAction(state, action), self.Root.WinRate(),
             self.Root.ChildProbability())
 
-    def _runMCTS(self, root, temp, endTime=None, nPlays=None):
-        endPlays = root.Plays + (nPlays if nPlays is not None else 0)
-        while ((endTime is None or (time() < endTime or root.Children is None))
-                and (nPlays is None or root.Plays < endPlays)):
-            node = self.FindLeaf(root, temp)
+    def _runMCTS(self, temp, endTime=None, nPlays=None):
+        """ Run the MCTS algorithm on the current Root Node.
+
+            Given the 
+        """
+
+        endPlays = self.Root.Plays + (nPlays if nPlays is not None else 0)
+        while ((endTime is None or (time() < endTime or self.Root.Children is None))
+                and (nPlays is None or self.Root.Plays < endPlays)):
+            node = self.FindLeaf(self.Root, temp)
 
             val = self.SampleValue(node.State, node.State.PreviousPlayer)
             self._backProp(node, val, node.State.PreviousPlayer)
-
-        return root
 
     def _mergeAll(self, target, trees):
         for t in trees:
