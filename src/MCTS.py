@@ -115,7 +115,15 @@ class MCTS(object):
     def _runMCTS(self, temp, endTime=None, nPlays=None):
         """ Run the MCTS algorithm on the current Root Node.
 
-            Given the 
+            Given the current game state, represented by self.Root, a child node
+            is seleted using the FindLeaf method. This method will apply temp to
+            all child node move selection proportions, compute the sampled value
+            of the action, and backpropogate the value through the tree.
+
+            Args:
+                temp: A float determining the temperature to apply in FindMove.
+                endTime: (optional) The maximum time to spend on searching.
+                nPlays: (optional) The maximum number of positions to evaluate.
         """
 
         endPlays = self.Root.Plays + (nPlays if nPlays is not None else 0)
@@ -187,7 +195,11 @@ class MCTS(object):
         return choice
 
     def AddChildren(self, node):
-        """ Expands the node and adds children, actions and priors.
+        """ Expands a node and adds children, actions and priors.
+
+            Given a node, MCTS will evaluate the node's children, if they exist.
+            The evaluation and prior policy are supplied in the creation of the
+            child Node object.
 
             Args:
                 node: A Node object to expand.
