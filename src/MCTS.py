@@ -119,7 +119,7 @@ class MCTS(object):
             node = self.FindLeaf(root, temp)
 
             val = self.SampleValue(node.State, node.State.PreviousPlayer)
-            self.BackProp(node, val, node.State.PreviousPlayer)
+            self._backProp(node, val, node.State.PreviousPlayer)
 
         return root
 
@@ -235,7 +235,7 @@ class MCTS(object):
     def DropRoot(self):
         self.Root = None
 
-    def BackProp(self, leaf, stateValue, playerForValue):
+    def _backProp(self, leaf, stateValue, playerForValue):
         leaf.Plays += 1
         if leaf.Parent is not None:
             if leaf.Parent.State.Player == playerForValue:
@@ -243,7 +243,7 @@ class MCTS(object):
             else:
                 leaf.Value += 1 - stateValue
 
-            self.BackProp(leaf.Parent, stateValue, playerForValue)
+            self._backProp(leaf.Parent, stateValue, playerForValue)
 
     def _applyAction(self, state, action):
         s = state.Copy()
