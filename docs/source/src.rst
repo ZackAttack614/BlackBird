@@ -1,4 +1,4 @@
-src package
+BlackBird Suite
 ===========
 
 Submodules

@@ -24,7 +24,7 @@ copyright = '2018, Jordan Singer, Kevin Welsh'
 author = 'Jordan Singer, Kevin Welsh'
 
 # The short X.Y version
-version = '0.1'
+version = '0.0.1'
 # The full version, including alpha/beta/rc tags
 release = 'July 2018'
 
