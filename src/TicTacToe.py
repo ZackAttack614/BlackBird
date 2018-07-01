@@ -15,7 +15,6 @@ class BoardState(GameState):
         self.Board = np.zeros((self.Size, self.Size, 2))
         self.Player = 1
         self.PreviousPlayer = None
-        return 
 
     def Copy(self):
         copy = BoardState()
@@ -37,15 +36,12 @@ class BoardState(GameState):
 
     def ApplyAction(self, action):
         coords = self._indexToCoords(action)
-        assert np.sum(self.Board[coords[0], coords[1], :]) == 0, \
-            'Ahh. Can\'t go there! {}\n{}\n{}'.format(
-                action,
-                str(self),
-                str(self.LegalActions()))
+        if np.sum(self.Board[coords[0], coords[1], :]) != 0:
+            raise ValueError('Tried to make an illegal move.')
+
         self.Board[coords[0], coords[1], self.Player - 1] = 1
         self.PreviousPlayer = self.Player
         self.Player = 1 if self.Player == 2 else 2
-        return
 
     def AsInputArray(self):
         player = np.full((self.Size, self.Size), 1 if self.Player == 1 else -1)
@@ -54,7 +50,7 @@ class BoardState(GameState):
         array[0, :, :, 2] = player
         return array
 
-    def Winner(self, prevAction = None):
+    def Winner(self, prevAction=None):
         board = self._collapsed()
 
         if prevAction is not None:
@@ -103,13 +99,13 @@ class BoardState(GameState):
             if inARow >= self.InARow:
                 return p
         return None
-    
+
     def _coordsToIndex(self, coords):
         return coords[0]*self.Size + coords[1]
 
     def _indexToCoords(self, index):
         return (index//self.Size, index % self.Size)
-    
+
     def _collapsed(self):
         array = np.zeros(self.Board.shape[:2])
         for p in BoardState.Players:
@@ -156,8 +152,3 @@ if __name__ == '__main__':
         player.MoveRoot([state])
     print(state)
     print(state.Winner())
-
-
-
-
-
