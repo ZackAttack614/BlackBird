@@ -12,7 +12,19 @@ np.seterr(divide='ignore', invalid='ignore')
 np.set_printoptions(precision=2)
 
 class BlackBird(MCTS, Network):
-    """ Class to train a network using an MCTS driver to improve decision making
+    """ Class which encapsulates MCTS powered by a neural network.
+
+        The BlackBird class is designed to learn how to win at a board game, by
+        using Monte Carlo Tree Search (MCTS) with the tree search powered by a
+        neural network.
+
+        Attributes:
+            BoardState: A GameState object which holds the rules of the game
+                BlackBird is intended to learn.
+            bbParameters: A dictionary holding algorithmic parameters, usually
+                read in from parameters.yaml in the root of the project.
+            boardShape: A list of integers representing the dimension of the
+                board game to be learned.
     """
     class TrainingExample(object):
         def __init__(self, state, value, childValues, childValuesStr,
@@ -44,7 +56,6 @@ class BlackBird(MCTS, Network):
 
         self.BoardState = boardState
         self.bbParameters = parameters
-        self.batchSize = parameters.get('network').get('training').get('batch_size')
         self.boardShape = boardState().BoardShape
 
         mctsParams = parameters.get('mcts')
@@ -55,6 +66,24 @@ class BlackBird(MCTS, Network):
             teacher=teacher, loadOld=loadOld, **networkParams)
 
     def GenerateTrainingSamples(self, nGames, temp):
+        """ Generates self-play games to learn from.
+
+            This method generates `nGames` self-play games, and returns them as
+            a list of `TrainingExample` objects.
+
+            Args:
+                `nGames`: An int determining the number of games to generate.
+                `temp`: A float between 0 and 1 determining the exploration temp
+                    for MCTS. Usually this should be close to 1 to ensure
+                    high move exploration rate.
+
+            Returns:
+                A list of `TrainingExample` objects holding game states in the
+                    `nGames` games produced.
+
+            Raises:
+                ValueError: nGames was not a positive integer.
+        """
         if nGames <= 0:
             raise ValueError('Use a positive integer for number of games.')
 
@@ -99,13 +128,14 @@ class BlackBird(MCTS, Network):
         self.SampleValue.cache_clear()
         self.GetPriors.cache_clear()
 
+        batchSize = self.bbParameters.get('network').get('training').get('batch_size')
         examples = np.random.choice(examples, 
-            len(examples) - (len(examples) % self.batchSize), 
+            len(examples) - (len(examples) % batchSize), 
             replace = False)
 
-        for i in range(len(examples) // self.batchSize):
-            start = i * self.batchSize
-            batch = examples[start : start + self.batchSize]
+        for i in range(len(examples) // batchSize):
+            start = i * batchSize
+            batch = examples[start : start + batchSize]
             self.train(
                 np.stack([b.State.AsInputArray()[0] for b in batch], axis = 0),
                 np.stack([b.Reward for b in batch], axis = 0),
