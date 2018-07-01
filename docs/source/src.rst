@@ -1,9 +1,6 @@
 BlackBird Suite
 ===============
 
-Submodules
-----------
-
 Blackbird module
 --------------------
 
@@ -73,15 +70,6 @@ TicTacToe module
 --------------------
 
 .. automodule:: TicTacToe
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-
-Module contents
----------------
-
-.. automodule:: src
     :members:
     :undoc-members:
     :show-inheritance:
