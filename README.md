@@ -2,7 +2,7 @@
 
 BlackBird is a self-learning algorithm designed for board games, based on the AlphaZero implementation. Future versions of this project will include extensions from state-of-the-art research into reinforcement learning optimization.
 
-## Requirements ans Suggested Tools
+## Requirements and Suggested Tools
 - This project is not compatible with Python 2.x; please use 3.5+.
 - It is strongly advised that you use the GPU version of tensorflow, should you have a compatible Nvidia GPU. If you have not yet installed this, you can follow the directions [here](https://www.tensorflow.org/install/install_windows#requirements_to_run_tensorflow_with_gpu_support).
 
