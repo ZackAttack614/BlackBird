@@ -78,8 +78,8 @@ class BlackBird(MCTS, Network):
                     high move exploration rate.
 
             Returns:
-                A list of `TrainingExample` objects holding game states in the
-                    `nGames` games produced.
+                `examples`: A list of `TrainingExample` objects holding all game
+                    states from the `nGames` games produced.
 
             Raises:
                 ValueError: nGames was not a positive integer.
@@ -125,6 +125,20 @@ class BlackBird(MCTS, Network):
         return examples
 
     def LearnFromExamples(self, examples, teacher=None):
+        """ Trains the neural network on provided example positions.
+
+            Provided a list of example positions, this method will train
+            BlackBird's neural network to play better. If `teacher` is provided,
+            the neural network will include a cross-entropy term in the loss
+            calculation so that the other network's policy is incorporated into
+            the learning.
+
+            Args:
+                `examples`: A list of `TrainingExample` objects which the
+                    neural network will learn from.
+                `teacher`: An optional `BlackBird` object whose policy the
+                    current network will include in its loss calculation.
+        """
         self.SampleValue.cache_clear()
         self.GetPriors.cache_clear()
 
@@ -145,22 +159,63 @@ class BlackBird(MCTS, Network):
                 )
 
     def TestRandom(self, temp, numTests):
-        return self.Test(RandomMCTS(), temp, numTests)
+        """ Plays the current BlackBird instance against an opponent making
+            random moves.
+
+            Args:
+                `temp`: A float between 0 and 1 determining the exploitation
+                    temp for MCTS. Usually this should be close to 0.1 to ensure
+                    optimal move selection.
+                `numTests`: An int determining the number of games to play.
+
+            Returns:
+                `wins`: The number of wins BlackBird had.
+                `draws`: The number of draws BlackBird had.
+                `losses`: The number of losses BlackBird had.
+        """
+        return self._test(RandomMCTS(), temp, numTests)
 
     def TestPrevious(self, temp, numTests):
+        """ Plays the current BlackBird instance against the previous version of
+            BlackBird's neural network.
+
+            Args:
+                `temp`: A float between 0 and 1 determining the exploitation
+                    temp for MCTS. Usually this should be close to 0.1 to ensure
+                    optimal move selection.
+                `numTests`: An int determining the number of games to play.
+
+            Returns:
+                `wins`: The number of wins BlackBird had.
+                `draws`: The number of draws BlackBird had.
+                `losses`: The number of losses BlackBird had.
+        """
         oldBlackbird = BlackBird(self.BoardState, tfLog=False, loadOld=True,
             **self.bbParameters)
 
-        wins, draws, losses = self.Test(oldBlackbird, temp, numTests)
+        wins, draws, losses = self._test(oldBlackbird, temp, numTests)
 
         del oldBlackbird
         return wins, draws, losses
 
     def TestGood(self, temp, numTests):
-        good = FixedMCTS(maxDepth = 10, explorationRate = 0.85, timeLimit = 1)
-        return self.Test(good, temp, numTests)
+        """ Plays the current BlackBird instance against a standard MCTS player.
 
-    def Test(self, other, temp, numTests):
+            Args:
+                `temp`: A float between 0 and 1 determining the exploitation
+                    temp for MCTS. Usually this should be close to 0.1 to ensure
+                    optimal move selection.
+                `numTests`: An int determining the number of games to play.
+
+            Returns:
+                `wins`: The number of wins BlackBird had.
+                `draws`: The number of draws BlackBird had.
+                `losses`: The number of losses BlackBird had.
+        """
+        good = FixedMCTS(maxDepth = 10, explorationRate = 0.85, timeLimit = 1)
+        return self._test(good, temp, numTests)
+
+    def _test(self, other, temp, numTests):
         wins = draws = losses = 0
 
         for _ in range(numTests):
@@ -194,8 +249,21 @@ class BlackBird(MCTS, Network):
 
     @functools.lru_cache(maxsize=4096)
     def SampleValue(self, state, player):
+        """ Returns BlackBird's evaluation of a supplied position.
+
+            BlackBird's network will evaluate a supplied position, from the
+            perspective of `player`.
+
+            Args:
+                `state`: A GameState object which should be evaluated.
+                `player`: An int representing the current player.
+
+            Returns:
+                `value`: A float between 0 and 1 holding the evaluation of the
+                    position. 0 is the worst possible evaluation, 1 is the best.
+        """
         value = self.getEvaluation(state.AsInputArray())
-        value = (value + 1 ) * 0.5 # [-1, 1] -> [0, 1]
+        value = (value + 1) * 0.5 # [-1, 1] -> [0, 1]
         if state.Player != player:
             value = 1 - value
         assert value >= 0, 'Value: {}'.format(value)
@@ -203,6 +271,18 @@ class BlackBird(MCTS, Network):
 
     @functools.lru_cache(maxsize=4096)
     def GetPriors(self, state):
+        """ Returns BlackBird's policy of a supplied position.
+
+            BlackBird's network will evaluate the policy of a supplied position.
+
+            Args:
+                `state`: A GameState object which should be evaluated.
+
+            Returns:
+                `policy`: A list of floats of size `len(state.LegalActions())` 
+                    which sums to 1, representing the probabilities of selecting 
+                    each legal action.
+        """
         policy = self.getPolicy(state.AsInputArray()) * state.LegalActions()
         policy /= np.sum(policy)
 
