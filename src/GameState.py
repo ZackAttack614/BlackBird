@@ -3,7 +3,6 @@ class GameState(object):
         self.Board = None
         self.Player = None
         self.PreviousPlayer = None
-        return 
 
     def Copy(self):
         raise NotImplementedError
@@ -16,8 +15,8 @@ class GameState(object):
 
     def ApplyAction(self, action):
         raise NotImplementedError
-    
-    def Winner(self, prevAction = None):
+
+    def Winner(self, prevAction=None):
         raise NotImplementedError
 
     def NumericRepresentation(self):

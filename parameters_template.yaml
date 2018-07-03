@@ -1,7 +1,6 @@
 mcts :
   maxDepth : 10
   explorationRate : 0.85
-  threads : 1
   timeLimit :
   playLimit : 250
   temperature :
