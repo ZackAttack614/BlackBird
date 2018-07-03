@@ -8,8 +8,8 @@ class Connection(object):
         if not os.path.isdir(directory):
             os.makedirs(directory)
         self._conn = sqlite3.connect(os.path.join(directory, 'blackbird.db'))
-        self.cursor = self._conn.cursor()
-        self._makeSchema()
+        self.Cursor = self._conn.cursor()
+        self._makeSchema(self.Cursor)
 
     def GetGame(self):
         pass
@@ -23,7 +23,13 @@ class Connection(object):
     def PutModel(self, model):
         pass
 
-    def _makeSchema(self):
+    def _makeSchema(self, cursor):
+        check = """SELECT COUNT(name) FROM sqlite_master
+                   WHERE type='table' AND name='TrainingStatisticsFact';"""
+        cursor.execute(check)
+        if cursor.fetchone()[0] == 1:
+            return
+
         tableStatements = []
         tableStatements.append("""
             CREATE TABLE ArchitectureDim(
@@ -35,7 +41,8 @@ class Connection(object):
                 ModelKey INTEGER PRIMARY KEY NOT NULL,
                 ArchitectureKey INTEGER NOT NULL,
                 Name TEXT,
-                FOREIGN KEY(ArchitectureKey) REFERENCES ArchitectureDim(ArchitectureKey));""")
+                FOREIGN KEY(ArchitectureKey)
+                    REFERENCES ArchitectureDim(ArchitectureKey));""")
 
         tableStatements.append("""
             CREATE TABLE ConfigurationDim(
@@ -47,6 +54,7 @@ class Connection(object):
                 TrainingStatisticsKey INTEGER PRIMARY KEY NOT NULL,
                 ModelKey INTEGER NOT NULL,
                 ConfigurationKey INTEGER NOT NULL,
+                Rating REAL,
                 Time REAL,
                 Loss REAL,
                 WinsVsRandom INTEGER,
@@ -55,8 +63,10 @@ class Connection(object):
                 WinsVsSelf INTEGER,
                 DrawsVsSelf INTEGER,
                 LossesVsSelf INTEGER,
-                FOREIGN KEY (ModelKey) REFERENCES ModelDim(ModelKey),
-                FOREIGN KEY (ConfigurationKey) REFERENCES ConfigurationDim(ConfigurationKey));""")
+                FOREIGN KEY (ModelKey)
+                    REFERENCES ModelDim(ModelKey),
+                FOREIGN KEY (ConfigurationKey)
+                    REFERENCES ConfigurationDim(ConfigurationKey));""")
 
         tableStatements.append("""
             CREATE TABLE JobQueue(
@@ -68,18 +78,19 @@ class Connection(object):
                 PID INTEGER);""")
 
         for command in tableStatements:
-            self.cursor.execute(command)
+            cursor.execute(command)
 
-    def _close(self):
-        pass
+    def Close(self):
+        self._conn.close()
 
     def __del__(self):
-        self._close()
+        self.Close()
 
     def __enter__(self):
-        pass       
-    def __exit__(self):
-        pass
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.Close()
 
 if __name__ == '__main__':
     conn = Connection()
