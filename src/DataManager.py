@@ -27,7 +27,7 @@ class Connection(object):
         pass
 
     def PutGame(self, gameType, game):
-        command = 'INSERT INTO GameStateDim(ModelKey, GameType, StateJSON) VALUES (?, ?, ?);'
+        command = 'INSERT INTO GameStateDim(ModelKey, GameType, State) VALUES (?, ?, ?);'
         self.Cursor.execute(command, (self.ModelKey, gameType, game))
         self._conn.commit()
 

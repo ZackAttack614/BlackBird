@@ -87,7 +87,7 @@ class BoardState(GameState):
         serialized.mctsPolicy = policy.tobytes()
         serialized.boardEncoding = state.Board.tobytes()
         serialized.boardDims = np.array([self.Size, self.Size, 2]).tobytes()
-        return serialized
+        return serialized.SerializeToString()
 
     def DeserializeState(self, serialState):
         raise NotImplementedError
