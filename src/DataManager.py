@@ -93,7 +93,7 @@ class Connection(object):
                 StateKey INTEGER PRIMARY KEY AUTOINCREMENT,
                 ModelKey INTEGER NOT NULL,
                 GameType TEXT NOT NULL,
-                StateJSON TEXT NOT NULL,
+                State BYTES NOT NULL,
                 FOREIGN KEY (ModelKey)
                     REFERENCES ModelDim(ModelKey));""")
 

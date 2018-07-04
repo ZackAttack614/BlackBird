@@ -1,6 +1,7 @@
 from FixedMCTS import FixedMCTS
 from DynamicMCTS import DynamicMCTS
 from GameState import GameState
+from proto.state_pb2 import State
 
 import json
 import numpy as np
@@ -79,13 +80,14 @@ class BoardState(GameState):
         return str(reshapedEval)
 
     def SerializeState(self, state, policy, evaluation):
-        serialized = {
-            'state': list((state.Board[:,:,0] - state.Board[:,:,1]).reshape(9)),
-            'player': state.Player,
-            'policy': list(policy.reshape(9)),
-            'eval': evaluation
-        }
-        return json.dumps(serialized)
+        serialized = State()
+
+        serialized.player = state.Player
+        serialized.mctsEval = evaluation
+        serialized.mctsPolicy = policy.tobytes()
+        serialized.boardEncoding = state.Board.tobytes()
+        serialized.boardDims = np.array([self.Size, self.Size, 2]).tobytes()
+        return serialized
 
     def DeserializeState(self, serialState):
         raise NotImplementedError
