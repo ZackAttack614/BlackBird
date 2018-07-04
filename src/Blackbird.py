@@ -127,8 +127,9 @@ class BlackBird(MCTS, Network):
                 else:
                     example.Reward = 1 if example.State.Player == winner else -1
 
-                serialized = state.SerializeState(example.State, example.Probabilities, example.Reward)
-                self.Connection.PutGame(state.GameType, serialized)
+                if self.bbParameters.get('localLogging'):
+                    serialized = state.SerializeState(example.State, example.Probabilities, example.Reward)
+                    self.Connection.PutGame(state.GameType, serialized)
 
             examples += gameHistory
 

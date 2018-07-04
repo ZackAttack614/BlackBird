@@ -31,8 +31,4 @@ selfplay :
   selfplay_tests : 10      # Number of games to have new net play against itself for testing
   random_tests : 10        # Number of games to have new net play against random player for testing
 
-logging : 
-  log_dir : None
-  dbURI : 'mongodb://localhost:port/'
-  dbName : DB
-  
+localLogging: Yes          # Flag for logging game states in a local SQLite3 db
