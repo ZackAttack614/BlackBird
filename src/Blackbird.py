@@ -2,6 +2,7 @@ from DynamicMCTS import DynamicMCTS as MCTS
 from RandomMCTS import RandomMCTS
 from FixedMCTS import FixedMCTS
 from Network import Network
+from DataManager import Connection
 
 import functools
 import random
@@ -21,6 +22,8 @@ class BlackBird(MCTS, Network):
         Attributes:
             BoardState: A GameState object which holds the rules of the game
                 BlackBird is intended to learn.
+            Connection: A DataManager.Connection object which communicates with
+                an external database.
             bbParameters: A dictionary holding algorithmic parameters, usually
                 read in from parameters.yaml in the root of the project.
             boardShape: A list of integers representing the dimension of the
@@ -55,6 +58,7 @@ class BlackBird(MCTS, Network):
             **parameters):
 
         self.BoardState = boardState
+        self.Connection = Connection()
         self.bbParameters = parameters
         self.boardShape = boardState().BoardShape
 
@@ -64,6 +68,8 @@ class BlackBird(MCTS, Network):
         networkParams = parameters.get('network')
         Network.__init__(self, tfLog, self.boardShape, boardState.LegalMoves,
             teacher=teacher, loadOld=loadOld, **networkParams)
+
+        self.Connection.PutArchitecture(self.GetSerializedArch())
 
     def GenerateTrainingSamples(self, nGames, temp):
         """ Generates self-play games to learn from.
@@ -96,6 +102,7 @@ class BlackBird(MCTS, Network):
             winner = None
             self.DropRoot()
             while winner is None:
+
                 (nextState, v, currentProbabilties) = self.FindMove(state, temp)
                 childValues = self.Root.ChildWinRates()
                 example = self.TrainingExample(state, 1 - v, childValues,
@@ -119,6 +126,9 @@ class BlackBird(MCTS, Network):
                     example.Reward = 0
                 else:
                     example.Reward = 1 if example.State.Player == winner else -1
+
+                serialized = state.SerializeState(example.State, example.Probabilities, example.Reward)
+                self.Connection.PutGame(serialized)
 
             examples += gameHistory
 

@@ -1,6 +1,8 @@
 from FixedMCTS import FixedMCTS
 from DynamicMCTS import DynamicMCTS
 from GameState import GameState
+
+import json
 import numpy as np
 
 class BoardState(GameState):
@@ -74,6 +76,18 @@ class BoardState(GameState):
     def EvalToString(self, eval):
         reshapedEval = eval.reshape(3, 3)
         return str(reshapedEval)
+
+    def SerializeState(self, state, policy, evaluation):
+        serialized = {
+            'state': list((state.Board[:,:,0] - state.Board[:,:,1]).reshape(9)),
+            'player': state.Player,
+            'policy': list(policy.reshape(9)),
+            'eval': evaluation
+        }
+        return json.dumps(serialized)
+
+    def DeserializeState(self, serialState):
+        raise NotImplementedError
 
     def _isOver(self, board):
         return np.sum(board > 0) == self.Size * self.Size

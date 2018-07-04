@@ -1,4 +1,5 @@
 import sqlite3
+import uuid
 import os
 
 class Connection(object):
@@ -11,16 +12,26 @@ class Connection(object):
         self.Cursor = self._conn.cursor()
         self._makeSchema(self.Cursor)
 
+    def PutArchitecture(self, arch):
+        command = 'INSERT INTO ArchitectureDim(ArchitectureJSON) VALUES (?);'
+        self.Cursor.execute(command, (arch,))
+        self.PutModel(int(self.Cursor.lastrowid), str(uuid.uuid4()))
+        self._conn.commit()
+
+    def PutModel(self, archKey, name):
+        command = 'INSERT INTO ModelDim(ArchitectureKey, Name) VALUES(?,?);'
+        self.Cursor.execute(command, (archKey, name))
+        self.ModelKey = self.Cursor.lastrowid
+
     def GetGame(self):
         pass
 
     def PutGame(self, game):
-        pass
+        command = 'INSERT INTO GameStateDim(ModelKey, StateJSON) VALUES (?, ?);'
+        self.Cursor.execute(command, (self.ModelKey, game))
+        self._conn.commit()
 
     def PutTrainingStatistic(self, statistic):
-        pass
-
-    def PutModel(self, model):
         pass
 
     def _makeSchema(self, cursor):
@@ -33,12 +44,12 @@ class Connection(object):
         tableStatements = []
         tableStatements.append("""
             CREATE TABLE ArchitectureDim(
-                ArchitectureKey INTEGER PRIMARY KEY NOT NULL,
-                ArchitectureJSON BLOB);""")
+                ArchitectureKey INTEGER PRIMARY KEY AUTOINCREMENT,
+                ArchitectureJSON TEXT);""")
 
         tableStatements.append("""
             CREATE TABLE ModelDim(
-                ModelKey INTEGER PRIMARY KEY NOT NULL,
+                ModelKey INTEGER PRIMARY KEY AUTOINCREMENT,
                 ArchitectureKey INTEGER NOT NULL,
                 Name TEXT,
                 FOREIGN KEY(ArchitectureKey)
@@ -46,12 +57,12 @@ class Connection(object):
 
         tableStatements.append("""
             CREATE TABLE ConfigurationDim(
-                ConfigurationKey INTEGER PRIMARY KEY NOT NULL,
+                ConfigurationKey INTEGER PRIMARY KEY AUTOINCREMENT,
                 ConfigJSON TEXT);""")
 
         tableStatements.append("""
             CREATE TABLE TrainingStatisticsFact(
-                TrainingStatisticsKey INTEGER PRIMARY KEY NOT NULL,
+                TrainingStatisticsKey INTEGER PRIMARY KEY AUTOINCREMENT,
                 ModelKey INTEGER NOT NULL,
                 ConfigurationKey INTEGER NOT NULL,
                 Rating REAL,
@@ -70,12 +81,20 @@ class Connection(object):
 
         tableStatements.append("""
             CREATE TABLE JobQueue(
-                JobKey INTEGER PRIMARY KEY NOT NULL,
+                JobKey INTEGER PRIMARY KEY AUTOINCREMENT,
                 QueueTime INTEGER,
                 StartTime INTEGER,
                 EndTime INTEGER,
                 RPC INTEGER,
                 PID INTEGER);""")
+
+        tableStatements.append("""
+            CREATE TABLE GameStateDim(
+                StateKey INTEGER PRIMARY KEY AUTOINCREMENT,
+                ModelKey INTEGER NOT NULL,
+                StateJSON TEXT NOT NULL,
+                FOREIGN KEY (ModelKey)
+                    REFERENCES ModelDim(ModelKey));""")
 
         for command in tableStatements:
             cursor.execute(command)

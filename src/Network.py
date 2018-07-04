@@ -1,5 +1,6 @@
 import numpy as np
 import tensorflow as tf
+import json
 import os
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
@@ -314,6 +315,9 @@ class Network:
         if self.batchCount % 10 == 0 and self.write_summary:
             summary = self.sess.run(self.lossMerged, feed_dict=feed_dict)
             self.writer.add_summary(summary, self.batchCount)
+
+    def GetSerializedArch(self):
+        return json.dumps(self.parameters)
 
     def saveModel(self):
         """ Write the state of the network to a file.
