@@ -1,6 +1,8 @@
 from FixedMCTS import FixedMCTS
 from DynamicMCTS import DynamicMCTS
 from GameState import GameState
+
+import json
 import numpy as np
 
 class BoardState(GameState):
@@ -13,6 +15,7 @@ class BoardState(GameState):
     LegalMoves = Width
 
     def __init__(self):
+        self.GameType = 'Connect4'
         self.Board = np.zeros((self.Height, self.Width, 2))
         self.Player = 1
         self.PreviousPlayer = None
@@ -80,6 +83,15 @@ class BoardState(GameState):
 
     def EvalToString(self, eval):
         return str(eval)
+
+    def SerializeState(self, state, policy, evaluation):
+        serialized = {
+            'state': list((state.Board[:,:,0] - state.Board[:,:,1]).reshape(self.Width*self.Height)),
+            'player': state.Player,
+            'policy': list(policy.reshape(self.Width)),
+            'eval': evaluation
+        }
+        return json.dumps(serialized)
 
     def _isOver(self, board):
         for j in range(self.Width):

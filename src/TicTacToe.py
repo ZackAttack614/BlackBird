@@ -14,6 +14,7 @@ class BoardState(GameState):
     LegalMoves = Size ** 2
 
     def __init__(self):
+        self.GameType = 'TicTacToe'
         self.Board = np.zeros((self.Size, self.Size, 2))
         self.Player = 1
         self.PreviousPlayer = None

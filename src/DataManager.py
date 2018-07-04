@@ -4,7 +4,7 @@ import os
 
 class Connection(object):
     def __init__(self, isLocal=True):
-        directory = 'data'
+        directory = 'data' # Placeholder until I can figure out a robust method
 
         if not os.path.isdir(directory):
             os.makedirs(directory)
@@ -26,9 +26,9 @@ class Connection(object):
     def GetGame(self):
         pass
 
-    def PutGame(self, game):
-        command = 'INSERT INTO GameStateDim(ModelKey, StateJSON) VALUES (?, ?);'
-        self.Cursor.execute(command, (self.ModelKey, game))
+    def PutGame(self, gameType, game):
+        command = 'INSERT INTO GameStateDim(ModelKey, GameType, StateJSON) VALUES (?, ?, ?);'
+        self.Cursor.execute(command, (self.ModelKey, gameType, game))
         self._conn.commit()
 
     def PutTrainingStatistic(self, statistic):
@@ -92,6 +92,7 @@ class Connection(object):
             CREATE TABLE GameStateDim(
                 StateKey INTEGER PRIMARY KEY AUTOINCREMENT,
                 ModelKey INTEGER NOT NULL,
+                GameType TEXT NOT NULL,
                 StateJSON TEXT NOT NULL,
                 FOREIGN KEY (ModelKey)
                     REFERENCES ModelDim(ModelKey));""")
