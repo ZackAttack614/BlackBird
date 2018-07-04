@@ -4,7 +4,7 @@ import os
 
 class Connection(object):
     def __init__(self, isLocal=True):
-        directory = os.path.join(__file__, '../data')
+        directory = 'data'
 
         if not os.path.isdir(directory):
             os.makedirs(directory)
