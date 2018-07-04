@@ -323,7 +323,8 @@ class Network:
             os.mkdir('blackbird_models')
         if not os.path.isdir(saveDir):
             os.mkdir(saveDir)
-        tf.train.Saver().save(self.sess, os.path.join(saveDir, 'best'))
+        with self.sess.graph.as_default():
+            tf.train.Saver().save(self.sess, os.path.join(saveDir, 'best'))
 
     def loadModel(self, name):
         """ Load an old version of the network.
