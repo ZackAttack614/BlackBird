@@ -8,6 +8,7 @@ mcts :
     exploitation: 0.1
 
 network :
+  name : Blackbird.0.1
   gpu_frac : 0.2
   blocks : 4
   filters : 16
@@ -30,9 +31,3 @@ selfplay :
   training_games : 10     # Number of games to generate for each epoch
   selfplay_tests : 10      # Number of games to have new net play against itself for testing
   random_tests : 10        # Number of games to have new net play against random player for testing
-
-logging : 
-  log_dir : None
-  dbURI : 'mongodb://localhost:port/'
-  dbName : DB
-  
