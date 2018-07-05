@@ -217,7 +217,7 @@ class Network:
             self.policy /= tf.reduce_sum(self.policy)
             
         with tf.variable_scope('loss', reuse=tf.AUTO_REUSE) as _:
-            teacherPolicy = tf.placeholder(
+            self.teacherPolicy = tf.placeholder(
                 shape=[self.policy.shape[1]], dtype=tf.float32,
                 name='teacher_policy')
 
