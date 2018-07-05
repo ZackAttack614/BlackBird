@@ -102,7 +102,6 @@ class BlackBird(MCTS, Network):
             winner = None
             self.DropRoot()
             while winner is None:
-
                 (nextState, v, currentProbabilties) = self.FindMove(state, temp)
                 childValues = self.Root.ChildWinRates()
                 example = self.TrainingExample(state, 1 - v, childValues,
@@ -110,12 +109,11 @@ class BlackBird(MCTS, Network):
                     state.EvalToString(self.Root.Priors), state.LegalActionShape())
                 state = nextState
                 self.MoveRoot(state)
-
                 winner = state.Winner(lastAction)
                 gameHistory.append(example)
 
             example = self.TrainingExample(state, None, None, None,
-                np.zeros([len(currentProbabilties)]),
+                np.zeros([len(currentProbabilties)], dtype=np.float),
                 np.zeros([len(currentProbabilties)]),
                 np.zeros([len(currentProbabilties)]),
                 state.LegalActionShape())

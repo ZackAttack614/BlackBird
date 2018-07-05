@@ -92,11 +92,20 @@ class BoardState(GameState):
         serialized.mctsEval = evaluation
         serialized.mctsPolicy = policy.tobytes()
         serialized.boardEncoding = state.Board.tobytes()
-        serialized.boardDims = np.array([self.Size, self.Size, 2]).tobytes()
+        serialized.boardDims = np.array([self.Width, self.Height, 3]).tobytes()
         return serialized
 
     def DeserializeState(self, serialState):
-        raise NotImplementedError
+        state = State()
+        state.ParseFromString(serialState)
+        dims = np.frombuffer(state.boardDims, dtype=np.uint8)
+
+        return {
+            'player': state.player,
+            'mctsEval': state.mctsEval,
+            'mctsPolicy': np.frombuffer(state.mctsPolicy, dtype=np.float),
+            'board': np.frombuffer(state.boardEncoding, dtype=np.uint8).reshape(dims)
+        }
 
     def _isOver(self, board):
         for j in range(self.Width):

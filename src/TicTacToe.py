@@ -16,7 +16,7 @@ class BoardState(GameState):
 
     def __init__(self):
         self.GameType = 'TicTacToe'
-        self.Board = np.zeros((self.Size, self.Size, 2))
+        self.Board = np.zeros((self.Size, self.Size, 2), dtype=np.uint8)
         self.Player = 1
         self.PreviousPlayer = None
 
@@ -86,11 +86,20 @@ class BoardState(GameState):
         serialized.mctsEval = evaluation
         serialized.mctsPolicy = policy.tobytes()
         serialized.boardEncoding = state.Board.tobytes()
-        serialized.boardDims = np.array([self.Size, self.Size, 2]).tobytes()
+        serialized.boardDims = np.array([self.Size, self.Size, 2], dtype=np.uint8).tobytes()
         return serialized.SerializeToString()
 
     def DeserializeState(self, serialState):
-        raise NotImplementedError
+        state = State()
+        state.ParseFromString(serialState)
+        dims = np.frombuffer(state.boardDims, dtype=np.uint8)
+
+        return {
+            'player': state.player,
+            'mctsEval': state.mctsEval,
+            'mctsPolicy': np.frombuffer(state.mctsPolicy, dtype=np.float).reshape(dims[:2]),
+            'board': np.frombuffer(state.boardEncoding, dtype=np.uint8).reshape(dims)
+        }
 
     def _isOver(self, board):
         return np.sum(board > 0) == self.Size * self.Size
