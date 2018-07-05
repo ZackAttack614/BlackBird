@@ -53,6 +53,7 @@ def main():
         print('Losses = {0}'.format(losses))
 
         print('\n')
+    del BlackbirdInstance
     print('Done!')
 
 

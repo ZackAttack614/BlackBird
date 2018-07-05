@@ -12,7 +12,96 @@ np.seterr(divide='ignore', invalid='ignore')
 np.set_printoptions(precision=2)
 
 
-class BlackBird(MCTS, Network):
+class TrainingExample(object):
+    def __init__(self, state, value, childValues, childValuesStr,
+                 probabilities, priors, priorsStr, boardShape):
+
+        self.State = state
+        self.Value = value
+        self.BoardShape = boardShape
+        self.ChildValues = childValues if childValues is not None else None
+        self.ChildValuesStr = childValuesStr if childValuesStr is not None else None
+        self.Reward = None
+        self.Priors = priors
+        self.PriorsStr = priorsStr
+        self.Probabilities = probabilities
+
+    def __str__(self):
+        state = str(self.State)
+        value = 'Value: {}'.format(self.Value)
+        childValues = 'Child Values: \n{}'.format(self.ChildValuesStr)
+        reward = 'Reward:\n{}'.format(self.Reward)
+        probs = 'Probabilities:\n{}'.format(
+            self.Probabilities.reshape(self.BoardShape))
+        priors = '\nPriors:\n{}\n'.format(self.PriorsStr)
+
+        return '\n'.join([state, value, childValues, reward, probs, priors])
+
+
+def NewModel(gameDefinition, mctsConfig, networkConfig):
+    return Model(gameDefinition, mctsConfig, networkConfig)
+
+
+def TestRandom(model, temp, numTests):
+    return TestModels(model, RandomMCTS(), temp, numTests)
+
+
+def TestPrevious(model, temp, numTests):
+            """ Plays the current BlackBird instance against the previous version of
+            BlackBird's neural network.
+
+            Args:
+                `temp`: A float between 0 and 1 determining the exploitation
+                    temp for MCTS. Usually this should be close to 0.1 to ensure
+                    optimal move selection.
+                `numTests`: An int determining the number of games to play.
+
+            Returns:
+                `wins`: The number of wins BlackBird had.
+                `draws`: The number of draws BlackBird had.
+                `losses`: The number of losses BlackBird had.
+        """
+        oldModel = Model(self.BoardState, tfLog=False, loadOld=True,
+                                 **self.bbParameters)
+
+        wins, draws, losses = self._test(oldModel, temp, numTests)
+
+        del oldModel
+        return wins, draws, losses
+
+def TestModels(model1, model2, temp, numTests):
+    wins = draws = losses = 0
+    for _ in range(numTests):
+        model1ToMove = random.choice([True, False])
+        model1Player = 1 if model1ToMove else 2
+        winner = None
+        model1.DropRoot()
+        model2.DropRoot()
+        state = self.BoardState()
+
+        while winner is None:
+            if model1ToMove:
+                (nextState, *_) = model1.FindMove(state, temp)
+            else:
+                (nextState, *_) = model2.FindMove(state, temp)
+            state = nextState
+            model1.MoveRoot(state)
+            model2.MoveRoot(state)
+
+            model1ToMove = not model1ToMove
+            winner = state.Winner()
+
+        if winner == model1Player:
+            wins += 1
+        elif winner == 0:
+            draws += 1
+        else:
+            losses += 1
+
+    return wins, draws, losses
+
+
+class Model(MCTS, Network):
     """ Class which encapsulates MCTS powered by a neural network.
 
         The BlackBird class is designed to learn how to win at a board game, by
@@ -27,37 +116,8 @@ class BlackBird(MCTS, Network):
             boardShape: A list of integers representing the dimension of the
                 board game to be learned.
     """
-    class TrainingExample(object):
-        def __init__(self, state, value, childValues, childValuesStr,
-                     probabilities, priors, priorsStr, boardShape):
 
-            self.State = state
-            self.Value = value
-            self.BoardShape = boardShape
-            self.ChildValues = childValues if childValues is not None else None
-            self.ChildValuesStr = childValuesStr if childValuesStr is not None else None
-            self.Reward = None
-            self.Priors = priors
-            self.PriorsStr = priorsStr
-            self.Probabilities = probabilities
-
-        def __str__(self):
-            state = str(self.State)
-            value = 'Value: {}'.format(self.Value)
-            childValues = 'Child Values: \n{}'.format(self.ChildValuesStr)
-            reward = 'Reward:\n{}'.format(self.Reward)
-            probs = 'Probabilities:\n{}'.format(
-                self.Probabilities.reshape(self.BoardShape))
-            priors = '\nPriors:\n{}\n'.format(self.PriorsStr)
-
-            return '\n'.join([state, value, childValues, reward, probs, priors])
-
-    def __init__(self, boardState, tfLog=False, teacher=False,
-                 **parameters):
-
-        self.BoardState = boardState
-        self.bbParameters = parameters
-        self.boardShape = boardState().BoardShape
+    def __init__(self, boardState, mctsConfig, networkConfig):
 
         mctsParams = parameters.get('mcts')
         MCTS.__init__(self, **mctsParams)

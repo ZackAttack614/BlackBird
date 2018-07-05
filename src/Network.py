@@ -6,14 +6,9 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 
 class Network:
-    def __init__(self, tfLog, dims, legalActions, name, teacher=False, *args, **kwargs):
+    def __init__(self, name, teacher=False, *args, **kwargs):
         self.Name = name
         self.parameters = kwargs
-        self.dims = dims
-        self.legalActions = legalActions
-
-        gpuFrac = kwargs.get('gpu_frac')
-        gpuOptions = tf.GPUOptions(per_process_gpu_memory_fraction=gpuFrac)
 
         self.batchCount = 0
 
@@ -22,20 +17,20 @@ class Network:
         self.epsilon = self.parameters.get(
             'policy').get('dirichlet').get('epsilon')
 
-        self.write_summary = tfLog
-
         self.graph = tf.Graph()
+        gpuOptions = tf.GPUOptions(
+            per_process_gpu_memory_fraction=self.parameters.get('gpu_frac'))
         self.sess = tf.Session(config=tf.ConfigProto(
             gpu_options=gpuOptions), graph=self.graph)
         with self.graph.as_default():
             if not self.loadModel(name):
-                self.buildNetwork(teacher)
+                self.buildNetwork(self.parameters.get('dims'),
+                                  self.parameters.get('legalActions'), teacher)
                 self.sess.run(tf.global_variables_initializer())
                 self.saveModel(name)
 
-        if tfLog:
-            self.writer = tf.summary.FileWriter(
-                os.path.join('blackbird_summary', name), graph=self.sess.graph)
+        self.writer = tf.summary.FileWriter(
+            os.path.join('blackbird_summary', name), graph=self.sess.graph)
 
     def __del__(self):
         self.sess.close()
@@ -44,17 +39,17 @@ class Network:
         except:
             pass
 
-    def buildNetwork(self, hasTeacher):
+    def buildNetwork(self, dims, policyShape, hasTeacher):
         """ Build out the policy/evaluation combo network
         """
         with tf.variable_scope('inputs', reuse=tf.AUTO_REUSE):
             self.input = tf.placeholder(
-                shape=[None] + self.dims + [3],
+                shape=[None] + dims + [3],
                 name='board_input', dtype=tf.float32)
             tf.add_to_collection('input', self.input)
 
             self.policyLabel = tf.placeholder(
-                shape=[None, self.legalActions],
+                shape=[None, policyShape],
                 name='correct_move_from_mcts', dtype=tf.float32)
             tf.add_to_collection('policyLabel', self.policyLabel)
 
@@ -191,7 +186,7 @@ class Network:
                 policyBatchNorm, name='rect_norm')
 
             policyDense = tf.layers.dense(
-                policyRectifier, units=self.legalActions, name='policy')
+                policyRectifier, units=policyShape, name='policy')
 
             policyVector = tf.reduce_sum(
                 policyDense, axis=[1, 2])
@@ -205,7 +200,7 @@ class Network:
                 [self.alpha, 1-self.alpha])
 
             self.policy = ((1 - self.epsilon) * policyBase
-                           + self.epsilon * dist.sample([1, self.legalActions])[0][:, 0])
+                           + self.epsilon * dist.sample([1, policyShape])[0][:, 0])
 
             self.policy /= tf.reduce_sum(self.policy)
             tf.add_to_collection('policy', self.policy)
