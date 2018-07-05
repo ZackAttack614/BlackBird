@@ -49,7 +49,7 @@ class BoardState(GameState):
 
     def AsInputArray(self):
         player = np.full((self.Size, self.Size), 1 if self.Player == 1 else -1)
-        array = np.zeros((1, self.Size, self.Size, 3))
+        array = np.zeros((1, self.Size, self.Size, 3), dtype=np.uint8)
         array[0, :, :, 0:2] = self.Board
         array[0, :, :, 2] = player
         return array

@@ -17,7 +17,7 @@ class BoardState(GameState):
 
     def __init__(self):
         self.GameType = 'Connect4'
-        self.Board = np.zeros((self.Height, self.Width, 2))
+        self.Board = np.zeros((self.Height, self.Width, 2), dtype=np.uint8)
         self.Player = 1
         self.PreviousPlayer = None
 
@@ -54,7 +54,7 @@ class BoardState(GameState):
 
     def AsInputArray(self):
         player = np.full((self.Height, self.Width), 1 if self.Player == 1 else -1)
-        array = np.zeros((1, self.Height, self.Width, 3))
+        array = np.zeros((1, self.Height, self.Width, 3), dtype=np.uint8)
         array[0, :, :, 0:2] = self.Board
         array[0, :, :, 2] = player
         return array
@@ -93,7 +93,7 @@ class BoardState(GameState):
         serialized.mctsPolicy = policy.tobytes()
         serialized.boardEncoding = state.Board.tobytes()
         serialized.boardDims = np.array([self.Width, self.Height, 3]).tobytes()
-        return serialized
+        return serialized.SerializeToString()
 
     def DeserializeState(self, serialState):
         state = State()
