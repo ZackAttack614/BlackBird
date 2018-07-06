@@ -374,7 +374,7 @@ class MCTS(object):
             winner = rolloutState.Winner(action)
         return 0.5 if winner == 0 else int(player == winner)
 
-    def _findLeaf(self, node):
+    def _findLeaf(self, node, temp):
         """ Applies MCTS to a supplied node until a leaf is found.
 
             Args:

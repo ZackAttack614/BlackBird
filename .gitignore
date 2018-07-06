@@ -267,3 +267,4 @@ NextNetworkParams.yaml
 .vscode/*
 logDir/*
 src/goodGames.txt
+data/blackbird.db
