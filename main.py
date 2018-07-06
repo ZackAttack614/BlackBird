@@ -6,6 +6,7 @@ sys.path.insert(0, './src/')
 from Blackbird import BlackBird
 from TicTacToe import BoardState
 
+
 def main():
     if not os.path.isfile('parameters.yaml'):
         raise IOError('Copy parameters_template.yaml into parameters.yaml')
@@ -13,8 +14,8 @@ def main():
         parameters = yaml.load(param_file.read().strip())
 
     numEpochs = parameters.get('selfplay').get('epochs')
-    BlackbirdInstance = BlackBird(BoardState, tfLog=True, loadOld=True,
-        **parameters)
+    BlackbirdInstance = BlackBird(BoardState, tfLog=True,
+                                  **parameters)
 
     for epoch in range(1, numEpochs + 1):
         print('Starting epoch {0}...'.format(epoch))
@@ -52,6 +53,8 @@ def main():
         print('Losses = {0}'.format(losses))
 
         print('\n')
+    print('Done!')
+
 
 if __name__ == '__main__':
     main()

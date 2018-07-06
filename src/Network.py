@@ -5,46 +5,38 @@ import os
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
-class Network:
-    def __init__(self, tfLog, dims, legalActions, teacher=False,
-            loadOld=False, *args, **kwargs):
 
+class Network:
+    def __init__(self, tfLog, dims, legalActions, name, teacher=False, *args, **kwargs):
+        self.Name = name
         self.parameters = kwargs
         self.dims = dims
         self.legalActions = legalActions
 
         gpuFrac = kwargs.get('gpu_frac')
         gpuOptions = tf.GPUOptions(per_process_gpu_memory_fraction=gpuFrac)
-        self.sess = tf.Session(config=tf.ConfigProto(gpu_options=gpuOptions))
 
-        self.buildNetwork(teacher)
-        init = tf.global_variables_initializer()
-        self.sess.run(init)
         self.batchCount = 0
 
-        self.saver = tf.train.Saver()
-        self.network_name = '{0}_{1}.ckpt'.format(self.parameters['blocks'], 
-            self.parameters['filters'])
-
-        self.modelLoc = 'blackbird_models/best_model_{0}.ckpt'.format(
-            self.network_name)
-
-        self.writerLoc = 'blackbird_summary/model_summary'
-
-        self.defaultAlpha = self.parameters.get('policy').get('dirichlet').get('alpha')
-        self.defaultEpsilon = self.parameters.get('policy').get('dirichlet').get('epsilon')
+        self.alpha = self.parameters.get(
+            'policy').get('dirichlet').get('alpha')
+        self.epsilon = self.parameters.get(
+            'policy').get('dirichlet').get('epsilon')
 
         self.write_summary = tfLog
 
+        self.graph = tf.Graph()
+        self.sess = tf.Session(config=tf.ConfigProto(
+            gpu_options=gpuOptions), graph=self.graph)
+        with self.graph.as_default():
+            if not self.loadModel(name):
+                self.buildNetwork(teacher)
+                self.sess.run(tf.global_variables_initializer())
+                self.saveModel(name)
+
         if tfLog:
             self.writer = tf.summary.FileWriter(
-                self.writerLoc, graph=self.sess.graph)
-
-        if loadOld:
-            try:
-                self.loadModel()
-            except:
-                self.saveModel()
+                os.path.join('blackbird_summary', name), graph=self.sess.graph)
 
     def __del__(self):
         self.sess.close()
@@ -56,42 +48,45 @@ class Network:
     def buildNetwork(self, hasTeacher):
         """ Build out the policy/evaluation combo network
         """
-        with tf.variable_scope('inputs', reuse=tf.AUTO_REUSE) as _:
+        with tf.variable_scope('inputs', reuse=tf.AUTO_REUSE):
             self.input = tf.placeholder(
                 shape=[None] + self.dims + [3],
                 name='board_input', dtype=tf.float32)
+            tf.add_to_collection('input', self.input)
 
-            self.mctsPolicy = tf.placeholder(
+            self.policyLabel = tf.placeholder(
                 shape=[None, self.legalActions],
                 name='correct_move_from_mcts', dtype=tf.float32)
+            tf.add_to_collection('policyLabel', self.policyLabel)
 
-            self.mctsEvaluation = tf.placeholder(
-                shape=[None], name='mctsEvaluation', dtype=tf.float32)
+            self.evaluationLabel = tf.placeholder(
+                shape=[None], name='evaluationLabel', dtype=tf.float32)
+            tf.add_to_collection('evaluationLabel', self.evaluationLabel)
 
-        with tf.variable_scope('resTower', reuse=tf.AUTO_REUSE) as _:
-            self.resTower = [self.input]
+        with tf.variable_scope('resTower', reuse=tf.AUTO_REUSE):
+            resTower = [self.input]
 
-            with tf.variable_scope('conv_block', reuse=tf.AUTO_REUSE) as _:
+            with tf.variable_scope('conv_block', reuse=tf.AUTO_REUSE):
                 """ AlphaZero convolutional blocks are...
                     1) Convolutional layer of 256 3x3 filters, stride of 1
                     2) Batch normalization
                     3) Rectifier nonlinearity
                 """
-                self.resTower.append(
-                    tf.layers.conv2d(inputs=self.input, kernel_size=[3,3],
-                        strides=1, padding="same", name='conv',
-                        filters=self.parameters['filters']))
+                resTower.append(
+                    tf.layers.conv2d(inputs=self.input, kernel_size=[3, 3],
+                                     strides=1, padding="same", name='conv',
+                                     filters=self.parameters['filters']))
 
-                self.resTower.append(
+                resTower.append(
                     tf.layers.batch_normalization(
-                        inputs=self.resTower[-1],name='batch_norm'))
+                        inputs=resTower[-1], name='batch_norm'))
 
-                self.resTower.append(
+                resTower.append(
                     tf.nn.relu(
-                        features=self.resTower[-1], name='rect_nonlinearity'))
+                        features=resTower[-1], name='rect_nonlinearity'))
 
             for block in range(self.parameters['blocks']):
-                with tf.variable_scope('block_{}'.format(block), reuse=tf.AUTO_REUSE) as _:
+                with tf.variable_scope('block_{}'.format(block), reuse=tf.AUTO_REUSE):
                     """ AlphaZero residual blocks are...
                         1) Convolutional layer of 256 3x3 filters, stride of 1
                         2) Batch normalization
@@ -101,42 +96,42 @@ class Network:
                         6) Skip connection that adds the input to the block
                         7) Rectifier nonlinearity
                     """
-                    self.resTower.append(
+                    resTower.append(
                         tf.layers.conv2d(
-                            inputs=self.resTower[-1], kernel_size=[3,3], 
+                            inputs=resTower[-1], kernel_size=[3, 3],
                             strides=1, filters=self.parameters['filters'],
                             padding="same", name='conv_1'))
 
-                    self.resTower.append(
+                    resTower.append(
                         tf.layers.batch_normalization(
-                            inputs=self.resTower[-1],name='batch_norm_1'))
+                            inputs=resTower[-1], name='batch_norm_1'))
 
-                    self.resTower.append(
+                    resTower.append(
                         tf.nn.relu(
-                            features=self.resTower[-1],
+                            features=resTower[-1],
                             name='rectifier_nonlinearity_1'))
 
-                    self.resTower.append(
+                    resTower.append(
                         tf.layers.conv2d(
-                            inputs=self.resTower[-1], kernel_size=[3,3],
+                            inputs=resTower[-1], kernel_size=[3, 3],
                             filters=self.parameters['filters'], strides=1,
                             padding="same", name='conv_2'))
 
-                    self.resTower.append(
+                    resTower.append(
                         tf.layers.batch_normalization(
-                            inputs=self.resTower[-1], name='batch_norm_2'))
+                            inputs=resTower[-1], name='batch_norm_2'))
 
-                    self.resTower.append(
+                    resTower.append(
                         tf.add(
-                            self.resTower[-1], self.resTower[-6],
+                            resTower[-1], resTower[-6],
                             name='skip_connection'))
 
-                    self.resTower.append(
+                    resTower.append(
                         tf.nn.relu(
-                            features=self.resTower[-1],
+                            features=resTower[-1],
                             name='rectifier_nonlinearity_2'))
 
-        with tf.variable_scope('value', reuse=tf.AUTO_REUSE) as _:
+        with tf.variable_scope('value', reuse=tf.AUTO_REUSE):
             """ AlphaZero's value head is...
                 1) Convolutional layer of 2 1x1 filters, stride of 1
                 2) Batch normalization
@@ -147,7 +142,7 @@ class Network:
                 7) tanh activation
             """
             evalConv = tf.layers.conv2d(
-                self.resTower[-1], filters=1, kernel_size=(1,1), strides=1,
+                resTower[-1], filters=1, kernel_size=(1, 1), strides=1,
                 name='convolution')
 
             evalBatchNorm = tf.layers.batch_normalization(
@@ -162,7 +157,7 @@ class Network:
 
             evalDenseReduced = tf.reduce_sum(
                 evalDense,
-                axis=[1,2], name='reduced_dense')
+                axis=[1, 2], name='reduced_dense')
 
             evalRectifier2 = tf.nn.relu(
                 evalDenseReduced, name='rect_norm_2')
@@ -177,8 +172,9 @@ class Network:
 
             self.evaluation = tf.tanh(
                 evalScalar, name='value')
+            tf.add_to_collection('evaluation', self.evaluation)
 
-        with tf.variable_scope('policy', reuse=tf.AUTO_REUSE) as _:
+        with tf.variable_scope('policy', reuse=tf.AUTO_REUSE):
             """ AlphaZero's policy head is...
                 1) Convolutional layer of 2 1x1 filters, stride of 1
                 2) Batch normalization
@@ -186,7 +182,7 @@ class Network:
                 4) Fully connected layer of size |legal actions|
             """
             policyConv = tf.layers.conv2d(
-                self.resTower[-1], filters=2, kernel_size=(1,1), strides=1,
+                resTower[-1], filters=2, kernel_size=(1, 1), strides=1,
                 name='convolution')
 
             policyBatchNorm = tf.layers.batch_normalization(
@@ -199,47 +195,47 @@ class Network:
                 policyRectifier, units=self.legalActions, name='policy')
 
             policyVector = tf.reduce_sum(
-                policyDense, axis=[1,2])
+                policyDense, axis=[1, 2])
 
             policyBase = tf.nn.softmax(
                 policyVector)
 
             # Generate Dirichlet noise to add to the network policy
-            self.epsilon = tf.placeholder(shape=[1], dtype=tf.float32)
-            self.alpha = tf.placeholder(shape=[1], dtype=tf.float32)
 
             dist = tf.distributions.Dirichlet(
-                [self.alpha[0], 1-self.alpha[0]])
+                [self.alpha, 1-self.alpha])
 
-            self.policy = ((1 - self.epsilon[0]) * policyBase
-                + self.epsilon[0] * dist.sample([1, self.legalActions])[0][:,0])
+            self.policy = ((1 - self.epsilon) * policyBase
+                           + self.epsilon * dist.sample([1, self.legalActions])[0][:, 0])
 
             self.policy /= tf.reduce_sum(self.policy)
-            
-        with tf.variable_scope('loss', reuse=tf.AUTO_REUSE) as _:
-            self.teacherPolicy = tf.placeholder(
-                shape=[self.policy.shape[1]], dtype=tf.float32,
-                name='teacher_policy')
+            tf.add_to_collection('policy', self.policy)
+
+        with tf.variable_scope('loss', reuse=tf.AUTO_REUSE):
 
             lossEvaluation = tf.reduce_mean(tf.square(
-                self.evaluation - self.mctsEvaluation))
+                self.evaluation - self.evaluationLabel))
 
             lossPolicy = -tf.reduce_mean(
                 tf.tensordot(
                     tf.log(self.policy),
-                    tf.transpose(self.mctsPolicy),
+                    tf.transpose(self.policyLabel),
                     axes=1))
 
             lossParam = tf.reduce_mean([
-                    tf.nn.l2_loss(v) for v in tf.trainable_variables()
+                tf.nn.l2_loss(v) for v in tf.trainable_variables()
 
-                    # I don't know if this filter is a good idea...
-                    if 'bias' not in v.name
-                ])
+                # I don't know if this filter is a good idea...
+                if 'bias' not in v.name
+            ])
 
             self.loss = lossEvaluation + lossPolicy + lossParam
 
             if hasTeacher:
+                self.teacherPolicy = tf.placeholder(
+                    shape=[self.policy.shape[1]], dtype=tf.float32,
+                    name='teacher_policy')
+                tf.add_to_collection('teacherPolicy', self.teacherPolicy)
                 policyXentropy = -tf.reduce_mean(
                     tf.tensordot(
                         tf.log(self.teacherPolicy),
@@ -248,6 +244,7 @@ class Network:
                     axis=1)
 
                 self.loss += policyXentropy
+            tf.add_to_collection('loss', self.loss)
 
             avgLoss = tf.summary.scalar('average_loss', self.loss)
             policyLoss = tf.summary.scalar('policyLoss', lossPolicy)
@@ -255,11 +252,13 @@ class Network:
             l2Loss = tf.summary.scalar('l2Loss', lossParam)
 
             self.lossMerged = tf.summary.merge([avgLoss, policyLoss,
-                                                 evalLoss, l2Loss])
+                                                evalLoss, l2Loss])
+            tf.add_to_collection('lossMerged', self.lossMerged)
 
-        with tf.variable_scope('training', reuse=tf.AUTO_REUSE) as _:
+        with tf.variable_scope('training', reuse=tf.AUTO_REUSE):
             self.learningRate = tf.placeholder(
                 shape=[1], dtype=tf.float32, name='learningRate')
+            tf.add_to_collection('learningRate', self.learningRate)
 
             if self.parameters['training']['optimizer'] == 'adam':
                 optimizer = tf.train.AdamOptimizer(self.learningRate[0])
@@ -272,12 +271,13 @@ class Network:
                     self.learningRate[0])
 
             self.trainingOp = optimizer.minimize(self.loss)
+            tf.add_to_collection('trainingOp', self.trainingOp)
 
     def getEvaluation(self, state):
         """ Given a game state, return the network's evaluation.
         """
         evaluation = self.sess.run(
-            self.evaluation, feed_dict={self.input:state})
+            self.evaluation, feed_dict={self.input: state})
 
         return evaluation[0]
 
@@ -287,27 +287,24 @@ class Network:
             to ensure exploration, if training.
         """
         policy = self.sess.run(
-            self.policy, feed_dict={
-                self.input:state,
-                self.epsilon:[self.defaultEpsilon],
-                self.alpha:[self.defaultAlpha]})
+            self.policy, feed_dict={self.input: state})
 
         return policy[0]
 
     def train(self, state, eval, policy, learningRate=0.01, teacher=None):
         """ Train the network
         """
-        feed_dict={
-            self.input:state,
-            self.mctsEvaluation:eval,
-            self.mctsPolicy:policy,
-            self.learningRate:[learningRate],
-            self.epsilon:[self.defaultEpsilon],
-            self.alpha:[self.defaultAlpha]
+        feed_dict = {
+            self.input: state,
+            self.evaluationLabel: eval,
+            self.policyLabel: policy,
+            self.learningRate: [learningRate]
         }
 
         if teacher is not None:
-            assert isinstance(teacher, Network), 'teacher can generate policies'
+            if not hasattr(teacher, 'getPolicy'):
+                raise TypeError(
+                    'Teacher of type {} cannot evaluate policies.'.format(type(teacher)))
             feed_dict[self.teacherPolicy] = teacher.getPolicy(state)
 
         self.sess.run(self.trainingOp, feed_dict=feed_dict)
@@ -316,16 +313,30 @@ class Network:
             summary = self.sess.run(self.lossMerged, feed_dict=feed_dict)
             self.writer.add_summary(summary, self.batchCount)
 
-    def GetSerializedArch(self):
-        return json.dumps(self.parameters)
-
-    def saveModel(self):
+    def saveModel(self, name=None):
         """ Write the state of the network to a file.
             This should be reserved for "best" networks.
         """
-        self.saver.save(self.sess, self.modelLoc)
+        if name is None:
+            name = self.Name
+        saveDir = os.path.join('blackbird_models', name)
+        if not os.path.isdir('blackbird_models'):
+            os.mkdir('blackbird_models')
+        if not os.path.isdir(saveDir):
+            os.mkdir(saveDir)
+        with self.sess.graph.as_default():
+            tf.train.Saver().save(self.sess, os.path.join(saveDir, 'best'))
 
-    def loadModel(self):
+    def loadModel(self, name):
         """ Load an old version of the network.
         """
-        self.saver.restore(self.sess, self.modelLoc)
+        saveDir = os.path.join('blackbird_models', name)
+        metaPath = os.path.join(saveDir, 'best.meta')
+        if not os.path.isdir(saveDir) or not os.path.isfile(metaPath):
+            return False
+
+        saver = tf.train.import_meta_graph(metaPath, clear_devices=True)
+        saver.restore(self.sess, os.path.join(saveDir, 'best'))
+        for k in self.graph.collections:
+            setattr(self, k, tf.get_collection(k)[0])
+        return True

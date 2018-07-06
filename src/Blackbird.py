@@ -12,6 +12,7 @@ import numpy as np
 np.seterr(divide='ignore', invalid='ignore')
 np.set_printoptions(precision=2)
 
+
 class BlackBird(MCTS, Network):
     """ Class which encapsulates MCTS powered by a neural network.
 
@@ -31,7 +32,7 @@ class BlackBird(MCTS, Network):
     """
     class TrainingExample(object):
         def __init__(self, state, value, childValues, childValuesStr,
-                probabilities, priors, priorsStr, boardShape):
+                     probabilities, priors, priorsStr, boardShape):
 
             self.State = state
             self.Value = value
@@ -54,8 +55,8 @@ class BlackBird(MCTS, Network):
 
             return '\n'.join([state, value, childValues, reward, probs, priors])
 
-    def __init__(self, boardState, tfLog=False, loadOld=False, teacher=False,
-            **parameters):
+    def __init__(self, boardState, tfLog=False, teacher=False,
+                 **parameters):
 
         self.BoardState = boardState
         self.Connection = Connection()
@@ -67,7 +68,7 @@ class BlackBird(MCTS, Network):
 
         networkParams = parameters.get('network')
         Network.__init__(self, tfLog, self.boardShape, boardState.LegalMoves,
-            teacher=teacher, loadOld=loadOld, **networkParams)
+                         teacher=teacher, **networkParams)
 
         self.Connection.PutArchitecture(self.GetSerializedArch())
 
@@ -105,18 +106,22 @@ class BlackBird(MCTS, Network):
                 (nextState, v, currentProbabilties) = self.FindMove(state, temp)
                 childValues = self.Root.ChildWinRates()
                 example = self.TrainingExample(state, 1 - v, childValues,
-                    state.EvalToString(childValues), currentProbabilties, self.Root.Priors, 
-                    state.EvalToString(self.Root.Priors), state.LegalActionShape())
+                                               state.EvalToString(
+                                                   childValues), currentProbabilties, self.Root.Priors,
+                                               state.EvalToString(self.Root.Priors), state.LegalActionShape())
                 state = nextState
                 self.MoveRoot(state)
                 winner = state.Winner(lastAction)
                 gameHistory.append(example)
 
             example = self.TrainingExample(state, None, None, None,
-                np.zeros([len(currentProbabilties)], dtype=np.float),
-                np.zeros([len(currentProbabilties)]),
-                np.zeros([len(currentProbabilties)]),
-                state.LegalActionShape())
+                                           np.zeros(
+                                               [len(currentProbabilties)]),
+                                           np.zeros(
+                                               [len(currentProbabilties)]),
+                                           np.zeros(
+                                               [len(currentProbabilties)]),
+                                           state.LegalActionShape())
             gameHistory.append(example)
 
             for example in gameHistory:
@@ -151,21 +156,24 @@ class BlackBird(MCTS, Network):
         self.SampleValue.cache_clear()
         self.GetPriors.cache_clear()
 
-        batchSize = self.bbParameters.get('network').get('training').get('batch_size')
-        examples = np.random.choice(examples, 
-            len(examples) - (len(examples) % batchSize), 
-            replace = False)
+        batchSize = self.bbParameters.get(
+            'network').get('training').get('batch_size')
+        examples = np.random.choice(examples,
+                                    len(examples) -
+                                    (len(examples) % batchSize),
+                                    replace=False)
 
         for i in range(len(examples) // batchSize):
             start = i * batchSize
-            batch = examples[start : start + batchSize]
+            batch = examples[start: start + batchSize]
             self.train(
-                np.stack([b.State.AsInputArray()[0] for b in batch], axis = 0),
-                np.stack([b.Reward for b in batch], axis = 0),
-                np.stack([b.Probabilities for b in batch], axis = 0),
-                self.bbParameters.get('network').get('training').get('learning_rate'),
+                np.stack([b.State.AsInputArray()[0] for b in batch], axis=0),
+                np.stack([b.Reward for b in batch], axis=0),
+                np.stack([b.Probabilities for b in batch], axis=0),
+                self.bbParameters.get('network').get(
+                    'training').get('learning_rate'),
                 teacher
-                )
+            )
 
     def TestRandom(self, temp, numTests):
         """ Plays the current BlackBird instance against an opponent making
@@ -200,7 +208,7 @@ class BlackBird(MCTS, Network):
                 `losses`: The number of losses BlackBird had.
         """
         oldBlackbird = BlackBird(self.BoardState, tfLog=False, loadOld=True,
-            **self.bbParameters)
+                                 **self.bbParameters)
 
         wins, draws, losses = self._test(oldBlackbird, temp, numTests)
 
@@ -221,7 +229,7 @@ class BlackBird(MCTS, Network):
                 `draws`: The number of draws BlackBird had.
                 `losses`: The number of losses BlackBird had.
         """
-        good = FixedMCTS(maxDepth = 10, explorationRate = 0.85, timeLimit = 1)
+        good = FixedMCTS(maxDepth=10, explorationRate=0.85, timeLimit=1)
         return self._test(good, temp, numTests)
 
     def _test(self, other, temp, numTests):
@@ -272,7 +280,7 @@ class BlackBird(MCTS, Network):
                     position. 0 is the worst possible evaluation, 1 is the best.
         """
         value = self.getEvaluation(state.AsInputArray())
-        value = (value + 1) * 0.5 # [-1, 1] -> [0, 1]
+        value = (value + 1) * 0.5  # [-1, 1] -> [0, 1]
         if state.Player != player:
             value = 1 - value
         assert value >= 0, 'Value: {}'.format(value)
@@ -296,6 +304,7 @@ class BlackBird(MCTS, Network):
         policy /= np.sum(policy)
 
         return policy
+
 
 if __name__ == '__main__':
     from Connect4 import BoardState
