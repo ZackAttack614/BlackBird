@@ -24,4 +24,4 @@ parameters.yaml
 NextNetworkParams.yaml
 .vscode/*
 src/goodGames.txt
-src/proto/__pycache__/state_pb2.cpython-36.pyc
+data/blackbird.db
