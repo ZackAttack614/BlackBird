@@ -25,3 +25,4 @@ NextNetworkParams.yaml
 .vscode/*
 src/goodGames.txt
 data/blackbird.db
+src/proto/__pycache__

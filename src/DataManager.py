@@ -3,7 +3,7 @@ import uuid
 import os
 
 class Connection(object):
-    def __init__(self, isLocal=True):
+    def __init__(self, modelKey, isLocal=True):
         directory = 'data' # Placeholder until I can figure out a robust method
 
         if not os.path.isdir(directory):
@@ -11,6 +11,7 @@ class Connection(object):
         self._conn = sqlite3.connect(os.path.join(directory, 'blackbird.db'))
         self.Cursor = self._conn.cursor()
         self._makeSchema(self.Cursor)
+        self.ModelKey = modelKey
 
     def PutArchitecture(self, arch):
         command = 'INSERT INTO ArchitectureDim(ArchitectureJSON) VALUES (?);'
@@ -27,7 +28,7 @@ class Connection(object):
         pass
 
     def PutGame(self, gameType, game):
-        command = 'INSERT INTO GameStateDim(ModelKey, GameType, State) VALUES (?, ?, ?);'
+        command = 'INSERT INTO GameStateFact(ModelKey, GameType, State) VALUES (?, ?, ?);'
         self.Cursor.execute(command, (self.ModelKey, gameType, game))
         self._conn.commit()
 
@@ -89,8 +90,8 @@ class Connection(object):
                 PID INTEGER);""")
 
         tableStatements.append("""
-            CREATE TABLE GameStateDim(
-                StateKey INTEGER PRIMARY KEY AUTOINCREMENT,
+            CREATE TABLE GameStateFact( 
+                GameStateKey INTEGER PRIMARY KEY AUTOINCREMENT,
                 ModelKey INTEGER NOT NULL,
                 GameType TEXT NOT NULL,
                 State BYTES NOT NULL,
