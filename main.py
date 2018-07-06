@@ -1,6 +1,6 @@
 import os
 import sys
-import json
+import yaml
 sys.path.insert(0, './src/')
 
 import Blackbird
@@ -12,7 +12,7 @@ def APITest():
     if not os.path.isfile('parameters.json'):
         raise IOError('Copy parameters_template.json into parameters.json')
     with open('parameters.json') as param_file:
-        parameters = json.load(param_file)
+        parameters = yaml.load(param_file)
 
     model = Blackbird.Model(BoardState, parameters['name'], parameters.get(
         'mcts'), parameters.get('network'), parameters.get('tensorflow'))
