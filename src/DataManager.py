@@ -3,7 +3,7 @@ import uuid
 import os
 
 class Connection(object):
-    def __init__(self, modelKey, isLocal=True):
+    def __init__(self, isLocal=True):
         directory = 'data' # Placeholder until I can figure out a robust method
 
         if not os.path.isdir(directory):
@@ -11,29 +11,43 @@ class Connection(object):
         self._conn = sqlite3.connect(os.path.join(directory, 'blackbird.db'))
         self.Cursor = self._conn.cursor()
         self._makeSchema(self.Cursor)
-        self.ModelKey = modelKey
+        self.ModelKey = None
 
     def PutArchitecture(self, arch):
         command = 'INSERT INTO ArchitectureDim(ArchitectureJSON) VALUES (?);'
         self.Cursor.execute(command, (arch,))
-        self.PutModel(int(self.Cursor.lastrowid), str(uuid.uuid4()))
         self._conn.commit()
 
-    def PutModel(self, archKey, name):
-        command = 'INSERT INTO ModelDim(ArchitectureKey, Name) VALUES(?,?);'
-        self.Cursor.execute(command, (archKey, name))
+    def PutModel(self, archKey, gameType, name):
+        command = 'INSERT INTO ModelDim(ArchitectureKey, GameType, Name) VALUES(?,?,?);'
+        self.Cursor.execute(command, (archKey, gameType, name))
         self.ModelKey = self.Cursor.lastrowid
+        self._conn.commit()
 
-    def GetGame(self):
-        pass
+    def GetGames(self):
+        command = 'SELECT State FROM GameStateFact WHERE ModelKey = ?;'
+        self.Cursor.execute(command, (self.ModelKey,))
+        return [state[0] for state in self.Cursor.fetchall()]
 
-    def PutGame(self, gameType, game):
+    def PutGames(self, gameType, games):
         command = 'INSERT INTO GameStateFact(ModelKey, GameType, State) VALUES (?, ?, ?);'
-        self.Cursor.execute(command, (self.ModelKey, gameType, game))
+        self.Cursor.executemany(command, [(self.ModelKey, gameType, g) for g in games])
         self._conn.commit()
 
     def PutTrainingStatistic(self, statistic):
         pass
+
+    def Close(self):
+        self._conn.close()
+
+    def SetLastModel(self, gameType, name):
+        self.Cursor.execute('SELECT MAX(ModelKey) FROM ModelDim WHERE GameType = ?;', (gameType,))
+        key = self.Cursor.fetchone()
+
+        if any(key):
+            self.ModelKey = key[0]
+        else:
+            self.PutModel(1, gameType, name)
 
     def _makeSchema(self, cursor):
         check = """SELECT COUNT(name) FROM sqlite_master
@@ -52,6 +66,7 @@ class Connection(object):
             CREATE TABLE ModelDim(
                 ModelKey INTEGER PRIMARY KEY AUTOINCREMENT,
                 ArchitectureKey INTEGER NOT NULL,
+                GameType TEXT NOT NULL,
                 Name TEXT,
                 FOREIGN KEY(ArchitectureKey)
                     REFERENCES ArchitectureDim(ArchitectureKey));""")
@@ -101,9 +116,6 @@ class Connection(object):
         for command in tableStatements:
             cursor.execute(command)
 
-    def Close(self):
-        self._conn.close()
-
     def __del__(self):
         self.Close()
 
@@ -112,7 +124,3 @@ class Connection(object):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.Close()
-
-if __name__ == '__main__':
-    conn = Connection()
-    del conn

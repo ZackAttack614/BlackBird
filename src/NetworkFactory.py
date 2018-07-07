@@ -1,4 +1,5 @@
 import tensorflow as tf
+import numpy as np
 
 
 class NetworkFactory(object):
@@ -7,13 +8,12 @@ class NetworkFactory(object):
             `networkConfig`: Not goina lie. You probably shouldn't be trying to use any of this.
     """
 
-    def __init__(self, networkConfig):
+    def __init__(self, networkConfig, policyShape):
         self.NetworkConfig = networkConfig
         self.alpha = networkConfig.get('policy').get('dirichlet').get('alpha')
         self.epsilon = networkConfig.get(
             'policy').get('dirichlet').get('epsilon')
-        self.dims = networkConfig.get('dims')
-        self.policyShape = networkConfig.get('policyShape')
+        self.policyShape = policyShape
         self.hasTeacher = networkConfig.get('hasTeacher')
 
     def __call__(self):
@@ -21,12 +21,12 @@ class NetworkFactory(object):
         """
         with tf.variable_scope('inputs', reuse=tf.AUTO_REUSE):
             input = tf.placeholder(
-                shape=[None] + self.dims + [3],
+                shape=[None, None, None, 3],
                 name='board_input', dtype=tf.float32)
             tf.add_to_collection('input', input)
 
             policyLabel = tf.placeholder(
-                shape=[None, self.policyShape],
+                shape=[None, None],
                 name='correct_move_from_mcts', dtype=tf.float32)
             tf.add_to_collection('policyLabel', policyLabel)
 

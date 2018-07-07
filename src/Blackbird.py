@@ -3,6 +3,8 @@ from RandomMCTS import RandomMCTS
 from FixedMCTS import FixedMCTS
 from Network import Network
 from NetworkFactory import NetworkFactory
+from DataManager import Connection
+from proto.state_pb2 import State
 
 import functools
 import random
@@ -12,6 +14,21 @@ import numpy as np
 np.seterr(divide='ignore', invalid='ignore')
 np.set_printoptions(precision=2)
 
+_conn = Connection()
+
+
+class ExampleState(object):
+    def __init__(self, serialState=None):
+        state = State()
+        state.ParseFromString(serialState)
+        boardDims = np.frombuffer(state.boardDims, dtype=np.int8)
+
+        self.player = state.player,
+        self.mctsEval = state.mctsEval,
+        self.mctsPolicy = np.frombuffer(state.mctsPolicy,
+                                        dtype=np.float),
+        self.board = np.frombuffer(state.boardEncoding,
+                                   dtype=np.int8).reshape(boardDims)
 
 class TrainingExample(object):
     def __init__(self, state, value, childValues, childValuesStr,
@@ -122,11 +139,11 @@ def TestModels(model1, model2, temp, numTests):
     }
 
 
-def GenerateTrainingSamples(model, nGames, temp, conn=None):
+def GenerateTrainingSamples(model, nGames, temp):
     """ Generates self-play games to learn from.
 
-        This method generates `nGames` self-play games, and returns them as
-        a list of `TrainingExample` objects.
+        This method generates `nGames` self-play games, and stores the game
+        states in a local sqlite3 database.
 
         Args:
             `model`: The Blackbird model to use to generate games
@@ -135,17 +152,11 @@ def GenerateTrainingSamples(model, nGames, temp, conn=None):
                 for MCTS. Usually this should be close to 1 to ensure
                 high move exploration rate.
 
-        Returns:
-            `examples`: A list of `TrainingExample` objects holding all game
-                states from the `nGames` games produced.
-
         Raises:
             ValueError: nGames was not a positive integer.
     """
     if nGames <= 0:
         raise ValueError('Use a positive integer for number of games.')
-
-    examples = []
 
     for _ in range(nGames):
         gameHistory = []
@@ -181,16 +192,12 @@ def GenerateTrainingSamples(model, nGames, temp, conn=None):
                 example.Reward = 0
             else:
                 example.Reward = 1 if example.State.Player == winner else -1
-            if conn is not None:
-                serialized = state.SerializeState(example.State, example.Probabilities, example.Reward)
-                conn.PutGame(state.GameType, serialized)
 
-        examples += gameHistory
-
-    return examples
+        serialized = [state.SerializeState(example.State, example.Probabilities, example.Reward) for example in gameHistory]
+        _conn.PutGames(state.GameType, serialized)
 
 
-def TrainWithExamples(model, examples, batchSize, learningRate, teacher=None):
+def TrainWithExamples(model, batchSize, learningRate, teacher=None):
     """ Trains the neural network on provided example positions.
 
         Provided a list of example positions, this method will train
@@ -209,6 +216,9 @@ def TrainWithExamples(model, examples, batchSize, learningRate, teacher=None):
     model.SampleValue.cache_clear()
     model.GetPriors.cache_clear()
 
+    games = _conn.GetGames()
+    examples = [ExampleState(game) for game in games]
+
     examples = np.random.choice(examples,
                                 len(examples) -
                                 (len(examples) % batchSize),
@@ -218,12 +228,13 @@ def TrainWithExamples(model, examples, batchSize, learningRate, teacher=None):
         start = i * batchSize
         batch = examples[start: start + batchSize]
         model.train(
-            np.stack([b.State.AsInputArray()[0] for b in batch], axis=0),
-            np.stack([b.Reward for b in batch], axis=0),
-            np.stack([b.Probabilities for b in batch], axis=0),
+            np.stack([b.board for b in batch], axis=0),
+            np.hstack([b.mctsEval for b in batch]),
+            np.vstack([b.mctsPolicy for b in batch]),
             learningRate,
             teacher
         )
+    _conn.PutModel(1, model.Game.GameType, model.Name)
 
 
 class Model(MCTS, Network):
@@ -243,17 +254,17 @@ class Model(MCTS, Network):
 
     def __init__(self, game, name, mctsConfig, networkConfig={}, tensorflowConfig={}):
         self.Game = game
-        self.Name = name
+        self.Name = '-'.join([name, game.GameType])
         self.MCTSConfig = mctsConfig
         self.NetworkConfig = networkConfig
         self.TensorflowConfig = tensorflowConfig
         MCTS.__init__(self, **mctsConfig)
 
         if networkConfig != {}:
-            Network.__init__(self, name, NetworkFactory(
-                networkConfig), tensorflowConfig)
+            Network.__init__(self, self.Name, NetworkFactory(networkConfig, game.LegalMoves), tensorflowConfig)
         else:
-            Network.__init__(self, name, tensorflowConfig=tensorflowConfig)
+            Network.__init__(self, self.Name, tensorflowConfig=tensorflowConfig)
+        _conn.SetLastModel(self.Game.GameType, self.Name)
 
     def LastVersion(self):
         return Model(self.Game, self.Name, self.MCTSConfig, self.NetworkConfig, self.TensorflowConfig)

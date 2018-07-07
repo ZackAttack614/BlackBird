@@ -11,12 +11,12 @@ class BoardState(GameState):
     Size = 3
     InARow = 3
     Dirs = [(0,1),(1,1),(1,0),(1,-1)]
-    BoardShape = [Size, Size]
+    BoardShape = np.array([Size, Size], dtype=np.int8)
     LegalMoves = Size ** 2
+    GameType = 'TicTacToe'
 
     def __init__(self):
-        self.GameType = 'TicTacToe'
-        self.Board = np.zeros((self.Size, self.Size, 2), dtype=np.uint8)
+        self.Board = np.zeros((self.Size, self.Size, 2), dtype=np.int8)
         self.Player = 1
         self.PreviousPlayer = None
 
@@ -49,7 +49,7 @@ class BoardState(GameState):
 
     def AsInputArray(self):
         player = np.full((self.Size, self.Size), 1 if self.Player == 1 else -1)
-        array = np.zeros((1, self.Size, self.Size, 3), dtype=np.uint8)
+        array = np.zeros((1, self.Size, self.Size, 3), dtype=np.int8)
         array[0, :, :, 0:2] = self.Board
         array[0, :, :, 2] = player
         return array
@@ -85,21 +85,10 @@ class BoardState(GameState):
         serialized.player = state.Player
         serialized.mctsEval = evaluation
         serialized.mctsPolicy = policy.tobytes()
-        serialized.boardEncoding = state.Board.tobytes()
-        serialized.boardDims = np.array([self.Size, self.Size, 2], dtype=np.uint8).tobytes()
+        serialized.boardEncoding = state.AsInputArray().tobytes()
+        serialized.boardDims = np.array([self.Size, self.Size, 3], dtype=np.int8).tobytes()
+        serialized.policyDims = np.array([self.Size, self.Size], dtype=np.int8).tobytes()
         return serialized.SerializeToString()
-
-    def DeserializeState(self, serialState):
-        state = State()
-        state.ParseFromString(serialState)
-        dims = np.frombuffer(state.boardDims, dtype=np.uint8)
-
-        return {
-            'player': state.player,
-            'mctsEval': state.mctsEval,
-            'mctsPolicy': np.frombuffer(state.mctsPolicy, dtype=np.float).reshape(dims[:2]),
-            'board': np.frombuffer(state.boardEncoding, dtype=np.uint8).reshape(dims)
-        }
 
     def _isOver(self, board):
         return np.sum(board > 0) == self.Size * self.Size

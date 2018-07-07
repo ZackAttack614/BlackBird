@@ -12,12 +12,12 @@ class BoardState(GameState):
     Height = 6
     InARow = 4
     Dirs = [(0,1),(1,1),(1,0),(1,-1)]
-    BoardShape = [Height, Width]
+    BoardShape = np.array([Height, Width], dtype=np.int8)
     LegalMoves = Width
+    GameType = 'Connect4'
 
     def __init__(self):
-        self.GameType = 'Connect4'
-        self.Board = np.zeros((self.Height, self.Width, 2), dtype=np.uint8)
+        self.Board = np.zeros((self.Height, self.Width, 2), dtype=np.int8)
         self.Player = 1
         self.PreviousPlayer = None
 
@@ -54,7 +54,7 @@ class BoardState(GameState):
 
     def AsInputArray(self):
         player = np.full((self.Height, self.Width), 1 if self.Player == 1 else -1)
-        array = np.zeros((1, self.Height, self.Width, 3), dtype=np.uint8)
+        array = np.zeros((1, self.Height, self.Width, 3), dtype=np.int8)
         array[0, :, :, 0:2] = self.Board
         array[0, :, :, 2] = player
         return array
@@ -91,21 +91,9 @@ class BoardState(GameState):
         serialized.player = state.Player
         serialized.mctsEval = evaluation
         serialized.mctsPolicy = policy.tobytes()
-        serialized.boardEncoding = state.Board.tobytes()
-        serialized.boardDims = np.array([self.Width, self.Height, 3]).tobytes()
+        serialized.boardEncoding = state.AsInputArray().tobytes()
+        serialized.boardDims = np.array([self.Width, self.Height, 3], dtype=np.int8()).tobytes()
         return serialized.SerializeToString()
-
-    def DeserializeState(self, serialState):
-        state = State()
-        state.ParseFromString(serialState)
-        dims = np.frombuffer(state.boardDims, dtype=np.uint8)
-
-        return {
-            'player': state.player,
-            'mctsEval': state.mctsEval,
-            'mctsPolicy': np.frombuffer(state.mctsPolicy, dtype=np.float),
-            'board': np.frombuffer(state.boardEncoding, dtype=np.uint8).reshape(dims)
-        }
 
     def _isOver(self, board):
         for j in range(self.Width):

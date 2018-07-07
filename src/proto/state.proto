@@ -6,4 +6,5 @@ message State {
     bytes mctsPolicy = 3;
     bytes boardEncoding = 4;
     bytes boardDims = 5;
+    bytes policyDims = 6;
 }

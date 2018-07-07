@@ -27,6 +27,3 @@ class GameState(object):
 
     def SerializeState(self, state, policy, eval):
         raise NotImplementedError
-
-    def DeserializeState(self, serialState):
-        raise NotImplementedError
