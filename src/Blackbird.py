@@ -14,8 +14,6 @@ import numpy as np
 np.seterr(divide='ignore', invalid='ignore')
 np.set_printoptions(precision=2)
 
-_conn = Connection()
-
 
 class ExampleState(object):
     def __init__(self, serialState=None):
@@ -57,7 +55,10 @@ class TrainingExample(object):
 
 
 def TestRandom(model, temp, numTests):
-    return TestModels(model, RandomMCTS(), temp, numTests)
+    stats = TestModels(model, RandomMCTS(), temp, numTests)
+    model.Conn.PutTrainingStatistic('random', stats, model.ModelKey)
+    
+    return stats
 
 
 def TestPrevious(model, temp, numTests):
@@ -78,10 +79,11 @@ def TestPrevious(model, temp, numTests):
     """
     oldModel = model.LastVersion()
 
-    results = TestModels(model, oldModel, temp, numTests)
-
+    stats = TestModels(model, oldModel, temp, numTests)
+    model.Conn.PutTrainingStatistic('self', stats, model.ModelKey)
+    
     del oldModel
-    return results
+    return stats
 
 
 def TestGood(model, temp, numTests):
@@ -100,7 +102,9 @@ def TestGood(model, temp, numTests):
             `losses`: The number of losses BlackBird had.
     """
     good = FixedMCTS(maxDepth=10, explorationRate=0.85, timeLimit=1)
-    return TestModels(model, good, temp, numTests)
+    stats = TestModels(model, good, temp, numTests)
+    model.Conn.PutTrainingStatistic('MCTS', stats, model.ModelKey)
+    return stats
 
 
 def TestModels(model1, model2, temp, numTests):
@@ -194,7 +198,7 @@ def GenerateTrainingSamples(model, nGames, temp):
                 example.Reward = 1 if example.State.Player == winner else -1
 
         serialized = [SerializeState(example.State, example.Probabilities, example.Reward) for example in gameHistory]
-        _conn.PutGames(state.GameType, serialized)
+        model.Conn.PutGames(state.GameType, serialized)
 
 
 def SerializeState(state, policy, reward):
@@ -228,7 +232,7 @@ def TrainWithExamples(model, batchSize, learningRate, teacher=None):
     model.SampleValue.cache_clear()
     model.GetPriors.cache_clear()
 
-    games = _conn.GetGames()
+    games = model.Conn.GetGames()
     examples = [ExampleState(game) for game in games]
 
     examples = np.random.choice(examples,
@@ -248,7 +252,7 @@ def TrainWithExamples(model, batchSize, learningRate, teacher=None):
         )
 
     model.Version += 1
-    _conn.PutModel(1, model.Game.GameType, model.Name, model.Version)
+    model.Conn.PutModel(1, model.Game.GameType, model.Name, model.Version)
 
 
 class Model(MCTS, Network):
@@ -267,9 +271,11 @@ class Model(MCTS, Network):
     """
 
     def __init__(self, game, name, mctsConfig, networkConfig={}, tensorflowConfig={}):
+        self.Conn = Connection()
         self.Game = game
         self.Name = name.split('_')[0]
-        self.Version = _conn.SetLastModel(self.Game.GameType, self.Name)
+        self.Version = self.Conn.SetLastModel(self.Game.GameType, self.Name)
+        self.ModelKey = self.Conn.ModelKey
         self.Name += '_'.join(['', game.GameType, str(self.Version)])
 
         self.MCTSConfig = mctsConfig
@@ -281,7 +287,7 @@ class Model(MCTS, Network):
             Network.__init__(self, self.Name, NetworkFactory(networkConfig, game.LegalMoves), tensorflowConfig)
         else:
             Network.__init__(self, self.Name, tensorflowConfig=tensorflowConfig)
-        _conn.SetLastModel(self.Game.GameType, self.Name)
+        self.Conn.SetLastModel(self.Game.GameType, self.Name)
 
     def LastVersion(self):
         return Model(self.Game, self.Name, self.MCTSConfig, self.NetworkConfig, self.TensorflowConfig)

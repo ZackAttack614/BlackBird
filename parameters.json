@@ -1,5 +1,5 @@
 {
-  "name": "Blackbird.0.1",
+  "name": "Blackbird",
   "mcts": {
     "maxDepth": 10,
     "explorationRate": 0.85,

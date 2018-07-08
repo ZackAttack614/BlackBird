@@ -22,6 +22,9 @@ class Connection(object):
         command = 'INSERT INTO ModelDim(ArchitectureKey, GameType, Name, Version) VALUES(?,?,?,?);'
         self.Cursor.execute(command, (archKey, gameType, name, version))
         self.ModelKey = self.Cursor.lastrowid
+        self.Cursor.execute("""INSERT INTO TrainingStatisticsFact(
+            ModelKey) VALUES (?);""", (self.ModelKey,))
+
         self._conn.commit()
 
     def GetGames(self):
@@ -34,8 +37,23 @@ class Connection(object):
         self.Cursor.executemany(command, [(self.ModelKey, gameType, g) for g in games])
         self._conn.commit()
 
-    def PutTrainingStatistic(self, statistic):
-        pass
+    def PutTrainingStatistic(self, statType, stats, modelKey):
+        command = """UPDATE TrainingStatisticsFact
+            SET {0} = ?, {1} = ?, {2} = ?
+            WHERE ModelKey = ?;"""
+            
+        if statType == 'random':
+            command = command.format('WinsVsRandom', 'DrawsVsRandom', 'LossesVsRandom')
+        elif statType == 'self':
+            command = command.format('WinsVsSelf', 'DrawsVsSelf', 'LossesVsSelf')
+        elif statType == 'MCTS':
+            command = command.format('WinsVsMCTS', 'DrawsVsMCTS', 'LossesVsMCTS')
+        else:
+            raise ValueError('statType must be "random", "self", or "MCTS".')
+
+        args = tuple(list(stats.values()) + [modelKey])
+        self.Cursor.execute(command, args)
+        self._conn.commit()
 
     def Close(self):
         self._conn.close()
@@ -84,7 +102,7 @@ class Connection(object):
             CREATE TABLE TrainingStatisticsFact(
                 TrainingStatisticsKey INTEGER PRIMARY KEY AUTOINCREMENT,
                 ModelKey INTEGER NOT NULL,
-                ConfigurationKey INTEGER NOT NULL,
+                ConfigurationKey INTEGER,
                 Rating REAL,
                 Time REAL,
                 Loss REAL,
@@ -94,6 +112,9 @@ class Connection(object):
                 WinsVsSelf INTEGER,
                 DrawsVsSelf INTEGER,
                 LossesVsSelf INTEGER,
+                WinsVsMCTS INTEGER,
+                DrawsVsMCTS INTEGER,
+                LossesVsMCTS INTEGER,
                 FOREIGN KEY (ModelKey)
                     REFERENCES ModelDim(ModelKey),
                 FOREIGN KEY (ConfigurationKey)
