@@ -12,7 +12,7 @@ class BoardState(GameState):
     Height = 6
     InARow = 4
     Dirs = [(0,1),(1,1),(1,0),(1,-1)]
-    BoardShape = np.array([Height, Width], dtype=np.int8)
+    BoardShape = np.array([Width, Height], dtype=np.int8)
     LegalMoves = Width
     GameType = 'Connect4'
 
@@ -36,7 +36,7 @@ class BoardState(GameState):
         return actions
 
     def LegalActionShape(self):
-        return [self.LegalMoves]
+        return np.array([self.Width], dtype=np.int8)
 
     def ApplyAction(self, action):
         if np.sum(self.Board[self.Height -1, action, :]) != 0:
@@ -84,16 +84,6 @@ class BoardState(GameState):
 
     def EvalToString(self, eval):
         return str(eval)
-        
-    def SerializeState(self, state, policy, evaluation):
-        serialized = State()
-
-        serialized.player = state.Player
-        serialized.mctsEval = evaluation
-        serialized.mctsPolicy = policy.tobytes()
-        serialized.boardEncoding = state.AsInputArray().tobytes()
-        serialized.boardDims = np.array([self.Width, self.Height, 3], dtype=np.int8()).tobytes()
-        return serialized.SerializeToString()
 
     def _isOver(self, board):
         for j in range(self.Width):

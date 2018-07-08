@@ -79,17 +79,6 @@ class BoardState(GameState):
         reshapedEval = eval.reshape(3, 3)
         return str(reshapedEval)
 
-    def SerializeState(self, state, policy, evaluation):
-        serialized = State()
-
-        serialized.player = state.Player
-        serialized.mctsEval = evaluation
-        serialized.mctsPolicy = policy.tobytes()
-        serialized.boardEncoding = state.AsInputArray().tobytes()
-        serialized.boardDims = np.array([self.Size, self.Size, 3], dtype=np.int8).tobytes()
-        serialized.policyDims = np.array([self.Size, self.Size], dtype=np.int8).tobytes()
-        return serialized.SerializeToString()
-
     def _isOver(self, board):
         return np.sum(board > 0) == self.Size * self.Size
 

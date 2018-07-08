@@ -193,9 +193,20 @@ def GenerateTrainingSamples(model, nGames, temp):
             else:
                 example.Reward = 1 if example.State.Player == winner else -1
 
-        serialized = [state.SerializeState(example.State, example.Probabilities, example.Reward) for example in gameHistory]
+        serialized = [SerializeState(example.State, example.Probabilities, example.Reward) for example in gameHistory]
         _conn.PutGames(state.GameType, serialized)
 
+
+def SerializeState(state, policy, reward):
+    serialized = State()
+
+    serialized.player = state.Player
+    serialized.mctsEval = reward
+    serialized.mctsPolicy = policy.tobytes()
+    serialized.boardEncoding = state.AsInputArray().tobytes()
+    serialized.boardDims = np.array(state.AsInputArray().shape, dtype=np.int8).tobytes()
+    serialized.policyDims = state.LegalActionShape().tobytes()
+    return serialized.SerializeToString()
 
 def TrainWithExamples(model, batchSize, learningRate, teacher=None):
     """ Trains the neural network on provided example positions.
@@ -228,7 +239,7 @@ def TrainWithExamples(model, batchSize, learningRate, teacher=None):
         start = i * batchSize
         batch = examples[start: start + batchSize]
         model.train(
-            np.stack([b.board for b in batch], axis=0),
+            np.vstack([b.board for b in batch]),
             np.hstack([b.mctsEval for b in batch]),
             np.vstack([b.mctsPolicy for b in batch]),
             learningRate,
