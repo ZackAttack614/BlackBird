@@ -206,6 +206,7 @@ def SerializeState(state, policy, reward):
     serialized.boardEncoding = state.AsInputArray().tobytes()
     serialized.boardDims = np.array(state.AsInputArray().shape, dtype=np.int8).tobytes()
     serialized.policyDims = state.LegalActionShape().tobytes()
+
     return serialized.SerializeToString()
 
 def TrainWithExamples(model, batchSize, learningRate, teacher=None):
@@ -245,7 +246,9 @@ def TrainWithExamples(model, batchSize, learningRate, teacher=None):
             learningRate,
             teacher
         )
-    _conn.PutModel(1, model.Game.GameType, model.Name)
+
+    model.Version += 1
+    _conn.PutModel(1, model.Game.GameType, model.Name, model.Version)
 
 
 class Model(MCTS, Network):
@@ -265,7 +268,10 @@ class Model(MCTS, Network):
 
     def __init__(self, game, name, mctsConfig, networkConfig={}, tensorflowConfig={}):
         self.Game = game
-        self.Name = '-'.join([name, game.GameType])
+        self.Name = name.split('_')[0]
+        self.Version = _conn.SetLastModel(self.Game.GameType, self.Name)
+        self.Name += '_'.join(['', game.GameType, str(self.Version)])
+
         self.MCTSConfig = mctsConfig
         self.NetworkConfig = networkConfig
         self.TensorflowConfig = tensorflowConfig

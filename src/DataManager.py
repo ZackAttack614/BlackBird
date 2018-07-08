@@ -18,9 +18,9 @@ class Connection(object):
         self.Cursor.execute(command, (arch,))
         self._conn.commit()
 
-    def PutModel(self, archKey, gameType, name):
-        command = 'INSERT INTO ModelDim(ArchitectureKey, GameType, Name) VALUES(?,?,?);'
-        self.Cursor.execute(command, (archKey, gameType, name))
+    def PutModel(self, archKey, gameType, name, version):
+        command = 'INSERT INTO ModelDim(ArchitectureKey, GameType, Name, Version) VALUES(?,?,?,?);'
+        self.Cursor.execute(command, (archKey, gameType, name, version))
         self.ModelKey = self.Cursor.lastrowid
         self._conn.commit()
 
@@ -47,7 +47,10 @@ class Connection(object):
         if any(key):
             self.ModelKey = key[0]
         else:
-            self.PutModel(1, gameType, name)
+            self.PutModel(1, gameType, name, 1)
+
+        self.Cursor.execute('SELECT Version FROM ModelDim WHERE ModelKey = ?;', (self.ModelKey,))
+        return self.Cursor.fetchone()[0]
 
     def _makeSchema(self, cursor):
         check = """SELECT COUNT(name) FROM sqlite_master
@@ -68,6 +71,7 @@ class Connection(object):
                 ArchitectureKey INTEGER NOT NULL,
                 GameType TEXT NOT NULL,
                 Name TEXT,
+                Version INTEGER DEFAULT 1,
                 FOREIGN KEY(ArchitectureKey)
                     REFERENCES ArchitectureDim(ArchitectureKey));""")
 

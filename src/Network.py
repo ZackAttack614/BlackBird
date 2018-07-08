@@ -44,7 +44,7 @@ class Network:
         self.trainingOp = tf.get_collection('trainingOp')[0]
         self.lossMerged = tf.get_collection('lossMerged')[0]
 
-        if len(tf.get_collection('teacherPolicy')) > 0:
+        if any(tf.get_collection('teacherPolicy')):
             self.teacherPolicy = tf.get_collection('teacherPolicy')[0]
 
     def getEvaluation(self, state):
