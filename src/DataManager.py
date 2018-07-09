@@ -1,5 +1,6 @@
 import sqlite3
 import uuid
+import gzip
 import os
 
 class Connection(object):
@@ -37,6 +38,13 @@ class Connection(object):
         self.Cursor.executemany(command, [(self.ModelKey, gameType, g) for g in games])
         self._conn.commit()
 
+    def DumpToZip(self, modelKey):
+        self.Cursor.execute('SELECT State FROM GameStateFact WHERE ModelKey = ?;', (modelKey,))
+
+        with gzip.open('data/states_{0}.gz'.format(modelKey), 'wb') as states_out:
+            for state in self.Cursor.fetchall():
+                states_out.write(state[0]+b'\x07\x07\x07')
+
     def PutTrainingStatistic(self, statType, stats, modelKey):
         command = """UPDATE TrainingStatisticsFact
             SET {0} = ?, {1} = ?, {2} = ?
@@ -51,8 +59,7 @@ class Connection(object):
         else:
             raise ValueError('statType must be "random", "self", or "MCTS".')
 
-        args = tuple(list(stats.values()) + [modelKey])
-        self.Cursor.execute(command, args)
+        self.Cursor.execute(command, (*stats.values(), modelKey))
         self._conn.commit()
 
     def Close(self):
