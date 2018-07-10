@@ -8,9 +8,9 @@ from TicTacToe import BoardState
 
 
 def APITest():
-    if not os.path.isfile('parameters.json'):
-        raise IOError('Copy parameters_template.json into parameters.json')
-    with open('parameters.json') as param_file:
+    if not os.path.isfile('parameters.yaml'):
+        raise IOError('Copy parameters_template.yaml into parameters.yaml')
+    with open('parameters.yaml') as param_file:
         parameters = yaml.safe_load(param_file)
 
     model = Blackbird.Model(BoardState, parameters['name'], parameters.get(
