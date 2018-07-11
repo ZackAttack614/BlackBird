@@ -61,12 +61,13 @@ class Connection(object):
         self._conn.close()
 
     def SetLastModel(self, gameType, name):
-        self.Cursor.execute('''SELECT ModelKey FROM ModelDim WHERE GameType = ?
-                               ORDER BY Version LIMIT 1;''', (gameType,))
-        key = self.Cursor.fetchone()
+        self.Cursor.execute('''SELECT ModelKey FROM ModelDim
+                               WHERE GameType = ? AND Name = ?
+                               ORDER BY Version LIMIT 1;''', (gameType, name))
+        key = self.Cursor.fetchall()
 
         if any(key):
-            self.ModelKey = key[0]
+            self.ModelKey = key[0][0]
         else:
             self.PutModel(gameType, name, 1)
 
