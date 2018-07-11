@@ -14,14 +14,9 @@ class Connection(object):
         self._makeSchema(self.Cursor)
         self.ModelKey = None
 
-    def PutArchitecture(self, arch):
-        command = 'INSERT INTO ArchitectureDim(ArchitectureJSON) VALUES (?);'
-        self.Cursor.execute(command, (arch,))
-        self._conn.commit()
-
-    def PutModel(self, archKey, gameType, name, version):
-        command = 'INSERT INTO ModelDim(ArchitectureKey, GameType, Name, Version) VALUES(?,?,?,?);'
-        self.Cursor.execute(command, (archKey, gameType, name, version))
+    def PutModel(self, gameType, name, version):
+        command = 'INSERT INTO ModelDim(GameType, Name, Version) VALUES(?,?,?);'
+        self.Cursor.execute(command, (gameType, name, version))
         self.ModelKey = self.Cursor.lastrowid
         self.Cursor.execute("""INSERT INTO TrainingStatisticsFact(
             ModelKey) VALUES (?);""", (self.ModelKey,))
@@ -72,7 +67,7 @@ class Connection(object):
         if any(key):
             self.ModelKey = key[0]
         else:
-            self.PutModel(1, gameType, name, 1)
+            self.PutModel(gameType, name, 1)
 
         self.Cursor.execute('SELECT Version FROM ModelDim WHERE ModelKey = ?;', (self.ModelKey,))
         return self.Cursor.fetchone()[0]
@@ -85,20 +80,13 @@ class Connection(object):
             return
 
         tableStatements = []
-        tableStatements.append("""
-            CREATE TABLE ArchitectureDim(
-                ArchitectureKey INTEGER PRIMARY KEY AUTOINCREMENT,
-                ArchitectureJSON TEXT);""")
 
         tableStatements.append("""
             CREATE TABLE ModelDim(
                 ModelKey INTEGER PRIMARY KEY AUTOINCREMENT,
-                ArchitectureKey INTEGER NOT NULL,
                 GameType TEXT NOT NULL,
                 Name TEXT,
-                Version INTEGER DEFAULT 1,
-                FOREIGN KEY(ArchitectureKey)
-                    REFERENCES ArchitectureDim(ArchitectureKey));""")
+                Version INTEGER DEFAULT 1);""")
 
         tableStatements.append("""
             CREATE TABLE ConfigurationDim(

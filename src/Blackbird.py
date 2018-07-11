@@ -252,7 +252,7 @@ def TrainWithExamples(model, batchSize, learningRate, teacher=None):
         )
 
     model.Version += 1
-    model.Conn.PutModel(1, model.Game.GameType, model.Name, model.Version)
+    model.Conn.PutModel(model.Game.GameType, model.Name, model.Version)
 
 
 class Model(MCTS, Network):
