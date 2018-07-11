@@ -61,7 +61,8 @@ class Connection(object):
         self._conn.close()
 
     def SetLastModel(self, gameType, name):
-        self.Cursor.execute('SELECT MAX(ModelKey) FROM ModelDim WHERE GameType = ?;', (gameType,))
+        self.Cursor.execute('''SELECT ModelKey FROM ModelDim WHERE GameType = ?
+                               ORDER BY Version LIMIT 1;''', (gameType,))
         key = self.Cursor.fetchone()
 
         if any(key):
