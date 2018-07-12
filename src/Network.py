@@ -8,8 +8,6 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 class Network:
     def __init__(self, name, networkConstructor=None, tensorflowConfig={}):
-        self.Name = name
-
         self.batchCount = 0
 
         self.graph = tf.Graph()

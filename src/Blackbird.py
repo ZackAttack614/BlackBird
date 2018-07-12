@@ -5,6 +5,7 @@ from Network import Network
 from NetworkFactory import NetworkFactory
 from DataManager import Connection
 from proto.state_pb2 import State
+from collections import defaultdict
 
 import functools
 import random
@@ -55,9 +56,15 @@ class TrainingExample(object):
 
 
 def TestRandom(model, temp, numTests):
-    stats = TestModels(model, RandomMCTS(), temp, numTests)
-    model.Conn.PutTrainingStatistic('random', stats, model.ModelKey)
-    
+    resultMap = {1:'wins', 0:'draws', -1:'losses'}
+    stats = defaultdict(int)
+
+    for _ in range(numTests):
+        result = TestModels(model, RandomMCTS(), temp, numTests=1)
+        stats[resultMap.get(result, 'indeterminant')] += 1
+        model.Conn.PutTrainingStatistic(result, model.Name,
+            model.Version, 'RANDOM')
+
     return stats
 
 
@@ -78,11 +85,15 @@ def TestPrevious(model, temp, numTests):
         `losses`: The number of losses BlackBird had.
     """
     oldModel = model.LastVersion()
+    resultMap = {1:'wins', 0:'draws', -1:'losses'}
+    stats = defaultdict(int)
 
-    stats = TestModels(model, oldModel, temp, numTests)
-    model.Conn.PutTrainingStatistic('self', stats, model.ModelKey)
-    
-    del oldModel
+    for _ in range(numTests):
+        result = TestModels(model, oldModel, temp, numTests=1)
+        stats[resultMap.get(result, 'indeterminant')] += 1
+        model.Conn.PutTrainingStatistic(result, model.Name, model.Version,
+            oldModel.Name, oldModel.Version)
+
     return stats
 
 
@@ -102,13 +113,19 @@ def TestGood(model, temp, numTests):
             `losses`: The number of losses BlackBird had.
     """
     good = FixedMCTS(maxDepth=10, explorationRate=0.85, timeLimit=1)
-    stats = TestModels(model, good, temp, numTests)
-    model.Conn.PutTrainingStatistic('MCTS', stats, model.ModelKey)
+    resultMap = {1:'wins', 0:'draws', -1:'losses'}
+    stats = defaultdict(int)
+    
+    for _ in range(numTests):
+        result = TestModels(model, good, temp, numTests=1)
+        stats[resultMap.get(result, 'indeterminant')] += 1
+        model.Conn.PutTrainingStatistic(result, model.Name, model.Version,
+            'MCTS')
+
     return stats
 
 
 def TestModels(model1, model2, temp, numTests):
-    wins = draws = losses = 0
     for _ in range(numTests):
         model1ToMove = random.choice([True, False])
         model1Player = 1 if model1ToMove else 2
@@ -130,17 +147,11 @@ def TestModels(model1, model2, temp, numTests):
             winner = state.Winner()
 
         if winner == model1Player:
-            wins += 1
+            return 1
         elif winner == 0:
-            draws += 1
+            return 0
         else:
-            losses += 1
-
-    return {
-        'wins': wins,
-        'draws': draws,
-        'losses': losses
-    }
+            return -1
 
 
 def GenerateTrainingSamples(model, nGames, temp):
@@ -198,7 +209,7 @@ def GenerateTrainingSamples(model, nGames, temp):
                 example.Reward = 1 if example.State.Player == winner else -1
 
         serialized = [SerializeState(example.State, example.Probabilities, example.Reward) for example in gameHistory]
-        model.Conn.PutGames(state.GameType, serialized)
+        model.Conn.PutGames(model.Name, model.Version, state.GameType, serialized)
 
 
 def SerializeState(state, policy, reward):
@@ -212,6 +223,7 @@ def SerializeState(state, policy, reward):
     serialized.policyDims = state.LegalActionShape().tobytes()
 
     return serialized.SerializeToString()
+
 
 def TrainWithExamples(model, batchSize, learningRate, teacher=None):
     """ Trains the neural network on provided example positions.
@@ -232,7 +244,7 @@ def TrainWithExamples(model, batchSize, learningRate, teacher=None):
     model.SampleValue.cache_clear()
     model.GetPriors.cache_clear()
 
-    games = model.Conn.GetGames()
+    games = model.Conn.GetGames(model.Name, model.Version)
     examples = [ExampleState(game) for game in games]
 
     examples = np.random.choice(examples,
@@ -273,10 +285,9 @@ class Model(MCTS, Network):
     def __init__(self, game, name, mctsConfig, networkConfig={}, tensorflowConfig={}):
         self.Conn = Connection()
         self.Game = game
-        self.Name = name.split('_')[0]
-        self.Version = self.Conn.SetLastModel(self.Game.GameType, self.Name)
-        self.ModelKey = self.Conn.ModelKey
-        self.Name += '_'.join(['', game.GameType, str(self.Version)])
+        self.Name = name
+        self.Version = self.Conn.GetLastVersion(self.Game.GameType, self.Name)
+        self._saveName = self.Name + '_' + str(self.Version)
 
         self.MCTSConfig = mctsConfig
         self.NetworkConfig = networkConfig
@@ -284,10 +295,9 @@ class Model(MCTS, Network):
         MCTS.__init__(self, **mctsConfig)
 
         if networkConfig != {}:
-            Network.__init__(self, self.Name, NetworkFactory(networkConfig, game.LegalMoves), tensorflowConfig)
+            Network.__init__(self, self._saveName, NetworkFactory(networkConfig, game.LegalMoves), tensorflowConfig)
         else:
-            Network.__init__(self, self.Name, tensorflowConfig=tensorflowConfig)
-        self.Conn.SetLastModel(self.Game.GameType, self.Name)
+            Network.__init__(self, self._saveName, tensorflowConfig=tensorflowConfig)
 
     def LastVersion(self):
         return Model(self.Game, self.Name, self.MCTSConfig, self.NetworkConfig, self.TensorflowConfig)

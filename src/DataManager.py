@@ -12,121 +12,97 @@ class Connection(object):
         self._conn = sqlite3.connect(os.path.join(directory, 'blackbird.db'))
         self.Cursor = self._conn.cursor()
         self._makeSchema(self.Cursor)
-        self.ModelKey = None
+
+    def GetLastVersion(self, gameType, name):
+        self.Cursor.execute("""
+            SELECT Version FROM ModelDim
+            WHERE Name = ? AND GameType = ?
+            ORDER BY Version DESC LIMIT 1;""", (name, gameType))
+        version = self.Cursor.fetchone()
+        if version is None:
+            self.PutModel(gameType, name, 1)
+            version = [1]
+        return version[0]
 
     def PutModel(self, gameType, name, version):
-        command = 'INSERT INTO ModelDim(GameType, Name, Version) VALUES(?,?,?);'
-        self.Cursor.execute(command, (gameType, name, version))
-        self.ModelKey = self.Cursor.lastrowid
-        self.Cursor.execute("""INSERT INTO TrainingStatisticsFact(
-            ModelKey) VALUES (?);""", (self.ModelKey,))
-
+        self.Cursor.execute("""INSERT INTO ModelDim(GameType, Name, Version)
+            VALUES(?, ?, ?);""", (gameType, name, version))
         self._conn.commit()
 
-    def GetGames(self):
-        command = 'SELECT State FROM GameStateFact WHERE ModelKey = ?;'
-        self.Cursor.execute(command, (self.ModelKey,))
+    def GetGames(self, name, version):
+        self.Cursor.execute("""
+            SELECT State FROM GameStateFact 
+            WHERE ModelKey = (
+                SELECT ModelKey FROM ModelDim
+                WHERE Name = ? AND Version = ?
+                ORDER BY ModelKey DESC LIMIT 1);""", (name, version))
         return [state[0] for state in self.Cursor.fetchall()]
 
-    def PutGames(self, gameType, games):
-        command = 'INSERT INTO GameStateFact(ModelKey, GameType, State) VALUES (?, ?, ?);'
-        self.Cursor.executemany(command, [(self.ModelKey, gameType, g) for g in games])
+    def PutGames(self, name, version, gameType, games):
+        self.Cursor.executemany("""
+            INSERT INTO GameStateFact(ModelKey, GameType, State)
+            VALUES(
+                (SELECT ModelKey FROM ModelDim WHERE Name = ? AND Version = ?
+                 ORDER BY ModelKey DESC LIMIT 1),
+                ?,
+                ?);""",
+            [(name, version, gameType, g) for g in games])
         self._conn.commit()
 
-    def DumpToZip(self, modelKey):
-        self.Cursor.execute('SELECT State FROM GameStateFact WHERE ModelKey = ?;', (modelKey,))
+    def DumpToZip(self, name, version):
+        with gzip.open('data/states_{0}_v{1}.gz'.format(name, version), 'wb') as states_out:
+            for state in self.GetGames(name, version):
+                states_out.write(state[0] + b'\x07\x07\x07')
 
-        with gzip.open('data/states_{0}.gz'.format(modelKey), 'wb') as states_out:
-            for state in self.Cursor.fetchall():
-                states_out.write(state[0]+b'\x07\x07\x07')
-
-    def PutTrainingStatistic(self, statType, stats, modelKey):
-        command = """UPDATE TrainingStatisticsFact
-            SET {0} = ?, {1} = ?, {2} = ?
-            WHERE ModelKey = ?;"""
-            
-        if statType == 'random':
-            command = command.format('WinsVsRandom', 'DrawsVsRandom', 'LossesVsRandom')
-        elif statType == 'self':
-            command = command.format('WinsVsSelf', 'DrawsVsSelf', 'LossesVsSelf')
-        elif statType == 'MCTS':
-            command = command.format('WinsVsMCTS', 'DrawsVsMCTS', 'LossesVsMCTS')
-        else:
-            raise ValueError('statType must be "random", "self", or "MCTS".')
-
-        self.Cursor.execute(command, (*stats.values(), modelKey))
+    def PutTrainingStatistic(self, result, name, version, opName, opVersion=0):
+        self.Cursor.execute("""
+            INSERT INTO TrainingStatisticsFact(
+                ModelKey, OpponentKey, Result)
+            VALUES(
+                (SELECT ModelKey FROM ModelDim WHERE Name = ? AND Version = ?),
+                (SELECT ModelKey FROM ModelDim WHERE Name = ? AND Version = ?),
+                ?
+            );""", (name, version, opName, opVersion, result))
         self._conn.commit()
 
     def Close(self):
         self._conn.close()
 
-    def SetLastModel(self, gameType, name):
-        self.Cursor.execute('''SELECT ModelKey FROM ModelDim
-                               WHERE GameType = ? AND Name = ?
-                               ORDER BY Version LIMIT 1;''', (gameType, name))
-        key = self.Cursor.fetchall()
-
-        if any(key):
-            self.ModelKey = key[0][0]
-        else:
-            self.PutModel(gameType, name, 1)
-
-        self.Cursor.execute('SELECT Version FROM ModelDim WHERE ModelKey = ?;', (self.ModelKey,))
-        return self.Cursor.fetchone()[0]
-
     def _makeSchema(self, cursor):
-        check = """SELECT COUNT(name) FROM sqlite_master
-                   WHERE type='table' AND name='TrainingStatisticsFact';"""
-        cursor.execute(check)
-        if cursor.fetchone()[0] == 1:
+        for _ in cursor.execute("""SELECT name FROM sqlite_master
+                   WHERE type='table' AND name='TrainingStatisticsFact';"""):
             return
 
-        tableStatements = []
-
-        tableStatements.append("""
+        self.Cursor.executescript("""
             CREATE TABLE ModelDim(
                 ModelKey INTEGER PRIMARY KEY AUTOINCREMENT,
-                GameType TEXT NOT NULL,
+                GameType TEXT,
                 Name TEXT,
-                Version INTEGER DEFAULT 1);""")
-
-        tableStatements.append("""
+                Version INTEGER DEFAULT 1);
+                
             CREATE TABLE ConfigurationDim(
                 ConfigurationKey INTEGER PRIMARY KEY AUTOINCREMENT,
-                ConfigJSON TEXT);""")
-
-        tableStatements.append("""
+                ConfigJSON TEXT);
+                
             CREATE TABLE TrainingStatisticsFact(
                 TrainingStatisticsKey INTEGER PRIMARY KEY AUTOINCREMENT,
                 ModelKey INTEGER NOT NULL,
-                ConfigurationKey INTEGER,
-                Rating REAL,
-                Time REAL,
-                Loss REAL,
-                WinsVsRandom INTEGER,
-                DrawsVsRandom INTEGER,
-                LossesVsRandom INTEGER,
-                WinsVsSelf INTEGER,
-                DrawsVsSelf INTEGER,
-                LossesVsSelf INTEGER,
-                WinsVsMCTS INTEGER,
-                DrawsVsMCTS INTEGER,
-                LossesVsMCTS INTEGER,
+                OpponentKey INTEGER NOT NULL,
+                Result INTEGER,
+                Timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (ModelKey)
                     REFERENCES ModelDim(ModelKey),
-                FOREIGN KEY (ConfigurationKey)
-                    REFERENCES ConfigurationDim(ConfigurationKey));""")
-
-        tableStatements.append("""
+                FOREIGN KEY (OpponentKey)
+                    REFERENCES ModelDim(ModelKey));
+                    
             CREATE TABLE JobQueue(
                 JobKey INTEGER PRIMARY KEY AUTOINCREMENT,
                 QueueTime INTEGER,
                 StartTime INTEGER,
                 EndTime INTEGER,
                 RPC INTEGER,
-                PID INTEGER);""")
-
-        tableStatements.append("""
+                PID INTEGER);
+                
             CREATE TABLE GameStateFact( 
                 GameStateKey INTEGER PRIMARY KEY AUTOINCREMENT,
                 ModelKey INTEGER NOT NULL,
@@ -135,8 +111,9 @@ class Connection(object):
                 FOREIGN KEY (ModelKey)
                     REFERENCES ModelDim(ModelKey));""")
 
-        for command in tableStatements:
-            cursor.execute(command)
+        self.Cursor.executescript("""
+            INSERT INTO ModelDim(Name, Version) VALUES('RANDOM', 0);
+            INSERT INTO ModelDim(Name, Version) VALUES('MCTS', 0);""")
 
     def __del__(self):
         self.Close()
