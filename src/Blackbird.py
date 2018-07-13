@@ -29,31 +29,6 @@ class ExampleState(object):
         self.board = np.frombuffer(state.boardEncoding,
                                    dtype=np.int8).reshape(boardDims)
 
-class TrainingExample(object):
-    def __init__(self, state, value, childValues, childValuesStr,
-                 probabilities, priors, priorsStr, boardShape):
-
-        self.State = state
-        self.Value = value
-        self.BoardShape = boardShape
-        self.ChildValues = childValues if childValues is not None else None
-        self.ChildValuesStr = childValuesStr if childValuesStr is not None else None
-        self.Reward = None
-        self.Priors = priors
-        self.PriorsStr = priorsStr
-        self.Probabilities = probabilities
-
-    def __str__(self):
-        state = str(self.State)
-        value = 'Value: {}'.format(self.Value)
-        childValues = 'Child Values: \n{}'.format(self.ChildValuesStr)
-        reward = 'Reward:\n{}'.format(self.Reward)
-        probs = 'Probabilities:\n{}'.format(
-            self.Probabilities.reshape(self.BoardShape))
-        priors = '\nPriors:\n{}\n'.format(self.PriorsStr)
-
-        return '\n'.join([state, value, childValues, reward, probs, priors])
-
 
 def TestRandom(model, temp, numTests):
     resultMap = {1:'wins', 0:'draws', -1:'losses'}
@@ -181,34 +156,23 @@ def GenerateTrainingSamples(model, nGames, temp):
         model.DropRoot()
         while winner is None:
             (nextState, v, currentProbabilties) = model.FindMove(state, temp)
-            childValues = model.Root.ChildWinRates()
-            example = TrainingExample(state, 1 - v, childValues,
-                                      state.EvalToString(
-                                          childValues), currentProbabilties, model.Root.Priors,
-                                      state.EvalToString(model.Root.Priors), state.LegalActionShape())
+            example = [state, currentProbabilties, 1 - v]
             state = nextState
             model.MoveRoot(state)
 
             winner = state.Winner(lastAction)
             gameHistory.append(example)
 
-        example = TrainingExample(state, None, None, None,
-                                  np.zeros(
-                                      [len(currentProbabilties)]),
-                                  np.zeros(
-                                      [len(currentProbabilties)]),
-                                  np.zeros(
-                                      [len(currentProbabilties)]),
-                                  state.LegalActionShape())
+        example = [state, np.zeros([len(currentProbabilties)]), None]
         gameHistory.append(example)
 
         for example in gameHistory:
             if winner == 0:
-                example.Reward = 0
+                example[2] = 0
             else:
-                example.Reward = 1 if example.State.Player == winner else -1
+                example[2] = 1 if example[0].Player == winner else -1
 
-        serialized = [SerializeState(example.State, example.Probabilities, example.Reward) for example in gameHistory]
+        serialized = [SerializeState(example[0], example[1], example[2]) for example in gameHistory]
         model.Conn.PutGames(model.Name, model.Version, state.GameType, serialized)
 
 
