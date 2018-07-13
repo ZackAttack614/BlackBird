@@ -44,15 +44,15 @@ class Connection(object):
             VALUES(
                 (SELECT ModelKey FROM ModelDim WHERE Name = ? AND Version = ?
                  ORDER BY ModelKey DESC LIMIT 1),
-                ?,
-                ?);""",
+                 ?,
+                 ?);""",
             [(name, version, gameType, g) for g in games])
         self._conn.commit()
 
     def DumpToZip(self, name, version):
         with gzip.open('data/states_{0}_v{1}.gz'.format(name, version), 'wb') as states_out:
             for state in self.GetGames(name, version):
-                states_out.write(state[0] + b'\x07\x07\x07')
+                states_out.write(state + b'\x07\x07\x07')
 
     def PutTrainingStatistic(self, result, name, version, opName, opVersion=0):
         self.Cursor.execute("""
