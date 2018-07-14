@@ -24,3 +24,6 @@ class GameState(object):
 
     def EvalToString(self, eval):
         return str(eval)
+
+    def SerializeState(self, state, policy, eval):
+        raise NotImplementedError

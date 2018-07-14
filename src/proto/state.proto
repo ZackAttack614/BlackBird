@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+message State {
+    float mctsEval = 1;
+    bytes mctsPolicy = 2;
+    bytes boardEncoding = 3;
+    bytes boardDims = 4;
+    bytes policyDims = 5;
+}

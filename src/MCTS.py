@@ -3,6 +3,7 @@ from time import time
 import multiprocessing as mp
 from GameState import GameState
 
+
 class Node(object):
     """ Base class for storing game state information in tree searches.
 
@@ -26,6 +27,7 @@ class Node(object):
             _childPlays: A numpy array of size [num_legal_actions] used for
                 storing the play counts of the Node's children in MCTS.
     """
+
     def __init__(self, state, legalActions, priors, **kwargs):
         self.State = state
         self.Value = 0
@@ -36,7 +38,7 @@ class Node(object):
         self.Priors = np.multiply(priors, legalActions)
 
         self._childWinRates = np.zeros(len(legalActions))
-        self._childPlays = np.zeros(len(legalActions))
+        self._childPlays = np.zeros(len(legalActions), dtype=np.float)
 
     def WinRate(self):
         """ Samples the win rate of the Node after MCTS.
@@ -62,7 +64,7 @@ class Node(object):
                 sampled.
         """
         allPlays = sum(self.ChildPlays())
-        zeroProbs = np.zeros((len(self.ChildPlays())))
+        zeroProbs = np.zeros((len(self.ChildPlays())), dtype=np.float)
         return self.ChildPlays() / allPlays if allPlays > 0 else zeroProbs
 
     def ChildWinRates(self):
@@ -95,6 +97,7 @@ class Node(object):
                 self._childPlays[i] = self.Children[i].Plays
         return self._childPlays
 
+
 class MCTS(object):
     """ Base class for Monte Carlo Tree Search algorithms.
 
@@ -107,8 +110,9 @@ class MCTS(object):
             ExplorationRate: The exploration parameter for MCTS.
             Root: The Node object representing the root of the MCTS.
     """
+
     def __init__(self, explorationRate, timeLimit=None, playLimit=None,
-            **kwargs):
+                 **kwargs):
 
         self.TimeLimit = timeLimit
         self.PlayLimit = playLimit
@@ -131,7 +135,7 @@ class MCTS(object):
             if node.LegalActions[actionIndex] == 1:
                 s = self._applyAction(node.State, actionIndex)
                 node.Children[actionIndex] = Node(s, s.LegalActions(),
-                    self.GetPriors(s))
+                                                  self.GetPriors(s))
                 node.Children[actionIndex].Parent = node
 
     def DropRoot(self):
@@ -178,14 +182,15 @@ class MCTS(object):
             raise ValueError('Not enough information to decide a stop time.')
 
         if self.Root is None:
-            self.Root = Node(state, state.LegalActions(), self.GetPriors(state))
+            self.Root = Node(state, state.LegalActions(),
+                             self.GetPriors(state))
         assert self.Root.State == state, 'Primed for the correct input state.'
 
         self._runMCTS(temp, endTime, playLimit)
         action = self._selectAction(self.Root, temp, exploring=False)
 
         return (self._applyAction(state, action), self.Root.WinRate(),
-            self.Root.ChildProbability())
+                self.Root.ChildProbability())
 
     def MoveRoot(self, state):
         """ This is the public API of MCTS._moveRoot.
@@ -315,8 +320,9 @@ class MCTS(object):
         if exploring or temp == 0:
             allPlays = sum(root.ChildPlays())
             upperConfidence = (root.ChildWinRates()
-                + (self.ExplorationRate * root.Priors * np.sqrt(1.0 + allPlays))
-                / (1.0 + root.ChildPlays()))
+                               + (self.ExplorationRate *
+                                  root.Priors * np.sqrt(1.0 + allPlays))
+                               / (1.0 + root.ChildPlays()))
             choice = np.argmax(upperConfidence)
             p = None
         else:
@@ -328,6 +334,7 @@ class MCTS(object):
         return choice
 
     '''Functions to override'''
+
     def GetPriors(self, state):
         """ Gets the array of prior search probabilities.
 
@@ -344,7 +351,7 @@ class MCTS(object):
 
     def SampleValue(self, state, player):
         """ Samples the value of a state for a specified player.
-            
+
             This applies a set of Monte Carlo random rollouts to a state until a
             game terminates, and returns the determined evaluation.
 
@@ -367,7 +374,7 @@ class MCTS(object):
             winner = rolloutState.Winner(action)
         return 0.5 if winner == 0 else int(player == winner)
 
-    def _findLeaf(self, node):
+    def _findLeaf(self, node, temp):
         """ Applies MCTS to a supplied node until a leaf is found.
 
             Args:
@@ -376,11 +383,13 @@ class MCTS(object):
         raise NotImplementedError
 
     '''Overriden from Object'''
+
     def __getstate__(self):
         self_dict = self.__dict__.copy()
         del self_dict['Pool']
         return self_dict
 
-if __name__=='__main__':
+
+if __name__ == '__main__':
     mcts = MCTS(1, np.sqrt(2))
     print(mcts.TimeLimit)

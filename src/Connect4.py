@@ -1,6 +1,9 @@
 from FixedMCTS import FixedMCTS
 from DynamicMCTS import DynamicMCTS
 from GameState import GameState
+from proto.state_pb2 import State
+
+import json
 import numpy as np
 
 class BoardState(GameState):
@@ -9,11 +12,12 @@ class BoardState(GameState):
     Height = 6
     InARow = 4
     Dirs = [(0,1),(1,1),(1,0),(1,-1)]
-    BoardShape = [Height, Width]
+    BoardShape = np.array([Width, Height], dtype=np.int8)
     LegalMoves = Width
+    GameType = 'Connect4'
 
     def __init__(self):
-        self.Board = np.zeros((self.Height, self.Width, 2))
+        self.Board = np.zeros((self.Height, self.Width, 2), dtype=np.int8)
         self.Player = 1
         self.PreviousPlayer = None
 
@@ -32,7 +36,7 @@ class BoardState(GameState):
         return actions
 
     def LegalActionShape(self):
-        return [self.LegalMoves]
+        return np.array([self.Width], dtype=np.int8)
 
     def ApplyAction(self, action):
         if np.sum(self.Board[self.Height -1, action, :]) != 0:
@@ -50,7 +54,7 @@ class BoardState(GameState):
 
     def AsInputArray(self):
         player = np.full((self.Height, self.Width), 1 if self.Player == 1 else -1)
-        array = np.zeros((1, self.Height, self.Width, 3))
+        array = np.zeros((1, self.Height, self.Width, 3), dtype=np.int8)
         array[0, :, :, 0:2] = self.Board
         array[0, :, :, 2] = player
         return array

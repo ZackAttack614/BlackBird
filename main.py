@@ -3,55 +3,45 @@ import sys
 import yaml
 sys.path.insert(0, './src/')
 
-from Blackbird import BlackBird
+import Blackbird
 from TicTacToe import BoardState
 
-def main():
+
+def APITest():
     if not os.path.isfile('parameters.yaml'):
         raise IOError('Copy parameters_template.yaml into parameters.yaml')
     with open('parameters.yaml') as param_file:
-        parameters = yaml.load(param_file.read().strip())
+        parameters = yaml.safe_load(param_file)
 
-    numEpochs = parameters.get('selfplay').get('epochs')
-    BlackbirdInstance = BlackBird(BoardState, tfLog=True, loadOld=True,
-        **parameters)
+    model = Blackbird.Model(BoardState, parameters['name'], parameters.get(
+        'mcts'), parameters.get('network'), parameters.get('tensorflow'))
 
-    for epoch in range(1, numEpochs + 1):
-        print('Starting epoch {0}...'.format(epoch))
-        examples = BlackbirdInstance.GenerateTrainingSamples(
-            parameters.get('selfplay').get('training_games'),
-            parameters.get('mcts').get('temperature').get('exploration'))
-        BlackbirdInstance.LearnFromExamples(examples)
-        print('Finished training for this epoch!')
+    Blackbird.GenerateTrainingSamples(model,
+                                    10,
+                                    parameters.get('mcts').get('temperature').get('exploration'))
+    Blackbird.TrainWithExamples(model, batchSize=10, learningRate=0.01)
 
-        (wins, draws, losses) = BlackbirdInstance.TestRandom(
-            parameters.get('mcts').get('temperature').get('exploitation'),
-            parameters.get('selfplay').get('random_tests'))
-        print('Against a random player:')
-        print('Wins = {0}'.format(wins))
-        print('Draws = {0}'.format(draws))
-        print('Losses = {0}'.format(losses))
+    print('Against a random player:')
+    print(Blackbird.TestRandom(model,
+                               parameters.get('mcts').get(
+                                   'temperature').get('exploitation'),
+                               10))
 
-        (wins, draws, losses) = BlackbirdInstance.TestPrevious(
-            parameters.get('mcts').get('temperature').get('exploitation'),
-            parameters.get('selfplay').get('selfplay_tests'))
-        print('Against the last best player:')
-        print('Wins = {0}'.format(wins))
-        print('Draws = {0}'.format(draws))
-        print('Losses = {0}'.format(losses))
+    print('Against the last best player:')
+    print(Blackbird.TestPrevious(model,
+                                 parameters.get('mcts').get(
+                                     'temperature').get('exploitation'),
+                                 10))
 
-        if wins > losses:
-            BlackbirdInstance.saveModel()
+    print('Against a good player:')
+    print(Blackbird.TestGood(model,
+                             parameters.get('mcts').get(
+                                 'temperature').get('exploitation'),
+                             10))
 
-        (wins, draws, losses) = BlackbirdInstance.TestGood(
-            parameters.get('mcts').get('temperature').get('exploitation'),
-            parameters.get('selfplay').get('selfplay_tests'))
-        print('Against a good player:')
-        print('Wins = {0}'.format(wins))
-        print('Draws = {0}'.format(draws))
-        print('Losses = {0}'.format(losses))
+    print('\n')
+    del model
 
-        print('\n')
 
 if __name__ == '__main__':
-    main()
+    APITest()
