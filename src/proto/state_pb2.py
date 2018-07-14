@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=_b('\n\x11proto/state.proto\"{\n\x05State\x12\x0e\n\x06player\x18\x01 \x01(\x05\x12\x10\n\x08mctsEval\x18\x02 \x01(\x02\x12\x12\n\nmctsPolicy\x18\x03 \x01(\x0c\x12\x15\n\rboardEncoding\x18\x04 \x01(\x0c\x12\x11\n\tboardDims\x18\x05 \x01(\x0c\x12\x12\n\npolicyDims\x18\x06 \x01(\x0c\x62\x06proto3')
+  serialized_pb=_b('\n\x11proto/state.proto\"k\n\x05State\x12\x10\n\x08mctsEval\x18\x01 \x01(\x02\x12\x12\n\nmctsPolicy\x18\x02 \x01(\x0c\x12\x15\n\rboardEncoding\x18\x03 \x01(\x0c\x12\x11\n\tboardDims\x18\x04 \x01(\x0c\x12\x12\n\npolicyDims\x18\x05 \x01(\x0c\x62\x06proto3')
 )
 
 
@@ -33,43 +33,36 @@ _STATE = _descriptor.Descriptor(
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='player', full_name='State.player', index=0,
-      number=1, type=5, cpp_type=1, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='mctsEval', full_name='State.mctsEval', index=1,
-      number=2, type=2, cpp_type=6, label=1,
+      name='mctsEval', full_name='State.mctsEval', index=0,
+      number=1, type=2, cpp_type=6, label=1,
       has_default_value=False, default_value=float(0),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='mctsPolicy', full_name='State.mctsPolicy', index=2,
+      name='mctsPolicy', full_name='State.mctsPolicy', index=1,
+      number=2, type=12, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b(""),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='boardEncoding', full_name='State.boardEncoding', index=2,
       number=3, type=12, cpp_type=9, label=1,
       has_default_value=False, default_value=_b(""),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='boardEncoding', full_name='State.boardEncoding', index=3,
+      name='boardDims', full_name='State.boardDims', index=3,
       number=4, type=12, cpp_type=9, label=1,
       has_default_value=False, default_value=_b(""),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       serialized_options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='boardDims', full_name='State.boardDims', index=4,
+      name='policyDims', full_name='State.policyDims', index=4,
       number=5, type=12, cpp_type=9, label=1,
-      has_default_value=False, default_value=_b(""),
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='policyDims', full_name='State.policyDims', index=5,
-      number=6, type=12, cpp_type=9, label=1,
       has_default_value=False, default_value=_b(""),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
@@ -87,7 +80,7 @@ _STATE = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=21,
-  serialized_end=144,
+  serialized_end=128,
 )
 
 DESCRIPTOR.message_types_by_name['State'] = _STATE

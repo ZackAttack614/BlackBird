@@ -17,17 +17,39 @@ np.set_printoptions(precision=2)
 
 
 class ExampleState(object):
-    def __init__(self, serialState=None):
+    def __init__(self, evaluation, policy, board, player=None):
+        self.MctsPolicy = policy
+        self.MctsEval = evaluation
+        self.Board = board
+        self.Player = player
+
+    @classmethod
+    def FromSerialized(cls, serialState):
         state = State()
         state.ParseFromString(serialState)
         boardDims = np.frombuffer(state.boardDims, dtype=np.int8)
+        policyDims = np.frombuffer(state.policyDims, dtype=np.int8)
 
-        self.player = state.player,
-        self.mctsEval = state.mctsEval,
-        self.mctsPolicy = np.frombuffer(state.mctsPolicy,
-                                        dtype=np.float),
-        self.board = np.frombuffer(state.boardEncoding,
-                                   dtype=np.int8).reshape(boardDims)
+        mctsEval = state.mctsEval,
+        mctsPolicy = np.frombuffer(state.mctsPolicy,
+            dtype=np.float).reshape(policyDims)
+        board = np.frombuffer(state.boardEncoding,
+            dtype=np.int8).reshape(boardDims)
+
+        return cls(mctsEval, mctsPolicy, board)
+
+    def SerializeState(self):
+        serialized = State()
+
+        serialized.mctsEval = self.MctsEval
+        serialized.mctsPolicy = self.MctsPolicy.tobytes()
+        serialized.boardEncoding = self.Board.tobytes()
+        serialized.boardDims = np.array(self.Board.shape,
+            dtype=np.int8).tobytes()
+        serialized.policyDims = np.array(self.MctsPolicy.shape,
+            dtype=np.int8).tobytes()
+
+        return serialized.SerializeToString()
 
 
 def TestRandom(model, temp, numTests):
@@ -156,37 +178,27 @@ def GenerateTrainingSamples(model, nGames, temp):
         model.DropRoot()
         while winner is None:
             (nextState, v, currentProbabilties) = model.FindMove(state, temp)
-            example = [state, currentProbabilties, 1 - v]
+            example = ExampleState(1 - v, currentProbabilties,
+                state.AsInputArray(), player=state.Player)
             state = nextState
             model.MoveRoot(state)
 
             winner = state.Winner(lastAction)
             gameHistory.append(example)
 
-        example = [state, np.zeros([len(currentProbabilties)]), None]
+        example = ExampleState(None, np.zeros([len(currentProbabilties)]),
+            state.AsInputArray(), player=state.Player)
         gameHistory.append(example)
 
         for example in gameHistory:
             if winner == 0:
-                example[2] = 0
+                example.MctsEval = 0
             else:
-                example[2] = 1 if example[0].Player == winner else -1
+                example.MctsEval = 1 if example.Player == winner else -1
 
-        serialized = [SerializeState(example[0], example[1], example[2]) for example in gameHistory]
-        model.Conn.PutGames(model.Name, model.Version, state.GameType, serialized)
-
-
-def SerializeState(state, policy, reward):
-    serialized = State()
-
-    serialized.player = state.Player
-    serialized.mctsEval = reward
-    serialized.mctsPolicy = policy.tobytes()
-    serialized.boardEncoding = state.AsInputArray().tobytes()
-    serialized.boardDims = np.array(state.AsInputArray().shape, dtype=np.int8).tobytes()
-    serialized.policyDims = state.LegalActionShape().tobytes()
-
-    return serialized.SerializeToString()
+        serialized = [example.SerializeState() for example in gameHistory]
+        model.Conn.PutGames(model.Name, model.Version, state.GameType,
+            serialized)
 
 
 def TrainWithExamples(model, batchSize, learningRate, teacher=None):
@@ -209,7 +221,7 @@ def TrainWithExamples(model, batchSize, learningRate, teacher=None):
     model.GetPriors.cache_clear()
 
     games = model.Conn.GetGames(model.Name, model.Version)
-    examples = [ExampleState(game) for game in games]
+    examples = [ExampleState.FromSerialized(game) for game in games]
 
     examples = np.random.choice(examples,
                                 len(examples) -
@@ -220,9 +232,9 @@ def TrainWithExamples(model, batchSize, learningRate, teacher=None):
         start = i * batchSize
         batch = examples[start: start + batchSize]
         model.train(
-            np.vstack([b.board for b in batch]),
-            np.hstack([b.mctsEval for b in batch]),
-            np.vstack([b.mctsPolicy for b in batch]),
+            np.vstack([b.Board for b in batch]),
+            np.hstack([b.MctsEval for b in batch]),
+            np.vstack([b.MctsPolicy for b in batch]),
             learningRate,
             teacher
         )
