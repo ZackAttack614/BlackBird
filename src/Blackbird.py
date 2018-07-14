@@ -17,6 +17,22 @@ np.set_printoptions(precision=2)
 
 
 class ExampleState(object):
+    """ Class which centralizes the data structure of a game state.
+
+        `GameState` objects have many properties, but only a few of them are
+        relevant to training. `ExampleState` provides an interface on top of
+        protocol buffers for reading and storing game state data.
+
+        Attributes:
+            `MctsPolicy`: A numpy array which holds the policy generated from
+                applying MCTS.
+            `MctsEval`: A float between -1 and 1 representing the evaluation
+                that the MCTS computed.
+            `Board`: A numpy array which holds the input state for a board
+                state. In general, this is the game state, as well as layers for
+                historical positions, current turn, current player, etc.
+            `Player`: An optional integer, representing the current player.
+    """
     def __init__(self, evaluation, policy, board, player=None):
         self.MctsPolicy = policy
         self.MctsEval = evaluation
@@ -25,6 +41,15 @@ class ExampleState(object):
 
     @classmethod
     def FromSerialized(cls, serialState):
+        """ Transforms a protobuf bytecode string to an `ExampleState` object.
+
+            Args:
+                serialState: A protobuf bytecode string holding `GameState`
+                    info.
+
+            Returns:
+                An `ExampleState` object holding the relevant deserialized data.
+        """
         state = State()
         state.ParseFromString(serialState)
         boardDims = np.frombuffer(state.boardDims, dtype=np.int8)
@@ -39,6 +64,8 @@ class ExampleState(object):
         return cls(mctsEval, mctsPolicy, board)
 
     def SerializeState(self):
+        """ Returns the protobuf bytecode serialization of the `ExampleState`.
+        """
         serialized = State()
 
         serialized.mctsEval = self.MctsEval
@@ -53,6 +80,23 @@ class ExampleState(object):
 
 
 def TestRandom(model, temp, numTests):
+    """ Plays the current BlackBird instance against an opponent making
+        random moves.
+
+        Game statistics are logged in the local `data/blackbird.db` database.
+
+        Args:
+            `temp`: A float between 0 and 1 determining the exploitation
+                temp for MCTS. Usually this should be close to 0.1 to ensure
+                optimal move selection.
+            `numTests`: An int determining the number of games to play.
+
+        Returns:
+            A dictionary holding:
+                - `wins`: The number of wins `model` had.
+                - `draws`: The number of draws `model` had.
+                - `losses`: The number of losses `model` had.
+    """
     resultMap = {1:'wins', 0:'draws', -1:'losses'}
     stats = defaultdict(int)
 
@@ -67,19 +111,22 @@ def TestRandom(model, temp, numTests):
 
 def TestPrevious(model, temp, numTests):
     """ Plays the current BlackBird instance against the previous version of
-    BlackBird's neural network.
+        BlackBird's neural network.
 
-    Args:
-        `model`: The Blackbird model to test
-        `temp`: A float between 0 and 1 determining the exploitation
-            temp for MCTS. Usually this should be close to 0.1 to ensure
-            optimal move selection.
-        `numTests`: An int determining the number of games to play.
+        Game statistics are logged in the local `data/blackbird.db` database.
 
-    Returns:
-        `wins`: The number of wins BlackBird had.
-        `draws`: The number of draws BlackBird had.
-        `losses`: The number of losses BlackBird had.
+        Args:
+            `model`: The Blackbird model to test
+            `temp`: A float between 0 and 1 determining the exploitation
+                temp for MCTS. Usually this should be close to 0.1 to ensure
+                optimal move selection.
+            `numTests`: An int determining the number of games to play.
+
+        Returns:
+            A dictionary holding:
+                - `wins`: The number of wins `model` had.
+                - `draws`: The number of draws `model` had.
+                - `losses`: The number of losses `model` had.
     """
     oldModel = model.LastVersion()
     resultMap = {1:'wins', 0:'draws', -1:'losses'}
@@ -97,6 +144,8 @@ def TestPrevious(model, temp, numTests):
 def TestGood(model, temp, numTests):
     """ Plays the current BlackBird instance against a standard MCTS player.
 
+        Game statistics are logged in the local `data/blackbird.db` database.
+
         Args:
             `model`: The Blackbird model to test
             `temp`: A float between 0 and 1 determining the exploitation
@@ -105,9 +154,10 @@ def TestGood(model, temp, numTests):
             `numTests`: An int determining the number of games to play.
 
         Returns:
-            `wins`: The number of wins BlackBird had.
-            `draws`: The number of draws BlackBird had.
-            `losses`: The number of losses BlackBird had.
+            A dictionary holding:
+                - `wins`: The number of wins `model` had.
+                - `draws`: The number of draws `model` had.
+                - `losses`: The number of losses `model` had.
     """
     good = FixedMCTS(maxDepth=10, explorationRate=0.85, timeLimit=1)
     resultMap = {1:'wins', 0:'draws', -1:'losses'}
@@ -123,6 +173,19 @@ def TestGood(model, temp, numTests):
 
 
 def TestModels(model1, model2, temp, numTests):
+    """ Base function for playing a BlackBird instance against another model.
+
+        Args:
+            `model1`: The Blackbird model to test.
+            `model2`: The model to play against.
+            `temp`: A float between 0 and 1 determining the exploitation
+                temp for MCTS. Usually this should be close to 0.1 to ensure
+                optimal move selection.
+            `numTests`: An int determining the number of games to play.
+
+        Returns:
+            An integer representing a win (1), draw (0), or loss (-1)
+    """
     for _ in range(numTests):
         model1ToMove = random.choice([True, False])
         model1Player = 1 if model1ToMove else 2
