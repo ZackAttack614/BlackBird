@@ -1,5 +1,5 @@
-from FixedMCTS import FixedMCTS
-from DynamicMCTS import DynamicMCTS
+# from FixedMCTS import FixedMCTS
+# from DynamicMCTS import DynamicMCTS
 from GameState import GameState
 from proto.state_pb2 import State
 
@@ -135,22 +135,27 @@ class BoardState(GameState):
         return "{0}{1}".format(self.Player,str(self)).__hash__()
 
 if __name__ == '__main__':
-    params = {'maxDepth' : 10, 'explorationRate' : 1, 'playLimit' : 1000}
-    player = FixedMCTS(**params)
-    BoardState.Width = 7
-    BoardState.Height = 6
-    BoardState.InARow = 4
+    # params = {'maxDepth' : 10, 'explorationRate' : 1, 'playLimit' : 1000}
+    # player = FixedMCTS(**params)
+    # BoardState.Width = 7
+    # BoardState.Height = 6
+    # BoardState.InARow = 4
+
+    # state = BoardState()
+    # while state.Winner() is None:
+    #     print(state)
+    #     print('To move: {}'.format(state.Player))
+    #     state, v, p = player.FindMove(state)
+    #     print('Value: {}'.format(v))
+    #     print('Selection Probabilities: {}'.format(p))
+    #     print('Child Values: {}'.format(player.Root.ChildWinRates()))
+    #     print('Child Exploration Rates: {}'.format(player.Root.ChildPlays()))
+    #     print()
+    #     player.MoveRoot([state])
+    # print(state)
+    # print(state.Winner())
 
     state = BoardState()
-    while state.Winner() is None:
-        print(state)
-        print('To move: {}'.format(state.Player))
-        state, v, p = player.FindMove(state)
-        print('Value: {}'.format(v))
-        print('Selection Probabilities: {}'.format(p))
-        print('Child Values: {}'.format(player.Root.ChildWinRates()))
-        print('Child Exploration Rates: {}'.format(player.Root.ChildPlays()))
-        print()
-        player.MoveRoot([state])
+    state.ApplyAction(1)
+    state.ApplyAction(2)
     print(state)
-    print(state.Winner())
