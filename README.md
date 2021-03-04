@@ -24,7 +24,7 @@ Depending on the level of interaction you want with BlackBird, you can either ru
 To get started quickly, run the following commands in a terminal shell.
 
 ```bash
-$ git clone https://github.com/jordan-singer/BlackBird
+$ git clone https://github.com/ZackWolf614/BlackBird
 $ cd BlackBird
 $ pip install -r requirements.txt
 $ cp parameters_template.yaml parameters.yaml
