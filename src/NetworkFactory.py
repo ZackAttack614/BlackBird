@@ -19,37 +19,37 @@ class NetworkFactory(object):
     def __call__(self):
         """ Build out the policy/evaluation combo network
         """
-        with tf.variable_scope('inputs', reuse=tf.AUTO_REUSE):
-            input = tf.placeholder(
-                shape=[None, None, None, 3],
+        with tf.compat.v1.variable_scope('inputs', reuse=tf.compat.v1.AUTO_REUSE):
+            input = tf.compat.v1.placeholder(
+                shape=[None, None, None, 16],
                 name='board_input', dtype=tf.float32)
-            tf.add_to_collection('input', input)
+            tf.compat.v1.add_to_collection('input', input)
 
-            policyLabel = tf.placeholder(
+            policyLabel = tf.compat.v1.placeholder(
                 shape=[None, None],
                 name='correct_move_from_mcts', dtype=tf.float32)
-            tf.add_to_collection('policyLabel', policyLabel)
+            tf.compat.v1.add_to_collection('policyLabel', policyLabel)
 
-            evaluationLabel = tf.placeholder(
+            evaluationLabel = tf.compat.v1.placeholder(
                 shape=[None], name='evaluationLabel', dtype=tf.float32)
-            tf.add_to_collection('evaluationLabel', evaluationLabel)
+            tf.compat.v1.add_to_collection('evaluationLabel', evaluationLabel)
 
-        with tf.variable_scope('resTower', reuse=tf.AUTO_REUSE):
+        with tf.compat.v1.variable_scope('resTower', reuse=tf.compat.v1.AUTO_REUSE):
             resTower = [input]
 
-            with tf.variable_scope('conv_block', reuse=tf.AUTO_REUSE):
+            with tf.compat.v1.variable_scope('conv_block', reuse=tf.compat.v1.AUTO_REUSE):
                 """ AlphaZero convolutional blocks are...
                     1) Convolutional layer of 256 3x3 filters, stride of 1
                     2) Batch normalization
                     3) Rectifier nonlinearity
                 """
                 resTower.append(
-                    tf.layers.conv2d(inputs=input, kernel_size=[3, 3],
+                    tf.compat.v1.layers.conv2d(inputs=input, kernel_size=[3, 3],
                                      strides=1, padding="same", name='conv',
                                      filters=self.NetworkConfig['filters']))
 
                 resTower.append(
-                    tf.layers.batch_normalization(
+                    tf.compat.v1.layers.batch_normalization(
                         inputs=resTower[-1], name='batch_norm'))
 
                 resTower.append(
@@ -57,7 +57,7 @@ class NetworkFactory(object):
                         features=resTower[-1], name='rect_nonlinearity'))
 
             for block in range(self.NetworkConfig['blocks']):
-                with tf.variable_scope('block_{}'.format(block), reuse=tf.AUTO_REUSE):
+                with tf.compat.v1.variable_scope('block_{}'.format(block), reuse=tf.compat.v1.AUTO_REUSE):
                     """ AlphaZero residual blocks are...
                         1) Convolutional layer of 256 3x3 filters, stride of 1
                         2) Batch normalization
@@ -68,13 +68,13 @@ class NetworkFactory(object):
                         7) Rectifier nonlinearity
                     """
                     resTower.append(
-                        tf.layers.conv2d(
+                        tf.compat.v1.layers.conv2d(
                             inputs=resTower[-1], kernel_size=[3, 3],
                             strides=1, filters=self.NetworkConfig['filters'],
                             padding="same", name='conv_1'))
 
                     resTower.append(
-                        tf.layers.batch_normalization(
+                        tf.compat.v1.layers.batch_normalization(
                             inputs=resTower[-1], name='batch_norm_1'))
 
                     resTower.append(
@@ -83,13 +83,13 @@ class NetworkFactory(object):
                             name='rectifier_nonlinearity_1'))
 
                     resTower.append(
-                        tf.layers.conv2d(
+                        tf.compat.v1.layers.conv2d(
                             inputs=resTower[-1], kernel_size=[3, 3],
                             filters=self.NetworkConfig['filters'], strides=1,
                             padding="same", name='conv_2'))
 
                     resTower.append(
-                        tf.layers.batch_normalization(
+                        tf.compat.v1.layers.batch_normalization(
                             inputs=resTower[-1], name='batch_norm_2'))
 
                     resTower.append(
@@ -102,7 +102,7 @@ class NetworkFactory(object):
                             features=resTower[-1],
                             name='rectifier_nonlinearity_2'))
 
-        with tf.variable_scope('value', reuse=tf.AUTO_REUSE):
+        with tf.compat.v1.variable_scope('value', reuse=tf.compat.v1.AUTO_REUSE):
             """ AlphaZero's value head is...
                 1) Convolutional layer of 2 1x1 filters, stride of 1
                 2) Batch normalization
@@ -112,17 +112,17 @@ class NetworkFactory(object):
                 6) Fully connected layer of size 1
                 7) tanh activation
             """
-            evalConv = tf.layers.conv2d(
+            evalConv = tf.compat.v1.layers.conv2d(
                 resTower[-1], filters=1, kernel_size=(1, 1), strides=1,
                 name='convolution')
 
-            evalBatchNorm = tf.layers.batch_normalization(
+            evalBatchNorm = tf.compat.v1.layers.batch_normalization(
                 evalConv, name='batch_norm')
 
             evalRectifier1 = tf.nn.relu(
                 evalBatchNorm, name='rect_norm_1')
 
-            evalDense = tf.layers.dense(
+            evalDense = tf.compat.v1.layers.dense(
                 inputs=evalRectifier1,
                 units=self.NetworkConfig.get('eval').get('dense'), name='dense_1')
 
@@ -133,7 +133,7 @@ class NetworkFactory(object):
             evalRectifier2 = tf.nn.relu(
                 evalDenseReduced, name='rect_norm_2')
 
-            evalDenseScalar = tf.layers.dense(
+            evalDenseScalar = tf.compat.v1.layers.dense(
                 inputs=evalRectifier2,
                 units=1, name='dense_2')
 
@@ -143,26 +143,26 @@ class NetworkFactory(object):
 
             evaluation = tf.tanh(
                 evalScalar, name='value')
-            tf.add_to_collection('evaluation', evaluation)
+            tf.compat.v1.add_to_collection('evaluation', evaluation)
 
-        with tf.variable_scope('policy', reuse=tf.AUTO_REUSE):
+        with tf.compat.v1.variable_scope('policy', reuse=tf.compat.v1.AUTO_REUSE):
             """ AlphaZero's policy head is...
                 1) Convolutional layer of 2 1x1 filters, stride of 1
                 2) Batch normalization
                 3) Rectifier nonlinearity
                 4) Fully connected layer of size |legal actions|
             """
-            policyConv = tf.layers.conv2d(
+            policyConv = tf.compat.v1.layers.conv2d(
                 resTower[-1], filters=2, kernel_size=(1, 1), strides=1,
                 name='convolution')
 
-            policyBatchNorm = tf.layers.batch_normalization(
+            policyBatchNorm = tf.compat.v1.layers.batch_normalization(
                 policyConv, name='batch_norm')
 
             policyRectifier = tf.nn.relu(
                 policyBatchNorm, name='rect_norm')
 
-            policyDense = tf.layers.dense(
+            policyDense = tf.compat.v1.layers.dense(
                 policyRectifier, units=self.policyShape, name='policy')
 
             policyVector = tf.reduce_sum(
@@ -173,28 +173,28 @@ class NetworkFactory(object):
 
             # Generate Dirichlet noise to add to the network policy
 
-            dist = tf.distributions.Dirichlet(
+            dist = tf.compat.v1.distributions.Dirichlet(
                 [self.alpha, 1-self.alpha])
 
             policy = ((1 - self.epsilon) * policyBase
                       + self.epsilon * dist.sample([1, self.policyShape])[0][:, 0])
 
             policy /= tf.reduce_sum(policy)
-            tf.add_to_collection('policy', policy)
+            tf.compat.v1.add_to_collection('policy', policy)
 
-        with tf.variable_scope('loss', reuse=tf.AUTO_REUSE):
+        with tf.compat.v1.variable_scope('loss', reuse=tf.compat.v1.AUTO_REUSE):
 
             lossEvaluation = tf.reduce_mean(tf.square(
                 evaluation - evaluationLabel))
 
             lossPolicy = -tf.reduce_mean(
                 tf.tensordot(
-                    tf.log(policy),
+                    tf.compat.v1.log(policy),
                     tf.transpose(policyLabel),
                     axes=1))
 
             lossParam = tf.reduce_mean([
-                tf.nn.l2_loss(v) for v in tf.trainable_variables()
+                tf.nn.l2_loss(v) for v in tf.compat.v1.trainable_variables()
 
                 # I don't know if this filter is a good idea...
                 if 'bias' not in v.name
@@ -203,10 +203,10 @@ class NetworkFactory(object):
             loss = lossEvaluation + lossPolicy + lossParam
 
             if self.hasTeacher:
-                teacherPolicy = tf.placeholder(
+                teacherPolicy = tf.compat.v1.placeholder(
                     shape=[policy.shape[1]], dtype=tf.float32,
                     name='teacher_policy')
-                tf.add_to_collection('teacherPolicy', teacherPolicy)
+                tf.compat.v1.add_to_collection('teacherPolicy', teacherPolicy)
                 policyXentropy = -tf.reduce_mean(
                     tf.tensordot(
                         tf.log(teacherPolicy),
@@ -215,32 +215,32 @@ class NetworkFactory(object):
                     axis=1)
 
                 loss += policyXentropy
-            tf.add_to_collection('loss', loss)
+            tf.compat.v1.add_to_collection('loss', loss)
 
-            avgLoss = tf.summary.scalar('average_loss', loss)
-            policyLoss = tf.summary.scalar('policyLoss', lossPolicy)
-            evalLoss = tf.summary.scalar('evalLoss', lossEvaluation)
-            l2Loss = tf.summary.scalar('l2Loss', lossParam)
+            avgLoss = tf.compat.v1.summary.scalar('average_loss', loss)
+            policyLoss = tf.compat.v1.summary.scalar('policyLoss', lossPolicy)
+            evalLoss = tf.compat.v1.summary.scalar('evalLoss', lossEvaluation)
+            l2Loss = tf.compat.v1.summary.scalar('l2Loss', lossParam)
 
-            lossMerged = tf.summary.merge([avgLoss, policyLoss,
+            lossMerged = tf.compat.v1.summary.merge([avgLoss, policyLoss,
                                            evalLoss, l2Loss])
-            tf.add_to_collection('lossMerged', lossMerged)
+            tf.compat.v1.add_to_collection('lossMerged', lossMerged)
 
-        with tf.variable_scope('training', reuse=tf.AUTO_REUSE):
-            learningRate = tf.placeholder(
+        with tf.compat.v1.variable_scope('training', reuse=tf.compat.v1.AUTO_REUSE):
+            learningRate = tf.compat.v1.placeholder(
                 shape=(), dtype=tf.float32, name='learningRate')
-            tf.add_to_collection('learningRate', learningRate)
+            tf.compat.v1.add_to_collection('learningRate', learningRate)
 
             if self.NetworkConfig['training']['optimizer'] == 'adam':
-                optimizer = tf.train.AdamOptimizer(learningRate)
+                optimizer = tf.compat.v1.train.AdamOptimizer(learningRate)
             elif self.NetworkConfig['training']['optimizer'] == 'momentum':
-                optimizer = tf.train.MomentumOptimizer(
+                optimizer = tf.compat.v1.train.MomentumOptimizer(
                     learningRate,
                     momentum=self.NetworkConfig['training']['momentum'])
             else:
-                optimizer = tf.train.GradientDescentOptimizer(
+                optimizer = tf.compat.v1.train.GradientDescentOptimizer(
                     learningRate)
 
             trainingOp = optimizer.minimize(loss)
-            tf.add_to_collection('trainingOp', trainingOp)
+            tf.compat.v1.add_to_collection('trainingOp', trainingOp)
         return

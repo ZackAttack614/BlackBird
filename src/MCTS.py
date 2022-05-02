@@ -184,6 +184,12 @@ class MCTS(object):
         if self.Root is None:
             self.Root = Node(state, state.LegalActions(),
                              self.GetPriors(state))
+            # la = state.LegalActions()
+            # for i in range(len(la)):
+            #     if la[i] == 1:
+            #         print(state.int_to_move[i])
+        # print(f'Root state= {self.Root.State.board}')
+        # print(state.board)
         assert self.Root.State == state, 'Primed for the correct input state.'
 
         self._runMCTS(temp, endTime, playLimit)
@@ -270,6 +276,7 @@ class MCTS(object):
         for child in self.Root.Children:
             if child is None:
                 continue
+            # print(child.State == state)
             if child.State == state:
                 self.Root = child
                 break
@@ -329,6 +336,7 @@ class MCTS(object):
             allPlays = sum([p ** (1 / temp) for p in root.ChildPlays()])
             p = [c ** (1 / temp) / allPlays for c in root.ChildPlays()]
             choice = np.random.choice(len(root.ChildPlays()), p=p)
+
 
         assert root.LegalActions[choice] == 1, 'Selected move is legal.'
         return choice

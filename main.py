@@ -1,10 +1,12 @@
 import os
 import sys
 import yaml
+import tensorflow as tf
 sys.path.insert(0, './src/')
 
 import Blackbird
-from TicTacToe import BoardState
+# from TicTacToe import BoardState
+from DragonChess import BoardState
 
 
 def APITest():
@@ -12,6 +14,9 @@ def APITest():
         raise IOError('Copy parameters_template.yaml into parameters.yaml')
     with open('parameters.yaml') as param_file:
         parameters = yaml.safe_load(param_file)
+
+    physical_devices = tf.config.list_physical_devices('GPU')
+    print("Num GPUs:", len(physical_devices))
 
     model = Blackbird.Model(BoardState, parameters['name'], parameters.get(
         'mcts'), parameters.get('network'), parameters.get('tensorflow'))

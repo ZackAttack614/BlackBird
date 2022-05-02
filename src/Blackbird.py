@@ -244,8 +244,9 @@ def GenerateTrainingSamples(model, nGames, temp):
             example = ExampleState(1 - v, currentProbabilties,
                 state.AsInputArray(), player=state.Player)
             state = nextState
+            # print(f'blackbird state: {state.board}')
             model.MoveRoot(state)
-
+            # print(f'moved root: {model.Game().Board}')
             winner = state.Winner(lastAction)
             gameHistory.append(example)
 
