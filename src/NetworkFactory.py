@@ -21,7 +21,7 @@ class NetworkFactory(object):
         """
         with tf.compat.v1.variable_scope('inputs', reuse=tf.compat.v1.AUTO_REUSE):
             input = tf.compat.v1.placeholder(
-                shape=[None, None, None, 16],
+                shape=[None, None, None, 17],
                 name='board_input', dtype=tf.float32)
             tf.compat.v1.add_to_collection('input', input)
 

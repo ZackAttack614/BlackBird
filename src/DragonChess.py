@@ -5,6 +5,7 @@ from proto.state_pb2 import State
 
 import json
 import numpy as np
+import random
 
 class BoardState(GameState):
     piece_map = { 1: 10, -1: 11, 2: 0, -2: 1, 3: 4, -3: 5, 4: 6, -4: 7, 5: 2, -5: 3, 6: 8, -6: 9 }
@@ -75,7 +76,7 @@ class BoardState(GameState):
         return copy
 
     def LegalActions(self):
-        legal = np.zeros((4032))
+        legal = np.zeros((4032)) # 4032 ordered pairs of distinct squares + 44*4 = 176 promotions + 4 castles = 4212
 
         for square_1 in range(64):
             for square_2 in range(64):
@@ -85,13 +86,30 @@ class BoardState(GameState):
                 col_2, row_2 = square_2 % 8, square_2 // 8
                 legal[self.move_to_int[f'{square_1} {square_2}']] = int(self._is_legal_move(row_1, col_1, row_2, col_2))
 
+        # for col_1 in range(8): # knight, bishop, rook, queen
+        #     legal[4032+4*col_1:4036+4*col_1] = 1 if type(self._is_legal_move(6, col_1, 7, col_1, promote=True)) == int else 0
+        # for start in range(7): # capture up right
+        #     legal[4064+4*start:4068+4*start] = 1 if type(self._is_legal_move(6, start, 7, start+1, promote=True)) == int else 0
+        # for end in range(7): # capture up left
+        #     legal[4092+4*end:4096+4*end] = 1 if type(self._is_legal_move(6, end+1, 7, end, promote=True)) == int else 0
+        # for col_1 in range(8):
+        #     legal[4120+4*col_1:4124+4*col_1] = 1 if type(self._is_legal_move(1, col_1, 0, col_1, promote=True)) == int else 0
+        # for start in range(7): # capture down right
+        #     legal[4152+4*start:4156+4*start] = 1 if type(self._is_legal_move(1, start, 0, start+1, promote=True)) == int else 0
+        # for end in range(7): # capture down left
+        #     legal[4180+4*end:4184+4*end] = 1 if type(self._is_legal_move(6, end+1, 7, end, promote=True)) == int else 0
+        # legal[4208] = 1 if type(self._is_legal_move(0, 4, 0, 6, castle=True)) == int else 0
+        # legal[4209] = 1 if type(self._is_legal_move(0, 4, 0, 2, castle=True)) == int else 0
+        # legal[4210] = 1 if type(self._is_legal_move(7, 4, 7, 6, castle=True)) == int else 0
+        # legal[4211] = 1 if type(self._is_legal_move(7, 4, 7, 2, castle=True)) == int else 0
+
         return legal
 
     def LegalActionShape(self):
-        return np.array([0 for _ in range(4032)], dtype=np.int8)
+        return np.array([0 for _ in range(4212)], dtype=np.int8)
 
     def AsInputArray(self):
-        state = np.zeros((1, 8, 8, 16), dtype=np.int8)
+        state = np.zeros((1, 8, 8, 17), dtype=np.int8)
 
         for row in range(self.board.shape[0]):
             for col in range(self.board.shape[1]):
@@ -102,18 +120,41 @@ class BoardState(GameState):
         state[0, :, :, 13] = int(self._white_castle_queenside)
         state[0, :, :, 14] = int(self._black_castle_kingside)
         state[0, :, :, 15] = int(self._black_castle_queenside)
+        state[0, :, :, 16] = 1 if self.Player == 1 and self.PreviousPlayer == 1 else 0
 
         return state
 
     def ApplyAction(self, action):
-        move = self.int_to_move[action]
-        square_1, square_2 = move.split(' ')
-        square_1 = int(square_1)
-        square_2 = int(square_2)
-        col_1, row_1 = square_1 % 8, square_1 // 8
-        col_2, row_2 = square_2 % 8, square_2 // 8
+        m = False
+        if action < 4032:
+            move = self.int_to_move[action]
+            square_1, square_2 = move.split(' ')
+            square_1 = int(square_1)
+            square_2 = int(square_2)
+            col_1, row_1 = square_1 % 8, square_1 // 8
+            col_2, row_2 = square_2 % 8, square_2 // 8
 
-        m = self.Move(row_1, col_1, row_2, col_2)
+            m = self.Move(row_1, col_1, row_2, col_2)
+        else:
+            if action >= 4208:
+                action -= 4208
+                m = self.Move(7*(action//2), 4, 7*(action//2), -4*(action%2)+6, castle=True) 
+            else:
+                action -= 4032 # 0-175 (first 88 are white promotions)
+                promotePiece = (action%4)+3
+                if action < 32:
+                    m = self.Move(6, action//4, 7, action//4, promote=promotePiece)
+                elif action < 60:
+                    m = self.Move(6, (action-32)//4, 7, (action-32)//4+1, promote=promotePiece)
+                elif action < 88:
+                    m = self.Move(6, (action-60)//4+1, 7, (action-60)//4, promote=promotePiece)
+                elif action < 120:
+                    m = self.Move(1, (action-88)//4, 0, (action-88)//4, promote=-promotePiece)
+                elif action < 148:
+                    m = self.Move(1, (action-120)//4, 0, (action-120)//4+1, promote=-promotePiece)
+                elif action < 176:
+                    m = self.Move(1, (action-148)//4+1, 0, (action-148)//4, promote=-promotePiece)
+
         if not m:
             raise ValueError('Tried to make an illegal move.')
 
@@ -121,22 +162,57 @@ class BoardState(GameState):
         if -1 not in self.board:
             return 1
         elif 1 not in self.board:
-            return -1
+            return 2
         else:
             return None
 
     def EvalToString(self, eval):
         return str(eval)
 
-    def Move(self, loc_row, loc_col, new_row, new_col):
-        if self._is_legal_move(loc_row, loc_col, new_row, new_col):
+    def Move(self, loc_row, loc_col, new_row, new_col, promote=None, castle=None):
+        if promote is not None:
+            if self._is_legal_move(loc_row, loc_col, new_row, new_col, promote=True) == 0:
+                self.board[new_row, new_col] = promote
+            else:
+                return False
+        elif castle is not None:
+            if self._is_legal_move(loc_row, loc_col, new_row, new_col, castle=True) == 0:
+                self.board[new_row, new_col] = self.board[loc_row, loc_col]
+                self.board[new_row, new_col//2+2] = self.board[new_row, new_col*7//4-3] # rook
+                self.board[new_row, new_col*7//4-3] = 0
+            else:
+                return False
+        elif self._is_legal_move(loc_row, loc_col, new_row, new_col):
             self.board[new_row, new_col] = self.board[loc_row, loc_col]
-            self.board[loc_row, loc_col] = 0
-            self.previousPlayer = self.Player
-            self.Player = 3 - self.Player
-            return True
         else:
             return False
+
+        # general things
+        self.board[loc_row, loc_col] = 0
+        if self.PreviousPlayer == 1 and self.Player == 1:
+            self.Player = 2
+            self.PreviousPlayer = 1
+        else:
+            self.PreviousPlayer = self.Player
+            self.Player = 1
+
+        if self.board[0, 4] != 1:
+            self._white_castle_kingside = False
+            self._white_castle_queenside = False
+        elif self.board[0, 7] != 5:
+            self._white_castle_kingside = False
+        if self.board[0, 0] != 5:
+            self._white_castle_queenside = False
+        if self.board[7, 4] != -1:
+            self._black_castle_kingside = False
+            self._black_castle_queenside = False
+        elif self.board[7, 7] != -5:
+            self._black_castle_kingside = False
+        if self.board[7, 0] != -5:
+            self._black_castle_queenside = False
+
+        return True
+
     def __str__(self):
         fboard = np.flip(self.board, axis=0)
         repr = '-----------------\n'
@@ -182,7 +258,7 @@ class BoardState(GameState):
             return False
         return True
 
-    def _is_legal_move(self, loc_row, loc_col, new_row, new_col):
+    def _is_legal_move(self, loc_row, loc_col, new_row, new_col, promote=None, castle=None):
         piece_map = {
             1: self._is_legal_move_king,
             2: self._is_legal_move_pawn,
@@ -195,31 +271,47 @@ class BoardState(GameState):
             return False
 
         piece_type = abs(self.board[loc_row, loc_col])
+        if promote is not None and piece_type != 2:
+            return False
+        if castle is not None and piece_type != 1:
+            return False
         return piece_map[piece_type](loc_row, loc_col, new_row, new_col)
 
     def _is_legal_move_pawn(self, loc_row, loc_col, new_row, new_col):
-        if not abs(self.board[loc_row, loc_col]) == 2:
-            return False
         if self.board[loc_row, loc_col] > 0:
-            if loc_row == 1:
+            if loc_row == 6 and loc_col == new_col and new_row == 7 and self.board[7, new_col] == 0:
+                return 0
+            elif loc_row == 6 and abs(loc_col - new_col) == 1 and new_row == 7 and self.board[7, new_col] < 0:
+                return 0
+            elif loc_row == 1:
                 if loc_col == new_col:
                     if new_row == 3 and self.board[3, new_col] == 0 and self.board[2, new_col] == 0:
                         return True
                     elif new_row == 2 and self.board[2, new_col] == 0:
                         return True
                     return False
+            elif loc_row > 1 and loc_row < 6:
+                if loc_col == new_col and self.board[new_row, new_col] == 0 and new_row == loc_row+1:
+                    return True
             if abs(loc_col - new_col) == 1:
                 if new_row == loc_row + 1:
                     if self.board[new_row, new_col] < 0:
                         return True
         else:
-            if loc_row == 6:
+            if loc_row == 1 and loc_col == new_col and new_row == 0 and self.board[0, new_col] == 0:
+                return 0
+            elif loc_row == 1 and abs(loc_col - new_col) == 1 and new_row == 0 and self.board[0, new_col] > 0:
+                return 0
+            elif loc_row == 6:
                 if loc_col == new_col:
                     if new_row == 4 and self.board[4, new_col] == 0 and self.board[5, new_col] == 0:
                         return True
                     elif new_row == 5 and self.board[5, new_col] == 0:
                         return True
                     return False
+            elif loc_row > 1 and loc_row < 6:
+                if loc_col == new_col and self.board[new_row, new_col] == 0 and new_row == loc_row-1:
+                    return True
             if abs(loc_col - new_col) == 1:
                 if new_row == loc_row-1:
                     if self.board[new_row, new_col] > 0:
@@ -259,10 +351,16 @@ class BoardState(GameState):
                self._is_legal_move_rook(loc_row, loc_col, new_row, new_col)
 
     def _is_legal_move_king(self, loc_row, loc_col, new_row, new_col):
-        if not abs(self.board[loc_row, loc_col]) == 1:
-            return False
         if abs(loc_row-new_row) <= 1 and abs(loc_col-new_col) <= 1:
             return True
+        elif loc_row == 0 and new_col == 6 and self._white_castle_kingside and (self.board[0, 5:7] == 0).all():
+            return 0
+        elif loc_row == 0 and new_col == 2 and self._white_castle_queenside and (self.board[0, 1:4] == 0).all():
+            return 0
+        elif loc_row == 7 and new_col == 6 and self._black_castle_kingside and (self.board[7, 5:7] == 0).all():
+            return 0
+        elif loc_row == 7 and new_col == 2 and self._black_castle_queenside and (self.board[7, 1:4] == 0).all():
+            return 0
         return False
 
     def _is_legal_move_knight(self, loc_row, loc_col, new_row, new_col):
@@ -275,7 +373,20 @@ class BoardState(GameState):
 
 if __name__ == "__main__":
     dc = BoardState()
-    la = dc.LegalActions()
-    for i in range(len(la)):
-        if la[i] == 1:
-            print(i)
+    while dc.Winner() == None:
+        print(dc)
+        # choice = input("Enter a move: ")
+        actions = dc.LegalActions()
+        choice = np.random.choice(np.where(actions == 1)[0])
+        try:
+            # if ' ' in choice:
+            #     choice = dc.move_to_int[choice]
+            print(choice)
+            if choice < 4032:
+                print(dc.int_to_move[choice])
+            input()
+            dc.ApplyAction(choice)
+        except ValueError:
+            print("The move you entered was illegal.")
+    print(dc)
+    print(f'Winner was {dc.Winner()}.')

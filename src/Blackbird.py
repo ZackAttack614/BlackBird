@@ -12,6 +12,8 @@ import random
 import yaml
 import numpy as np
 
+import time
+
 np.seterr(divide='ignore', invalid='ignore')
 np.set_printoptions(precision=2)
 
@@ -232,8 +234,9 @@ def GenerateTrainingSamples(model, nGames, temp):
     """
     if nGames <= 0:
         raise ValueError('Use a positive integer for number of games.')
-
+    start = time.time()
     for _ in range(nGames):
+        print(f'Starting training sample at time {time.time()-start}')
         gameHistory = []
         state = model.Game()
         lastAction = None
@@ -265,7 +268,8 @@ def GenerateTrainingSamples(model, nGames, temp):
             serialized)
 
 
-def TrainWithExamples(model, batchSize, learningRate, teacher=None):
+def TrainWithExamples(model, batchSize, learningRate, epochs=1, teacher=None,
+                      model_override=None, version_override=None):
     """ Trains the neural network on provided example positions.
 
         Provided a list of example positions, this method will train
@@ -284,8 +288,9 @@ def TrainWithExamples(model, batchSize, learningRate, teacher=None):
     model.SampleValue.cache_clear()
     model.GetPriors.cache_clear()
 
-    games = model.Conn.GetGames(model.Name, model.Version)
-    examples = [ExampleState.FromSerialized(game) for game in games]
+    states = model.Conn.GetGames(model_override if model_override is not None else model.Name,
+                                 version_override if version_override is not None else model.Version)
+    examples = [ExampleState.FromSerialized(state) for state in states]
 
     examples = np.random.choice(examples,
                                 len(examples) -

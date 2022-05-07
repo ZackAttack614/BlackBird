@@ -9,22 +9,24 @@ import Blackbird
 from DragonChess import BoardState
 
 
-def APITest():
+def main():
     if not os.path.isfile('parameters.yaml'):
         raise IOError('Copy parameters_template.yaml into parameters.yaml')
     with open('parameters.yaml') as param_file:
         parameters = yaml.safe_load(param_file)
 
     physical_devices = tf.config.list_physical_devices('GPU')
-    print("Num GPUs:", len(physical_devices))
+    print(f"Num GPUs: {len(physical_devices)}")
 
     model = Blackbird.Model(BoardState, parameters['name'], parameters.get(
         'mcts'), parameters.get('network'), parameters.get('tensorflow'))
 
     Blackbird.GenerateTrainingSamples(model,
-                                    10,
+                                    1,
                                     parameters.get('mcts').get('temperature').get('exploration'))
-    Blackbird.TrainWithExamples(model, batchSize=10, learningRate=0.01)
+    Blackbird.TrainWithExamples(model,
+                                batchSize=parameters.get('network').get('training').get('batch_size'),
+                                learningRate=parameters.get('network').get('training').get('learning_rate'))
 
     print('Against a random player:')
     print(Blackbird.TestRandom(model,
@@ -49,4 +51,4 @@ def APITest():
 
 
 if __name__ == '__main__':
-    APITest()
+    main()
