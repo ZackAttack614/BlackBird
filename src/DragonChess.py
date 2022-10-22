@@ -1,3 +1,4 @@
+from functools import lru_cache
 from FixedMCTS import FixedMCTS
 from DynamicMCTS import DynamicMCTS
 from GameState import GameState
@@ -5,6 +6,9 @@ from proto.state_pb2 import State
 
 import json
 import numpy as np
+import time
+
+from memory_profiler import profile
 import random
 
 class BoardState(GameState):
@@ -21,7 +25,7 @@ class BoardState(GameState):
     int_to_move = dict()
     possible_moves = list()
     GameType = 'DragonChess'
-    LegalMoves = 4032
+    LegalMoves = 4212
 
     for square_1 in range(64):
         for square_2 in range(64):
@@ -40,6 +44,14 @@ class BoardState(GameState):
         self.Player = 1
         self.PreviousPlayer = None
 
+        self.legal_move_piece_map = {
+            1: self._is_legal_move_king,
+            2: self._is_legal_move_pawn,
+            3: self._is_legal_move_knight,
+            4: self._is_legal_move_bishop,
+            5: self._is_legal_move_rook,
+            6: self._is_legal_move_queen,
+        }
         piece_loc, turn, castles, en_passant, halfmove, fullmove = self.fen.split(' ')
         for row_index, row in enumerate(piece_loc.split('/')[::-1]):
             col_index = 0
@@ -76,7 +88,7 @@ class BoardState(GameState):
         return copy
 
     def LegalActions(self):
-        legal = np.zeros((4032)) # 4032 ordered pairs of distinct squares + 44*4 = 176 promotions + 4 castles = 4212
+        legal = np.zeros((4212)) # 4032 ordered pairs of distinct squares + 44*4 = 176 promotions + 4 castles = 4212
 
         for square_1 in range(64):
             for square_2 in range(64):
@@ -85,23 +97,6 @@ class BoardState(GameState):
                 col_1, row_1 = square_1 % 8, square_1 // 8
                 col_2, row_2 = square_2 % 8, square_2 // 8
                 legal[self.move_to_int[f'{square_1} {square_2}']] = int(self._is_legal_move(row_1, col_1, row_2, col_2))
-
-        # for col_1 in range(8): # knight, bishop, rook, queen
-        #     legal[4032+4*col_1:4036+4*col_1] = 1 if type(self._is_legal_move(6, col_1, 7, col_1, promote=True)) == int else 0
-        # for start in range(7): # capture up right
-        #     legal[4064+4*start:4068+4*start] = 1 if type(self._is_legal_move(6, start, 7, start+1, promote=True)) == int else 0
-        # for end in range(7): # capture up left
-        #     legal[4092+4*end:4096+4*end] = 1 if type(self._is_legal_move(6, end+1, 7, end, promote=True)) == int else 0
-        # for col_1 in range(8):
-        #     legal[4120+4*col_1:4124+4*col_1] = 1 if type(self._is_legal_move(1, col_1, 0, col_1, promote=True)) == int else 0
-        # for start in range(7): # capture down right
-        #     legal[4152+4*start:4156+4*start] = 1 if type(self._is_legal_move(1, start, 0, start+1, promote=True)) == int else 0
-        # for end in range(7): # capture down left
-        #     legal[4180+4*end:4184+4*end] = 1 if type(self._is_legal_move(6, end+1, 7, end, promote=True)) == int else 0
-        # legal[4208] = 1 if type(self._is_legal_move(0, 4, 0, 6, castle=True)) == int else 0
-        # legal[4209] = 1 if type(self._is_legal_move(0, 4, 0, 2, castle=True)) == int else 0
-        # legal[4210] = 1 if type(self._is_legal_move(7, 4, 7, 6, castle=True)) == int else 0
-        # legal[4211] = 1 if type(self._is_legal_move(7, 4, 7, 2, castle=True)) == int else 0
 
         return legal
 
@@ -240,33 +235,29 @@ class BoardState(GameState):
         return "{0}{1}".format(self.Player,str(self)).__hash__()
 
     def _sanity_check(self, loc_row, loc_col, new_row, new_col):
-        if not (-1 < new_row < 8) or not (-1 < new_col < 8): # Moving outside of the board
+        if (square := self.board[loc_row, loc_col]) == 0: # no piece
             return False
-        if [new_row, new_col] == [loc_row, loc_col]: # Moving to the square you're already on
+        elif square < 0 and self.Player == 1: # black piece on white's turn
             return False
-        if self.board[loc_row, loc_col] > 0: # Moving to a square occupied by the same color piece
+        elif square > 0 and self.Player == 2: # white piece on black's turn
+            return False
+        if abs(loc_row-new_row) != abs(loc_col-new_col) and \
+            ((abs(loc_row-new_row) >= 3 and abs(loc_col-new_col) >= 1) or \
+             (abs(loc_col-new_col) >= 3 and abs(loc_row-new_row) >= 1)):
+            return False
+        if square > 0: # Moving to a square occupied by the same color piece
             if self.board[new_row, new_col] > 0:
                 return False
         else:
             if self.board[new_row, new_col] < 0:
                 return False
-        if self.board[loc_row, loc_col] < 0 and self.Player == 1: # black piece on white's turn
+        if not (-1 < new_row < 8) or not (-1 < new_col < 8): # Moving outside of the board
             return False
-        elif self.board[loc_row, loc_col] > 0 and self.Player == 2: # white piece on black's turn
-            return False
-        elif self.board[loc_row, loc_col] == 0: # no piece
+        if new_row == loc_row and new_col == loc_col: # Moving to the square you're already on
             return False
         return True
 
     def _is_legal_move(self, loc_row, loc_col, new_row, new_col, promote=None, castle=None):
-        piece_map = {
-            1: self._is_legal_move_king,
-            2: self._is_legal_move_pawn,
-            3: self._is_legal_move_knight,
-            4: self._is_legal_move_bishop,
-            5: self._is_legal_move_rook,
-            6: self._is_legal_move_queen,
-        }
         if not self._sanity_check(loc_row, loc_col, new_row, new_col):
             return False
 
@@ -275,7 +266,7 @@ class BoardState(GameState):
             return False
         if castle is not None and piece_type != 1:
             return False
-        return piece_map[piece_type](loc_row, loc_col, new_row, new_col)
+        return self.legal_move_piece_map[piece_type](loc_row, loc_col, new_row, new_col)
 
     def _is_legal_move_pawn(self, loc_row, loc_col, new_row, new_col):
         if self.board[loc_row, loc_col] > 0:
@@ -318,6 +309,79 @@ class BoardState(GameState):
                         return True
         return False
 
+    @staticmethod
+    def _legal_moves_pawn(board, loc_row, loc_col, color):
+        result = []
+        if color == 1:
+            if loc_row != 6:
+                if loc_col != 0: #left capture
+                    if np.sign(board[loc_row+1, loc_col-1]) == -1:
+                        square_1 = 8*loc_row + loc_col
+                        square_2 = 8*loc_row + loc_col + 7
+                        result.append(63*square_1+square_2+int(square_2 < square_1)-1)
+                if loc_col != 7: #right capture
+                    if np.sign(board[loc_row+1, loc_col+1]) == -1:
+                        square_1 = 8*loc_row + loc_col
+                        square_2 = 8*loc_row + loc_col + 9
+                        result.append(63*square_1+square_2+int(square_2 < square_1)-1)
+                if np.sign(board[loc_row+1, loc_col]) == 0: # move up one
+                    square_1 = 8*loc_row + loc_col
+                    square_2 = 8*loc_row + loc_col + 8
+                    result.append(63*square_1+square_2+int(square_2 < square_1)-1)
+                    if loc_row == 1 and np.sign(board[loc_row+2, loc_col]) == 0: # move up two
+                        square_1 = 8*loc_row + loc_col
+                        square_2 = 8*loc_row + loc_col + 16
+                        result.append(63*square_1+square_2+int(square_2 < square_1)-1)
+            else:
+                DEFact = 4032
+                if loc_col != 0: #left capture
+                    if np.sign(board[loc_row+1, loc_col-1]) == -1:
+                        for promotion in range(4):
+                            result.append(DEFact+60+4*(loc_col-1)+promotion)
+                if loc_col != 7: #right capture
+                    if np.sign(board[loc_row+1, loc_col+1]) == -1:
+                        for promotion in range(4):
+                            result.append(DEFact+32+4*loc_col+promotion)
+                if np.sign(board[loc_row+1, loc_col]) == 0: # move up one
+                    for promotion in range(4):
+                        result.append(DEFact+4*loc_col+promotion)
+        else:
+            if loc_row != 1:
+                if loc_col != 0: #left capture
+                    if np.sign(board[loc_row-1, loc_col-1]) == 1:
+                        square_1 = 8*loc_row + loc_col
+                        square_2 = 8*loc_row + loc_col - 9
+                        result.append(63*square_1+square_2+int(square_2 < square_1)-1)
+                if loc_col != 7: #right capture
+                    if np.sign(board[loc_row-1, loc_col+1]) == 1:
+                        square_1 = 8*loc_row + loc_col
+                        square_2 = 8*loc_row + loc_col - 7
+                        result.append(63*square_1+square_2+int(square_2 < square_1)-1)
+                if np.sign(board[loc_row-1, loc_col]) == 0: # move up one
+                    square_1 = 8*loc_row + loc_col
+                    square_2 = 8*loc_row + loc_col - 8
+                    result.append(63*square_1+square_2+int(square_2 < square_1)-1)
+                    if loc_row == 6 and np.sign(board[loc_row-2, loc_col]) == 0: # move up two
+                        square_1 = 8*loc_row + loc_col
+                        square_2 = 8*loc_row + loc_col - 16
+                        result.append(63*square_1+square_2+int(square_2 < square_1)-1)
+            else:
+                DEFact = 4120
+                if loc_col != 0: #left capture
+                    if np.sign(board[loc_row-1, loc_col-1]) == 1:
+                        for promotion in range(4):
+                            result.append(DEFact+60+4*(loc_col-1)+promotion)
+                if loc_col != 7: #right capture
+                    if np.sign(board[loc_row-1, loc_col+1]) == 1:
+                        for promotion in range(4):
+                            result.append(DEFact+32+4*loc_col+promotion)
+                if np.sign(board[loc_row-1, loc_col]) == 0: # move up one
+                    for promotion in range(4):
+                        result.append(DEFact+4*loc_col+promotion)
+        return result
+                    
+        
+
     def _is_legal_move_rook(self, loc_row, loc_col, new_row, new_col):
         direction = (new_row == loc_row or new_col == loc_col)
 
@@ -338,6 +402,32 @@ class BoardState(GameState):
 
         return direction and no_obstacle
 
+    @staticmethod
+    def _legal_moves_rook(board, loc_row, loc_col, color):
+        result = []
+        for dir in range(4):
+            theta = dir*90
+            count = 1
+            while True:
+                new_row = loc_row + count*int(np.cos(theta))
+                new_col = loc_col + count*int(np.sin(theta))
+                if (-1 < new_row < 8) and (-1 < new_col < 8):
+                    if np.sign(board[new_row, new_col]) == 0:
+                        square_1 = 8*loc_row + loc_col
+                        square_2 = 8*new_row + new_col
+                        result.append(63*square_1+square_2+int(square_2 < square_1)-1)
+                    elif np.sign(board[new_row, new_col]) != color:
+                        square_1 = 8*loc_row + loc_col
+                        square_2 = 8*new_row + new_col
+                        result.append(63*square_1+square_2+int(square_2 < square_1)-1)
+                        break
+                    else:
+                        break
+                else:
+                    break
+                count += 1
+        return result
+
     def _is_legal_move_bishop(self, loc_row, loc_col, new_row, new_col):
         if abs(loc_row-new_row) != abs(loc_col-new_col):
             return False
@@ -346,9 +436,61 @@ class BoardState(GameState):
                 return False
         return True
 
+    @staticmethod
+    def _legal_moves_bishop(board, loc_row, loc_col, color):
+        result = []
+        for dir in range(4):
+            theta = dir*90 + 45
+            count = 1
+            while True:
+                new_row = loc_row + count*int(np.sign(np.cos(theta)))
+                new_col = loc_col + count*int(np.sign(np.sin(theta)))
+                if (-1 < new_row < 8) and (-1 < new_col < 8):
+                    if np.sign(board[new_row, new_col]) == 0:
+                        square_1 = 8*loc_row + loc_col
+                        square_2 = 8*new_row + new_col
+                        result.append(63*square_1+square_2+int(square_2 < square_1)-1)
+                    elif np.sign(board[new_row, new_col]) != color:
+                        square_1 = 8*loc_row + loc_col
+                        square_2 = 8*new_row + new_col
+                        result.append(63*square_1+square_2+int(square_2 < square_1)-1)
+                        break
+                    else:
+                        break
+                else:
+                    break
+                count += 1
+        return result
+
     def _is_legal_move_queen(self, loc_row, loc_col, new_row, new_col):
         return self._is_legal_move_bishop(loc_row, loc_col, new_row, new_col) or \
                self._is_legal_move_rook(loc_row, loc_col, new_row, new_col)
+
+    @staticmethod
+    def _legal_moves_queen(board, loc_row, loc_col, color):
+        result = []
+        for dir in range(8):
+            theta = dir*45
+            count = 1
+            while True:
+                new_row = loc_row + count*int(np.sign(np.cos(theta)))
+                new_col = loc_col + count*int(np.sign(np.sin(theta)))
+                if (-1 < new_row < 8) and (-1 < new_col < 8):
+                    if np.sign(board[new_row, new_col]) == 0:
+                        square_1 = 8*loc_row + loc_col
+                        square_2 = 8*new_row + new_col
+                        result.append(63*square_1+square_2+int(square_2 < square_1)-1)
+                    elif np.sign(board[new_row, new_col]) != color:
+                        square_1 = 8*loc_row + loc_col
+                        square_2 = 8*new_row + new_col
+                        result.append(63*square_1+square_2+int(square_2 < square_1)-1)
+                        break
+                    else:
+                        break
+                else:
+                    break
+                count += 1
+        return result
 
     def _is_legal_move_king(self, loc_row, loc_col, new_row, new_col):
         if abs(loc_row-new_row) <= 1 and abs(loc_col-new_col) <= 1:
@@ -363,6 +505,31 @@ class BoardState(GameState):
             return 0
         return False
 
+    @staticmethod
+    def _legal_moves_king(board, loc_row, loc_col, color, white_castle_kingside, white_castle_queenside, black_castle_kingside, black_castle_queenside):
+        result = []
+        for drow in range(-1, 2):
+            for dcol in range(-1, 2):
+                new_row = loc_row + drow
+                new_col = loc_col + dcol
+                if (-1 < new_row < 8) and (-1 < new_col < 8) \
+                and (drow != 0 or dcol != 0) \
+                and np.sign(board[new_row, new_col]) != color:
+                    square_1 = 8*loc_row + loc_col
+                    square_2 = 8*new_row + new_col
+                    result.append(63*square_1+square_2+int(square_2 < square_1)-1)
+        if color == 1:
+            if loc_row == 0 and loc_col == 4 and white_castle_kingside and (board[0, 5:7] == 0).all():
+                result.append(4208)
+            if loc_row == 0 and loc_col == 4 and white_castle_queenside and (board[0, 1:4] == 0).all():
+                result.append(4209)
+        else:
+            if loc_row == 7 and loc_col == 4 and black_castle_kingside and (board[7, 5:7] == 0).all():
+                result.append(4210)
+            if loc_row == 7 and loc_col == 4 and black_castle_queenside and (board[7, 1:4] == 0).all():
+                result.append(4211)
+        return result
+
     def _is_legal_move_knight(self, loc_row, loc_col, new_row, new_col):
         if abs(loc_row-new_row) == 1 and abs(loc_col-new_col) == 2:
             return True
@@ -370,23 +537,82 @@ class BoardState(GameState):
             return True
         return False
 
+    @staticmethod
+    def _legal_moves_knight(board, loc_row, loc_col, color):
+        result = []
+        for drow in (-2, -1, 1, 2):
+            new_row = loc_row + drow
+            for dcol in (3-abs(drow), -3+abs(drow)):
+                new_col = loc_col + dcol
+                if (-1 < new_row < 8) and (-1 < new_col < 8) \
+                and np.sign(board[new_row, new_col]) != color:
+                    square_1 = 8*loc_row + loc_col
+                    square_2 = 8*new_row + new_col
+                    result.append(63*square_1+square_2+int(square_2 < square_1)-1)
+        return result
+
+@profile(precision=3)
+def main():
+    # import cProfile, pstats
+    
+    # profiler = cProfile.Profile()
+    # profiler.enable()
+    params = {'maxDepth' : 3, 'explorationRate' : 1, 'playLimit' : 5000}
+    player = FixedMCTS(**params)
+
+    state = BoardState()
+    counter = 0
+    while state.Winner() is None and counter < 10:
+        print(state)
+        print('To move: {}'.format(state.Player))
+        state, v, p = player.FindMove(state)
+        print('Value: {}'.format(v))
+        print('Selection Probabilities: {}'.format(p))
+        print('Child Values: {}'.format(player.Root.ChildWinRates()))
+        print('Child Exploration Rates: {}'.format(player.Root.ChildPlays()))
+        print()
+        player.MoveRoot(state)
+        counter += 1
+    # profiler.disable()
+    # stats = pstats.Stats(profiler).sort_stats('cumtime')
+    # stats.dump_stats('profile.log')
+    print(state)
+    print(state.Winner())
 
 if __name__ == "__main__":
-    dc = BoardState()
-    while dc.Winner() == None:
-        print(dc)
-        # choice = input("Enter a move: ")
-        actions = dc.LegalActions()
-        choice = np.random.choice(np.where(actions == 1)[0])
-        try:
-            # if ' ' in choice:
-            #     choice = dc.move_to_int[choice]
-            print(choice)
-            if choice < 4032:
-                print(dc.int_to_move[choice])
-            input()
-            dc.ApplyAction(choice)
-        except ValueError:
-            print("The move you entered was illegal.")
-    print(dc)
-    print(f'Winner was {dc.Winner()}.')
+    main()
+    # import cProfile, pstats
+    
+    # profiler = cProfile.Profile()
+    # profiler.enable()
+
+    # now = time.time()
+    # for game in range(100):
+    #     # print(f'Playing game {game+1}')
+    #     dc = BoardState()
+    #     # print(dc)
+    #     while dc.Winner() == None:
+    #         # choice = input("Enter a move: ")
+    #         actions = dc.LegalActions()
+    #         choice = np.random.choice(np.where(actions == 1)[0])
+    #         try:
+    #             # if ' ' in choice:
+    #             #     choice = dc.move_to_int[choice]
+    #             # print(choice)
+    #             # if choice < 4032:
+    #             #     print(dc.int_to_move[choice])
+    #             # elif choice < 4208:
+    #             #     print('PROMOTION')
+    #             # else:
+    #             #     print('CASTLE')
+    #             # input()
+    #             dc.ApplyAction(choice)
+    #         except ValueError:
+    #             print("The move you entered was illegal.")
+    #         # print(dc)
+    #     # print(dc.Winner())
+
+    # print(time.time()-now)
+    # profiler.disable()
+    # stats = pstats.Stats(profiler).sort_stats('cumtime')
+    # stats.dump_stats('profile.log')

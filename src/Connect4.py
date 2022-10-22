@@ -5,6 +5,7 @@ from proto.state_pb2 import State
 
 import json
 import numpy as np
+import time
 
 class BoardState(GameState):
     Players = {0: ' ', 1 : 'X', 2 : 'O'}
@@ -151,6 +152,34 @@ if __name__ == '__main__':
         print('Child Values: {}'.format(player.Root.ChildWinRates()))
         print('Child Exploration Rates: {}'.format(player.Root.ChildPlays()))
         print()
-        player.MoveRoot([state])
+        player.MoveRoot(state)
     print(state)
     print(state.Winner())
+    
+    # now = time.time()
+    # for game in range(100):
+    #     # print(f'Playing game {game+1}')
+    #     dc = BoardState()
+    #     # print(dc)
+    #     while dc.Winner() == None:
+    #         # choice = input("Enter a move: ")
+    #         actions = dc.LegalActions()
+    #         choice = np.random.choice(np.where(actions == 1)[0])
+    #         try:
+    #             # if ' ' in choice:
+    #             #     choice = dc.move_to_int[choice]
+    #             # print(choice)
+    #             # if choice < 4032:
+    #             #     print(dc.int_to_move[choice])
+    #             # elif choice < 4208:
+    #             #     print('PROMOTION')
+    #             # else:
+    #             #     print('CASTLE')
+    #             # input()
+    #             dc.ApplyAction(choice)
+    #         except ValueError:
+    #             print("The move you entered was illegal.")
+    #         # print(dc)
+    #     # print(dc.Winner())
+
+    # print(time.time()-now)
