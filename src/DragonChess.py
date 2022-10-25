@@ -1,5 +1,8 @@
+import tracemalloc
+tracemalloc.start()
 from functools import lru_cache
 from FixedMCTS import FixedMCTS
+from FixedLazyMCTS import FixedLazyMCTS
 from DynamicMCTS import DynamicMCTS
 from GameState import GameState
 from proto.state_pb2 import State
@@ -90,15 +93,54 @@ class BoardState(GameState):
     def LegalActions(self):
         legal = np.zeros((4212)) # 4032 ordered pairs of distinct squares + 44*4 = 176 promotions + 4 castles = 4212
 
-        for square_1 in range(64):
-            for square_2 in range(64):
-                if square_2 == square_1:
-                    continue
-                col_1, row_1 = square_1 % 8, square_1 // 8
-                col_2, row_2 = square_2 % 8, square_2 // 8
-                legal[self.move_to_int[f'{square_1} {square_2}']] = int(self._is_legal_move(row_1, col_1, row_2, col_2))
+        # for square_1 in range(64):
+        #     for square_2 in range(64):
+        #         if square_2 == square_1:
+        #             continue
+        #         col_1, row_1 = square_1 % 8, square_1 // 8
+        #         col_2, row_2 = square_2 % 8, square_2 // 8
+        #         legal[self.move_to_int[f'{square_1} {square_2}']] = int(self._is_legal_move(row_1, col_1, row_2, col_2))
+
+        piece_map = {
+            1: self._legal_moves_king,
+            2: self._legal_moves_pawn,
+            3: self._legal_moves_knight,
+            4: self._legal_moves_bishop,
+            5: self._legal_moves_rook,
+            6: self._legal_moves_queen,
+        }
+
+        for row_1 in range(8):
+            for col_1 in range(8):
+                if np.sign(self.board[row_1, col_1]) == -2*self.Player+3:
+                    if abs(self.board[row_1, col_1]) == 1:
+                        legal[piece_map[1](self.board, row_1, col_1, -2*self.Player+3, self._white_castle_kingside, self._white_castle_queenside, self._black_castle_kingside, self._black_castle_queenside)]=1
+                    else:
+                        legal[piece_map[abs(self.board[row_1, col_1])](self.board, row_1, col_1, -2*self.Player+3)] = 1
+
 
         return legal
+
+    def NumLegalActions(self):
+        numActions = 0
+        piece_map = {
+            1: self._legal_moves_king,
+            2: self._legal_moves_pawn,
+            3: self._legal_moves_knight,
+            4: self._legal_moves_bishop,
+            5: self._legal_moves_rook,
+            6: self._legal_moves_queen,
+        }
+
+        for row_1 in range(8):
+            for col_1 in range(8):
+                if np.sign(self.board[row_1, col_1]) == -2*self.Player+3:
+                    if abs(self.board[row_1, col_1]) == 1:
+                        numActions += len(piece_map[1](self.board, row_1, col_1, -2*self.Player+3, self._white_castle_kingside, self._white_castle_queenside, self._black_castle_kingside, self._black_castle_queenside))
+                    else:
+                        numActions += len(piece_map[abs(self.board[row_1, col_1])](self.board, row_1, col_1, -2*self.Player+3))
+        
+        return numActions
 
     def LegalActionShape(self):
         return np.array([0 for _ in range(4212)], dtype=np.int8)
@@ -406,11 +448,13 @@ class BoardState(GameState):
     def _legal_moves_rook(board, loc_row, loc_col, color):
         result = []
         for dir in range(4):
-            theta = dir*90
+            theta = (dir*90)*np.pi/180
             count = 1
             while True:
-                new_row = loc_row + count*int(np.cos(theta))
-                new_col = loc_col + count*int(np.sin(theta))
+                adjCos = 0 if np.abs(c:=np.cos(theta)) < 1e-8 else int(np.sign(c))
+                adjSin = 0 if np.abs(s:=np.sin(theta)) < 1e-8 else int(np.sign(s))
+                new_row = loc_row + count*adjCos
+                new_col = loc_col + count*adjSin
                 if (-1 < new_row < 8) and (-1 < new_col < 8):
                     if np.sign(board[new_row, new_col]) == 0:
                         square_1 = 8*loc_row + loc_col
@@ -440,11 +484,13 @@ class BoardState(GameState):
     def _legal_moves_bishop(board, loc_row, loc_col, color):
         result = []
         for dir in range(4):
-            theta = dir*90 + 45
+            theta = (dir*90 + 45)*np.pi/180
             count = 1
             while True:
-                new_row = loc_row + count*int(np.sign(np.cos(theta)))
-                new_col = loc_col + count*int(np.sign(np.sin(theta)))
+                adjCos = 0 if np.abs(c:=np.cos(theta)) < 1e-8 else int(np.sign(c))
+                adjSin = 0 if np.abs(s:=np.sin(theta)) < 1e-8 else int(np.sign(s))
+                new_row = loc_row + count*adjCos
+                new_col = loc_col + count*adjSin
                 if (-1 < new_row < 8) and (-1 < new_col < 8):
                     if np.sign(board[new_row, new_col]) == 0:
                         square_1 = 8*loc_row + loc_col
@@ -470,11 +516,13 @@ class BoardState(GameState):
     def _legal_moves_queen(board, loc_row, loc_col, color):
         result = []
         for dir in range(8):
-            theta = dir*45
+            theta = (dir*45)*np.pi/180
             count = 1
             while True:
-                new_row = loc_row + count*int(np.sign(np.cos(theta)))
-                new_col = loc_col + count*int(np.sign(np.sin(theta)))
+                adjCos = 0 if np.abs(c:=np.cos(theta)) < 1e-8 else int(np.sign(c))
+                adjSin = 0 if np.abs(s:=np.sin(theta)) < 1e-8 else int(np.sign(s))
+                new_row = loc_row + count*adjCos
+                new_col = loc_col + count*adjSin
                 if (-1 < new_row < 8) and (-1 < new_col < 8):
                     if np.sign(board[new_row, new_col]) == 0:
                         square_1 = 8*loc_row + loc_col
@@ -551,36 +599,39 @@ class BoardState(GameState):
                     result.append(63*square_1+square_2+int(square_2 < square_1)-1)
         return result
 
-@profile(precision=3)
 def main():
-    # import cProfile, pstats
+    import cProfile, pstats
     
-    # profiler = cProfile.Profile()
-    # profiler.enable()
-    params = {'maxDepth' : 3, 'explorationRate' : 1, 'playLimit' : 5000}
-    player = FixedMCTS(**params)
+    profiler = cProfile.Profile()
+    profiler.enable()
+    params = {'maxDepth' : 10, 'explorationRate' : 0.05, 'playLimit' : 1000}
+    player = FixedLazyMCTS(**params)
 
     state = BoardState()
-    counter = 0
-    while state.Winner() is None and counter < 10:
+    while state.Winner() is None:
         print(state)
         print('To move: {}'.format(state.Player))
-        state, v, p = player.FindMove(state)
+        state, v, p = player.FindMove(state, temp=player.ExplorationRate)
         print('Value: {}'.format(v))
         print('Selection Probabilities: {}'.format(p))
         print('Child Values: {}'.format(player.Root.ChildWinRates()))
         print('Child Exploration Rates: {}'.format(player.Root.ChildPlays()))
         print()
         player.MoveRoot(state)
-        counter += 1
-    # profiler.disable()
-    # stats = pstats.Stats(profiler).sort_stats('cumtime')
-    # stats.dump_stats('profile.log')
+    profiler.disable()
+    stats = pstats.Stats(profiler).sort_stats('cumtime')
+    stats.dump_stats('profile.log')
     print(state)
     print(state.Winner())
 
 if __name__ == "__main__":
     main()
+    snapshot = tracemalloc.take_snapshot()
+    top_stats = snapshot.statistics('lineno')
+
+    print("[ Top 10 ]")
+    for stat in top_stats[:10]:
+        print(stat)
     # import cProfile, pstats
     
     # profiler = cProfile.Profile()

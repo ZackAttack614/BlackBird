@@ -1,6 +1,6 @@
-from DynamicMCTS import DynamicMCTS as MCTS
-from RandomMCTS import RandomMCTS
-from FixedMCTS import FixedMCTS
+from DynamicLazyMCTS import DynamicLazyMCTS as LazyMCTS
+from RandomLazyMCTS import RandomLazyMCTS
+from FixedLazyMCTS import FixedLazyMCTS
 from Network import Network
 from NetworkFactory import NetworkFactory
 from DataManager import Connection
@@ -11,6 +11,9 @@ import functools
 import random
 import yaml
 import numpy as np
+
+import tracemalloc
+tracemalloc.start()
 
 import time
 
@@ -103,7 +106,7 @@ def TestRandom(model, temp, numTests):
     stats = defaultdict(int)
 
     for _ in range(numTests):
-        result = TestModels(model, RandomMCTS(), temp, numTests=1)
+        result = TestModels(model, RandomLazyMCTS(), temp, numTests=1)
         stats[resultMap.get(result, 'indeterminant')] += 1
         model.Conn.PutTrainingStatistic(result, model.Name,
             model.Version, 'RANDOM')
@@ -161,7 +164,7 @@ def TestGood(model, temp, numTests):
                 - `draws`: The number of draws `model` had.
                 - `losses`: The number of losses `model` had.
     """
-    good = FixedMCTS(maxDepth=10, explorationRate=0.85, timeLimit=1)
+    good = FixedLazyMCTS(maxDepth=10, explorationRate=0.05, timeLimit=1)
     resultMap = {1:'wins', 0:'draws', -1:'losses'}
     stats = defaultdict(int)
     
@@ -318,7 +321,7 @@ def TrainWithExamples(model, batchSize, learningRate, epochs=1, teacher=None,
     model.Conn.PutModel(model.Game.GameType, model.Name, model.Version)
 
 
-class Model(MCTS, Network):
+class Model(LazyMCTS, Network):
     """ Class which encapsulates MCTS powered by a neural network.
 
         The BlackBird class is designed to learn how to win at a board game, by
@@ -343,7 +346,7 @@ class Model(MCTS, Network):
         self.MCTSConfig = mctsConfig
         self.NetworkConfig = networkConfig
         self.TensorflowConfig = tensorflowConfig
-        MCTS.__init__(self, **mctsConfig)
+        LazyMCTS.__init__(self, **mctsConfig)
 
         if networkConfig != {}:
             Network.__init__(self, self._saveName, NetworkFactory(networkConfig, game.LegalMoves), tensorflowConfig)
@@ -389,7 +392,16 @@ class Model(MCTS, Network):
                     which sums to 1, representing the probabilities of selecting 
                     each legal action.
         """
-        policy = self.getPolicy(state.AsInputArray()) * state.LegalActions()
-        policy /= np.sum(policy)
+        legalActions = state.LegalActions()
+        policy = self.getPolicy(state.AsInputArray()) * legalActions
+        # snapshot = tracemalloc.take_snapshot()
+        # top_stats = snapshot.statistics('lineno')
 
-        return policy
+        # print("[ Top 10 ]")
+        # for stat in top_stats[:10]:
+        #     print(stat)
+        reducedPolicy = np.delete(policy, np.where(legalActions == 0)[0])
+        reducedPolicy /= np.sum(reducedPolicy)
+        del policy
+
+        return reducedPolicy, np.where(legalActions != 0)[0]

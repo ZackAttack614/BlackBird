@@ -1,4 +1,5 @@
 from FixedMCTS import FixedMCTS
+from FixedLazyMCTS import FixedLazyMCTS
 from DynamicMCTS import DynamicMCTS
 from GameState import GameState
 from proto.state_pb2 import State
@@ -35,6 +36,9 @@ class BoardState(GameState):
                 actions[j] = 1
 
         return actions
+
+    def NumLegalActions(self):
+        return int(np.sum(self.LegalActions()))
 
     def LegalActionShape(self):
         return np.array([self.Width], dtype=np.int8)
@@ -136,8 +140,8 @@ class BoardState(GameState):
         return "{0}{1}".format(self.Player,str(self)).__hash__()
 
 if __name__ == '__main__':
-    params = {'maxDepth' : 10, 'explorationRate' : 1, 'playLimit' : 1000}
-    player = FixedMCTS(**params)
+    params = {'maxDepth' : 10, 'explorationRate' : 0.1, 'playLimit' : 2000}
+    player = FixedLazyMCTS(**params)
     BoardState.Width = 7
     BoardState.Height = 6
     BoardState.InARow = 4
@@ -146,7 +150,7 @@ if __name__ == '__main__':
     while state.Winner() is None:
         print(state)
         print('To move: {}'.format(state.Player))
-        state, v, p = player.FindMove(state)
+        state, v, p = player.FindMove(state, temp=player.ExplorationRate)
         print('Value: {}'.format(v))
         print('Selection Probabilities: {}'.format(p))
         print('Child Values: {}'.format(player.Root.ChildWinRates()))

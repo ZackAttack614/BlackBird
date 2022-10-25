@@ -1,3 +1,5 @@
+import tracemalloc
+tracemalloc.start()
 import os
 import sys
 import yaml
@@ -6,9 +8,9 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import tensorflow as tf
 sys.path.insert(0, './src/')
 
-import Blackbird
+# import Blackbird
+import LazyBlackbird
 from DragonChess import BoardState
-# from DragonChess import BoardState
 
 
 def APITest():
@@ -21,28 +23,28 @@ def APITest():
     physical_devices = tf.config.list_physical_devices('GPU')
     print("Num GPUs:", len(physical_devices))
     for _ in range(100):
-        model = Blackbird.Model(BoardState, parameters['name'], parameters.get(
+        model = LazyBlackbird.Model(BoardState, parameters['name'], parameters.get(
             'mcts'), parameters.get('network'), parameters.get('tensorflow'))
 
-        Blackbird.GenerateTrainingSamples(model,
-                                        100,
+        LazyBlackbird.GenerateTrainingSamples(model,
+                                        10,
                                         parameters.get('mcts').get('temperature').get('exploration'))
-        Blackbird.TrainWithExamples(model, batchSize=10, learningRate=parameters.get('network').get('training').get('learning_rate'))
+        LazyBlackbird.TrainWithExamples(model, batchSize=parameters.get('network').get('training').get('batch_size'), learningRate=parameters.get('network').get('training').get('learning_rate'))
 
         print('Against a random player:')
-        print(Blackbird.TestRandom(model,
+        print(LazyBlackbird.TestRandom(model,
                                 parameters.get('mcts').get(
                                     'temperature').get('exploitation'),
                                 10))
 
         print('Against the last best player:')
-        print(Blackbird.TestPrevious(model,
+        print(LazyBlackbird.TestPrevious(model,
                                     parameters.get('mcts').get(
                                         'temperature').get('exploitation'),
                                     10))
 
         print('Against a good player:')
-        print(Blackbird.TestGood(model,
+        print(LazyBlackbird.TestGood(model,
                                 parameters.get('mcts').get(
                                     'temperature').get('exploitation'),
                                 10))

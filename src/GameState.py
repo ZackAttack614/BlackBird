@@ -10,6 +10,9 @@ class GameState(object):
     def LegalActions(self):
         raise NotImplementedError
 
+    def NumLegalActions(self):
+        raise NotImplementedError
+
     def LegalActionShape(self):
         raise NotImplementedError
 
