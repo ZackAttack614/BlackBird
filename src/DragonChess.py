@@ -2,7 +2,7 @@ import tracemalloc
 tracemalloc.start()
 from functools import lru_cache
 from FixedMCTS import FixedMCTS
-from FixedLazyMCTS import FixedLazyMCTS
+# from FixedLazyMCTS import FixedLazyMCTS
 from DynamicMCTS import DynamicMCTS
 from GameState import GameState
 from proto.state_pb2 import State
@@ -74,6 +74,8 @@ class BoardState(GameState):
         self._black_castle_kingside = 'k' in castles
         self._black_castle_queenside = 'q' in castles
 
+        self.playedMoves = 0
+
     @property
     def Board(self):
         return self.board
@@ -88,6 +90,7 @@ class BoardState(GameState):
         copy._black_castle_queenside = self._black_castle_queenside
 
         copy.board = np.copy(self.Board)
+        copy.playedMoves = self.playedMoves
         return copy
 
     def LegalActions(self):
@@ -109,7 +112,36 @@ class BoardState(GameState):
             5: self._legal_moves_rook,
             6: self._legal_moves_queen,
         }
-
+        ############################################## Look for mate
+        oppKing = np.where(self.board == 2*self.Player - 3)
+        mateFrom = []
+        if len(oppKing[0]) >= 1:
+            oppKingRow = oppKing[0][0]
+            oppKingCol = oppKing[1][0]
+            for row in range(8):
+                for col in range(8):
+                    if self._is_legal_move(row, col, oppKingRow, oppKingCol) or self._is_legal_move(row, col, oppKingRow, oppKingCol, promote=True) == 2:
+                        mateFrom.append((row, col))
+        if len(mateFrom) > 0:
+            if abs(self.board[mateFrom[0][0], mateFrom[0][1]]) == 1:
+                possMoves = piece_map[1](self.board, mateFrom[0][0], mateFrom[0][1], -2*self.Player+3, self._white_castle_kingside, self._white_castle_queenside, self._black_castle_kingside, self._black_castle_queenside)
+                for move in possMoves:
+                    newGame = self.Copy()
+                    newGame.ApplyAction(move)
+                    if newGame.Winner() is not None and newGame.Winner() > 0:
+                        legal[move] = 1
+                        return legal
+                raise Exception("Failed to find mating move.")
+            else:
+                possMoves = piece_map[abs(self.board[mateFrom[0][0], mateFrom[0][1]])](self.board, mateFrom[0][0], mateFrom[0][1], -2*self.Player+3)
+                for move in possMoves:
+                    newGame = self.Copy()
+                    newGame.ApplyAction(move)
+                    if newGame.Winner() is not None and newGame.Winner() > 0:
+                        legal[move] = 1
+                        return legal
+                raise Exception("Failed to find mating move.")
+        ###########################################################
         for row_1 in range(8):
             for col_1 in range(8):
                 if np.sign(self.board[row_1, col_1]) == -2*self.Player+3:
@@ -123,6 +155,19 @@ class BoardState(GameState):
 
     def NumLegalActions(self):
         numActions = 0
+        ################## Mating move exists
+        oppKing = np.where(self.board == 2*self.Player - 3)
+        mateFrom = []
+        if len(oppKing[0]) >= 1:
+            oppKingRow = oppKing[0][0] # board is flipped for white perspective
+            oppKingCol = oppKing[1][0]
+            for row in range(8):
+                for col in range(8):
+                    if self._is_legal_move(row, col, oppKingRow, oppKingCol) or self._is_legal_move(row, col, oppKingRow, oppKingCol, promote=True) == 2:
+                        mateFrom.append((row, col))
+        if len(mateFrom) > 0:
+            return 1
+        ################## 
         piece_map = {
             1: self._legal_moves_king,
             2: self._legal_moves_pawn,
@@ -195,11 +240,15 @@ class BoardState(GameState):
         if not m:
             raise ValueError('Tried to make an illegal move.')
 
+        self.playedMoves += 1
+
     def Winner(self, prevAction=None):
         if -1 not in self.board:
             return 1
         elif 1 not in self.board:
             return 2
+        elif self.playedMoves >= 80:
+            return 0
         else:
             return None
 
@@ -208,12 +257,12 @@ class BoardState(GameState):
 
     def Move(self, loc_row, loc_col, new_row, new_col, promote=None, castle=None):
         if promote is not None:
-            if self._is_legal_move(loc_row, loc_col, new_row, new_col, promote=True) == 0:
+            if self._is_legal_move(loc_row, loc_col, new_row, new_col, promote=True) == 2:
                 self.board[new_row, new_col] = promote
             else:
                 return False
         elif castle is not None:
-            if self._is_legal_move(loc_row, loc_col, new_row, new_col, castle=True) == 0:
+            if self._is_legal_move(loc_row, loc_col, new_row, new_col, castle=True) == 2:
                 self.board[new_row, new_col] = self.board[loc_row, loc_col]
                 self.board[new_row, new_col//2+2] = self.board[new_row, new_col*7//4-3] # rook
                 self.board[new_row, new_col*7//4-3] = 0
@@ -313,9 +362,9 @@ class BoardState(GameState):
     def _is_legal_move_pawn(self, loc_row, loc_col, new_row, new_col):
         if self.board[loc_row, loc_col] > 0:
             if loc_row == 6 and loc_col == new_col and new_row == 7 and self.board[7, new_col] == 0:
-                return 0
+                return 2
             elif loc_row == 6 and abs(loc_col - new_col) == 1 and new_row == 7 and self.board[7, new_col] < 0:
-                return 0
+                return 2
             elif loc_row == 1:
                 if loc_col == new_col:
                     if new_row == 3 and self.board[3, new_col] == 0 and self.board[2, new_col] == 0:
@@ -332,9 +381,9 @@ class BoardState(GameState):
                         return True
         else:
             if loc_row == 1 and loc_col == new_col and new_row == 0 and self.board[0, new_col] == 0:
-                return 0
+                return 2
             elif loc_row == 1 and abs(loc_col - new_col) == 1 and new_row == 0 and self.board[0, new_col] > 0:
-                return 0
+                return 2
             elif loc_row == 6:
                 if loc_col == new_col:
                     if new_row == 4 and self.board[4, new_col] == 0 and self.board[5, new_col] == 0:
@@ -544,13 +593,13 @@ class BoardState(GameState):
         if abs(loc_row-new_row) <= 1 and abs(loc_col-new_col) <= 1:
             return True
         elif loc_row == 0 and new_col == 6 and self._white_castle_kingside and (self.board[0, 5:7] == 0).all():
-            return 0
+            return 2
         elif loc_row == 0 and new_col == 2 and self._white_castle_queenside and (self.board[0, 1:4] == 0).all():
-            return 0
+            return 2
         elif loc_row == 7 and new_col == 6 and self._black_castle_kingside and (self.board[7, 5:7] == 0).all():
-            return 0
+            return 2
         elif loc_row == 7 and new_col == 2 and self._black_castle_queenside and (self.board[7, 1:4] == 0).all():
-            return 0
+            return 2
         return False
 
     @staticmethod
@@ -611,6 +660,7 @@ def main():
     while state.Winner() is None:
         print(state)
         print('To move: {}'.format(state.Player))
+        print('Number of Legal Moves: {}'.format(state.NumLegalActions()))
         state, v, p = player.FindMove(state, temp=player.ExplorationRate)
         print('Value: {}'.format(v))
         print('Selection Probabilities: {}'.format(p))

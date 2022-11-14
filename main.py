@@ -27,7 +27,7 @@ def APITest():
             'mcts'), parameters.get('network'), parameters.get('tensorflow'))
 
         LazyBlackbird.GenerateTrainingSamples(model,
-                                        10,
+                                        1,
                                         parameters.get('mcts').get('temperature').get('exploration'))
         LazyBlackbird.TrainWithExamples(model, batchSize=parameters.get('network').get('training').get('batch_size'), learningRate=parameters.get('network').get('training').get('learning_rate'))
 

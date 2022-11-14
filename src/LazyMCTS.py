@@ -2,6 +2,7 @@ import numpy as np
 from time import time
 import multiprocessing as mp
 from GameState import GameState
+from DragonChess import BoardState
 
 
 class LazyNode(object):
@@ -67,9 +68,17 @@ class LazyNode(object):
                 children. Defaults to an array of zeros if no children have been
                 sampled.
         """
-        allPlays = sum(self.ChildPlays())
-        zeroProbs = np.zeros((len(self.ChildPlays())), dtype=np.float)
-        return self.ChildPlays() / allPlays if allPlays > 0 else zeroProbs
+        # if type(self.State) == BoardState: ## Dragon chess specific to account for lazy MCTS
+        probs = np.zeros(self.State.LegalMoves, dtype=np.float)
+        if self.Children is not None:
+            for child in self.Children:
+                probs[child.id] = child.Plays
+        allPlays = sum(probs)
+        return probs / allPlays if allPlays > 0 else probs
+        # else:
+        #     allPlays = sum(self.ChildPlays())
+        #     zeroProbs = np.zeros((len(self.ChildPlays())), dtype=np.float)
+        #     return self.ChildPlays() / allPlays if allPlays > 0 else zeroProbs
 
     def ChildWinRates(self):
         """ Samples the win rate of each child Node object.
