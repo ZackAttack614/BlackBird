@@ -75,6 +75,7 @@ class BoardState(GameState):
         self._black_castle_queenside = 'q' in castles
 
         self.playedMoves = 0
+        self.LastAction = None
 
     @property
     def Board(self):
@@ -83,6 +84,7 @@ class BoardState(GameState):
     def Copy(self):
         copy = BoardState()
         copy.Player = self.Player
+        copy.LastAction = self.LastAction
         copy.PreviousPlayer = self.PreviousPlayer
         copy._white_castle_kingside = self._white_castle_kingside
         copy._white_castle_queenside = self._white_castle_queenside
@@ -221,6 +223,7 @@ class BoardState(GameState):
             if action >= 4208:
                 action -= 4208
                 m = self.Move(7*(action//2), 4, 7*(action//2), -4*(action%2)+6, castle=True) 
+                action += 4208
             else:
                 action -= 4032 # 0-175 (first 88 are white promotions)
                 promotePiece = (action%4)+3
@@ -236,11 +239,14 @@ class BoardState(GameState):
                     m = self.Move(1, (action-120)//4, 0, (action-120)//4+1, promote=-promotePiece)
                 elif action < 176:
                     m = self.Move(1, (action-148)//4+1, 0, (action-148)//4, promote=-promotePiece)
+                action += 4032
 
         if not m:
+            print(self, action)
             raise ValueError('Tried to make an illegal move.')
 
         self.playedMoves += 1
+        self.LastAction = action
 
     def Winner(self, prevAction=None):
         if -1 not in self.board:
@@ -592,13 +598,13 @@ class BoardState(GameState):
     def _is_legal_move_king(self, loc_row, loc_col, new_row, new_col):
         if abs(loc_row-new_row) <= 1 and abs(loc_col-new_col) <= 1:
             return True
-        elif loc_row == 0 and new_col == 6 and self._white_castle_kingside and (self.board[0, 5:7] == 0).all():
+        elif loc_row == 0 and new_col == 6 and new_row == 0 and self._white_castle_kingside and (self.board[0, 5:7] == 0).all():
             return 2
-        elif loc_row == 0 and new_col == 2 and self._white_castle_queenside and (self.board[0, 1:4] == 0).all():
+        elif loc_row == 0 and new_col == 2 and new_row == 0 and self._white_castle_queenside and (self.board[0, 1:4] == 0).all():
             return 2
-        elif loc_row == 7 and new_col == 6 and self._black_castle_kingside and (self.board[7, 5:7] == 0).all():
+        elif loc_row == 7 and new_col == 6 and new_row == 7 and self._black_castle_kingside and (self.board[7, 5:7] == 0).all():
             return 2
-        elif loc_row == 7 and new_col == 2 and self._black_castle_queenside and (self.board[7, 1:4] == 0).all():
+        elif loc_row == 7 and new_col == 2 and new_row == 7 and self._black_castle_queenside and (self.board[7, 1:4] == 0).all():
             return 2
         return False
 
@@ -649,6 +655,20 @@ class BoardState(GameState):
         return result
 
 def main():
+    # state = BoardState()
+    # state.ApplyAction(783)
+    # state.ApplyAction(711)
+    # state.ApplyAction(3320)
+    # state.ApplyAction(839)
+    # state.ApplyAction(264)
+    # state.ApplyAction(3184)
+    # state.ApplyAction(840)
+    # state.ApplyAction(1223)
+    # print(state.LegalActions())
+    # state.ApplyAction(3953)
+    # print(np.where(state.LegalActions() == 1)[0])
+    # print(state)
+    # exit()
     import cProfile, pstats
     
     profiler = cProfile.Profile()

@@ -287,6 +287,11 @@ class LazyMCTS(object):
             if child.State == state:
                 self.Root = child
                 break
+        else: # Because of lazy allocation, the child might not exist
+            last = state.LastAction
+            self.AddChild(self.Root, last)
+            self.Root = self.Root.Children[-1]
+
 
     def _runMCTS(self, temp, endTime=None, nPlays=None):
         """ Run the MCTS algorithm on the current Root Node.

@@ -58,7 +58,7 @@ class ExampleState(object):
         state = State()
         state.ParseFromString(serialState)
         boardDims = np.frombuffer(state.boardDims, dtype=np.int8)
-        policyDims = np.frombuffer(state.policyDims, dtype=np.int8)
+        policyDims = np.frombuffer(state.policyDims, dtype=np.int16)
 
         mctsEval = state.mctsEval,
         mctsPolicy = np.frombuffer(state.mctsPolicy,
@@ -79,7 +79,7 @@ class ExampleState(object):
         serialized.boardDims = np.array(self.Board.shape,
             dtype=np.int8).tobytes()
         serialized.policyDims = np.array(self.MctsPolicy.shape,
-            dtype=np.int8).tobytes()
+            dtype=np.int16).tobytes()
 
         return serialized.SerializeToString()
 
@@ -192,6 +192,7 @@ def TestModels(model1, model2, temp, numTests):
             An integer representing a win (1), draw (0), or loss (-1)
     """
     for _ in range(numTests):
+        print(f'Playing game {_}\n')
         model1ToMove = random.choice([True, False])
         model1Player = 1 if model1ToMove else 2
         winner = None
@@ -200,16 +201,22 @@ def TestModels(model1, model2, temp, numTests):
         state = model1.Game()
 
         while winner is None:
+            print(state)
             if model1ToMove:
                 (nextState, *_) = model1.FindMove(state, temp)
             else:
                 (nextState, *_) = model2.FindMove(state, temp)
+
+            model1ToMove = not model1ToMove if state.Player != nextState.Player else model1ToMove
+
             state = nextState
             model1.MoveRoot(state)
             model2.MoveRoot(state)
 
-            model1ToMove = not model1ToMove
             winner = state.Winner()
+
+        print(state)
+        print(winner)
 
         if winner == model1Player:
             return 1
@@ -253,7 +260,7 @@ def GenerateTrainingSamples(model, nGames, temp):
             example = ExampleState(1 - v, currentProbabilties,
                 state.AsInputArray(), player=state.Player)
             state = nextState
-            print(f'blackbird state: {state}')
+            # print(f'blackbird state: {state}')
             model.MoveRoot(state)
             # print(f'moved root: {model.Game().Board}')
             winner = state.Winner(lastAction)
