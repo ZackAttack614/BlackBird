@@ -194,6 +194,7 @@ def TestModels(model1, model2, temp, numTests):
     for _ in range(numTests):
         print(f'Playing game {_}\n')
         model1ToMove = random.choice([True, False])
+        print(f'Model 1 has first move: {model1ToMove}\n')
         model1Player = 1 if model1ToMove else 2
         winner = None
         model1.DropRoot()

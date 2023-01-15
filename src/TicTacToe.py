@@ -36,6 +36,9 @@ class BoardState(GameState):
 
         return actions
 
+    def NumLegalActions(self):
+        return int(np.sum((self.LegalActions())))
+
     def LegalActionShape(self):
         return self.BoardShape
 

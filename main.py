@@ -61,7 +61,7 @@ if __name__ == '__main__':
     with tf.device('/GPU:0'):
         APITest()
 
-        ##################################################
+        #################################################
         # if not os.path.isfile('parameters.yaml'):
         #     raise IOError('Copy parameters_template.yaml into parameters.yaml')
         # with open('parameters.yaml') as param_file:
