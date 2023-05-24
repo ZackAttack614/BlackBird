@@ -22,7 +22,7 @@ class FixedMCTS(MCTS):
         lastAction = None
         for _ in range(self.MaxDepth):
             if node.Children is None:
-                if node.State.Winner(lastAction) is not None:
+                if node.State.Winner() != -1:
                     break
                 self.AddChildren(node)
             if np.sum(node.LegalActions) == 0:

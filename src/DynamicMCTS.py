@@ -22,7 +22,7 @@ class DynamicMCTS(MCTS):
         lastAction = None
         while True:
             if node.Children is None:
-                if node.State.Winner(lastAction) is not None:
+                if node.State.Winner() != -1:
                     break
                 self.AddChildren(node)
                 break

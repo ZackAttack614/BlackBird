@@ -1,9 +1,9 @@
 import numpy as np
 from time import time
 import multiprocessing as mp
-from GameState import GameState
-from DragonChess import BoardState
-
+from dragonchess import GameState
+# from GameState import GameState
+# from DragonChess import BoardState
 
 class LazyNode(object):
     """ Base class for storing game state information in tree searches.
@@ -43,7 +43,7 @@ class LazyNode(object):
 
         self._childIds = []
         self._childWinRates = np.zeros(legalActions)
-        self._childPlays = np.zeros(legalActions, dtype=np.float)
+        self._childPlays = np.zeros(legalActions, dtype=np.single)
 
     def WinRate(self):
         """ Samples the win rate of the Node after MCTS.
@@ -69,7 +69,7 @@ class LazyNode(object):
                 sampled.
         """
         # if type(self.State) == BoardState: ## Dragon chess specific to account for lazy MCTS
-        probs = np.zeros(self.State.LegalMoves, dtype=np.float)
+        probs = np.zeros(self.State.LegalMoves, dtype=np.single)
         if self.Children is not None:
             for child in self.Children:
                 probs[child.id] = child.Plays
@@ -196,9 +196,7 @@ class LazyMCTS(object):
             # for i in range(len(la)):
             #     if la[i] == 1:
             #         print(state.int_to_move[i])
-        # print(f'Root state= {self.Root.State.board}')
-        # print(state.board)
-        assert self.Root.State == state, 'Primed for the correct input state.'
+        assert self.Root.State.eq(state), 'Primed for the correct input state.' # I adjusted this for dragonchess C++
 
         self._runMCTS(temp, endTime, playLimit)
         action = self._selectAction(self.Root, temp, exploring=False)
@@ -284,7 +282,7 @@ class LazyMCTS(object):
             return
         for child in self.Root.Children:
             # print(child.State == state)
-            if child.State == state:
+            if child.State.eq(state):
                 self.Root = child
                 break
         else: # Because of lazy allocation, the child might not exist
@@ -412,11 +410,11 @@ class LazyMCTS(object):
         """
         rolloutState = state
         winner = rolloutState.Winner()
-        while winner is None:
+        while winner == -1:
             actions = np.where(rolloutState.LegalActions() == 1)[0]
             action = np.random.choice(actions)
             rolloutState = self._applyAction(rolloutState, action)
-            winner = rolloutState.Winner(action)
+            winner = rolloutState.Winner()
         return 0.5 if winner == 0 else int(player == winner)
 
     def _findLeaf(self, node, temp):

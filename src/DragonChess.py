@@ -2,16 +2,16 @@ import tracemalloc
 tracemalloc.start()
 from functools import lru_cache
 from FixedMCTS import FixedMCTS
-# from FixedLazyMCTS import FixedLazyMCTS
+from FixedLazyMCTS import FixedLazyMCTS
 from DynamicMCTS import DynamicMCTS
 from GameState import GameState
-from proto.state_pb2 import State
+# from proto.state_pb2 import State
 
 import json
 import numpy as np
 import time
 
-from memory_profiler import profile
+# from memory_profiler import profile
 import random
 
 class BoardState(GameState):
@@ -673,7 +673,7 @@ def main():
     
     profiler = cProfile.Profile()
     profiler.enable()
-    params = {'maxDepth' : 10, 'explorationRate' : 0.05, 'playLimit' : 1000}
+    params = {'maxDepth' : 10, 'explorationRate' : 0.05, 'playLimit' : 100}
     player = FixedLazyMCTS(**params)
 
     state = BoardState()

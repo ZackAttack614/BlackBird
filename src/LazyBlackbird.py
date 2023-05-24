@@ -62,7 +62,7 @@ class ExampleState(object):
 
         mctsEval = state.mctsEval,
         mctsPolicy = np.frombuffer(state.mctsPolicy,
-            dtype=np.float).reshape(policyDims)
+            dtype=np.single).reshape(policyDims)
         board = np.frombuffer(state.boardEncoding,
             dtype=np.int8).reshape(boardDims)
 
@@ -196,12 +196,12 @@ def TestModels(model1, model2, temp, numTests):
         model1ToMove = random.choice([True, False])
         print(f'Model 1 has first move: {model1ToMove}\n')
         model1Player = 1 if model1ToMove else 2
-        winner = None
+        winner = -1
         model1.DropRoot()
         model2.DropRoot()
         state = model1.Game()
 
-        while winner is None:
+        while winner == -1:
             print(state)
             if model1ToMove:
                 (nextState, *_) = model1.FindMove(state, temp)
@@ -254,9 +254,9 @@ def GenerateTrainingSamples(model, nGames, temp):
         gameHistory = []
         state = model.Game()
         lastAction = None
-        winner = None
+        winner = -1
         model.DropRoot()
-        while winner is None:
+        while winner == -1:
             (nextState, v, currentProbabilties) = model.FindMove(state, temp)
             example = ExampleState(1 - v, currentProbabilties,
                 state.AsInputArray(), player=state.Player)
@@ -264,7 +264,7 @@ def GenerateTrainingSamples(model, nGames, temp):
             # print(f'blackbird state: {state}')
             model.MoveRoot(state)
             # print(f'moved root: {model.Game().Board}')
-            winner = state.Winner(lastAction)
+            winner = state.Winner()
             gameHistory.append(example)
         print(f'\nWinner: {winner}\n')
 

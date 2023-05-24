@@ -24,7 +24,7 @@ class FixedLazyMCTS(LazyMCTS):
             if node.LegalActions == 0:
                 break
             if node.Children is None:
-                if node.State.Winner(lastAction) is not None:
+                if node.State.Winner() != -1:
                     break
                 fullChildIds = node.PriorIndices
                 assert len(fullChildIds) > 0, 'There is at least one child to add.'

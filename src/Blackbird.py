@@ -59,7 +59,7 @@ class ExampleState(object):
 
         mctsEval = state.mctsEval,
         mctsPolicy = np.frombuffer(state.mctsPolicy,
-            dtype=np.float).reshape(policyDims)
+            dtype=np.single).reshape(policyDims)
         board = np.frombuffer(state.boardEncoding,
             dtype=np.int8).reshape(boardDims)
 
@@ -253,7 +253,7 @@ def GenerateTrainingSamples(model, nGames, temp):
             # print(f'blackbird state: {state.board}')
             model.MoveRoot(state)
             # print(f'moved root: {model.Game().Board}')
-            winner = state.Winner(lastAction)
+            winner = state.Winner()
             gameHistory.append(example)
 
         example = ExampleState(None, np.zeros([len(currentProbabilties)]),

@@ -38,7 +38,7 @@ class Node(object):
         self.Priors = np.multiply(priors, legalActions)
 
         self._childWinRates = np.zeros(len(legalActions))
-        self._childPlays = np.zeros(len(legalActions), dtype=np.float)
+        self._childPlays = np.zeros(len(legalActions), dtype=np.single)
 
     def WinRate(self):
         """ Samples the win rate of the Node after MCTS.
@@ -64,7 +64,7 @@ class Node(object):
                 sampled.
         """
         allPlays = sum(self.ChildPlays())
-        zeroProbs = np.zeros((len(self.ChildPlays())), dtype=np.float)
+        zeroProbs = np.zeros((len(self.ChildPlays())), dtype=np.single)
         return self.ChildPlays() / allPlays if allPlays > 0 else zeroProbs
 
     def ChildWinRates(self):
@@ -190,7 +190,7 @@ class MCTS(object):
             #         print(state.int_to_move[i])
         # print(f'Root state= {self.Root.State.board}')
         # print(state.board)
-        assert self.Root.State == state, 'Primed for the correct input state.'
+        assert self.Root.State.eq(state), 'Primed for the correct input state.'
 
         self._runMCTS(temp, endTime, playLimit)
         action = self._selectAction(self.Root, temp, exploring=False)
@@ -277,7 +277,7 @@ class MCTS(object):
             if child is None:
                 continue
             # print(child.State == state)
-            if child.State == state:
+            if child.State.eq(state):
                 self.Root = child
                 break
 
@@ -375,11 +375,11 @@ class MCTS(object):
         """
         rolloutState = state
         winner = rolloutState.Winner()
-        while winner is None:
+        while winner == -1:
             actions = np.where(rolloutState.LegalActions() == 1)[0]
             action = np.random.choice(actions)
             rolloutState = self._applyAction(rolloutState, action)
-            winner = rolloutState.Winner(action)
+            winner = rolloutState.Winner()
         return 0.5 if winner == 0 else int(player == winner)
 
     def _findLeaf(self, node, temp):
