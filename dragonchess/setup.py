@@ -1,7 +1,7 @@
 from setuptools import setup, Extension
 import pybind11
 
-cpp_args = ['-std=c++11', '-stdlib=libc++', '-mmacosx-version-min=10.7']
+cpp_args = ['/std:c++17', '-stdlib=libc++', '-mmacosx-version-min=10.7']
 
 sfc_module = Extension(
     'dragonchess',

@@ -14,9 +14,14 @@ docs/
 # BlackBird Models and Summaries
 blackbird_models/
 blackbird_summary/
+legacy/**
 
 # BlackBird Virtual Environment
 BlackBirdEnvironment/
+
+# dragonchess Library
+dragonchess/build/**
+dragonchess/dragonchess.egg-info/**
 
 # Blackbird Extraneous
 *.pyperf

@@ -53,7 +53,21 @@ class BoardState : GameState {
 public:
     const static std::string GameType;
     const static int NumLegalMoves = 802;
-    std::map<int, int> piece_map;
+    // std::map<int, int> piece_map;
+    inline const static std::map<int, int> piece_map = {
+    {5, 10}, {-5, 11}, {2, 4}, {7, 4}, {-2, 5}, {-7, 5}, {3, 6}, {6, 6},
+    {-3, 7}, {-6, 7}, {1, 2}, {8, 2}, {-1, 3}, {-8, 3}, {4, 8}, {-4, 9},
+    {9, 0}, {10, 0}, {11, 0}, {12, 0}, {13, 0}, {14, 0}, {15, 0}, {16, 0}, 
+    {-16, 1}, {-15, 1}, {-14, 1}, {-13, 1}, {-12, 1}, {-11, 1}, {-10, 1}, {-9, 1},
+    {17, 4}, {18, 4}, {19, 4}, {20, 4}, {21, 4}, {22, 4}, {23, 4}, {24, 4}, 
+    {-24, 5}, {-23, 5}, {-22, 5}, {-21, 5}, {-20, 5}, {-19, 5}, {-18, 5}, {-17, 5},
+    {25, 6}, {26, 6}, {27, 6}, {28, 6}, {29, 6}, {30, 6}, {31, 6}, {32, 6}, 
+    {-32, 7}, {-31, 7}, {-30, 7}, {-29, 7}, {-28, 7}, {-27, 7}, {-26, 7}, {-25, 7},
+    {33, 2}, {34, 2}, {35, 2}, {36, 2}, {37, 2}, {38, 2}, {39, 2}, {40, 2}, 
+    {-40, 3}, {-39, 3}, {-38, 3}, {-37, 3}, {-36, 3}, {-35, 3}, {-34, 3}, {-33, 3},
+    {41, 8}, {42, 8}, {43, 8}, {44, 8}, {45, 8}, {46, 8}, {47, 8}, {48, 8}, 
+    {-48, 9}, {-47, 9}, {-46, 9}, {-45, 9}, {-44, 9}, {-43, 9}, {-42, 9}, {-41, 9}
+    };
     std::array<std::array<int, 8>, 8> board;
     std::map<int, std::array<int, 2>> piece_locs;
     int LastAction;
@@ -821,42 +835,42 @@ public:
         return repr + "-----------------";
     };
     BoardState() : board(std::array<std::array<int, 8>, 8>()), Player(1), PreviousPlayer(0), _black_castle_kingside(true), _black_castle_queenside(true), playedMoves(0), LastAction(-1) {
-        piece_map[5] = 10;
-        piece_map[-5] = 11;
-        piece_map[2] = 4;
-        piece_map[7] = 4;
-        piece_map[-2] = 5;
-        piece_map[-7] = 5;
-        piece_map[3] = 6;
-        piece_map[6] = 6;
-        piece_map[-3] = 7;
-        piece_map[-6] = 7;
-        piece_map[1] = 2;
-        piece_map[8] = 2;
-        piece_map[-1] = 3;
-        piece_map[-8] = 3;
-        piece_map[4] = 8;
-        piece_map[-4] = 9;
-        for (int i = 9; i < 17; i++) {
-            piece_map[i] = 0;
-            piece_map[i - 25] = 1;
-        }
-        for (int i = 17; i < 25; i++) {
-            piece_map[i] = 4;
-            piece_map[i - 41] = 5;
-        }
-        for (int i = 25; i < 33; i++) {
-            piece_map[i] = 6;
-            piece_map[i - 57] = 7;
-        }
-        for (int i = 33; i < 41; i++) {
-            piece_map[i] = 2;
-            piece_map[i - 73] = 3;
-        }
-        for (int i = 41; i < 49; i++) {
-            piece_map[i] = 8;
-            piece_map[i - 89] = 9;
-        }
+        // piece_map[5] = 10;
+        // piece_map[-5] = 11;
+        // piece_map[2] = 4;
+        // piece_map[7] = 4;
+        // piece_map[-2] = 5;
+        // piece_map[-7] = 5;
+        // piece_map[3] = 6;
+        // piece_map[6] = 6;
+        // piece_map[-3] = 7;
+        // piece_map[-6] = 7;
+        // piece_map[1] = 2;
+        // piece_map[8] = 2;
+        // piece_map[-1] = 3;
+        // piece_map[-8] = 3;
+        // piece_map[4] = 8;
+        // piece_map[-4] = 9;
+        // for (int i = 9; i < 17; i++) {
+        //     piece_map[i] = 0;
+        //     piece_map[i - 25] = 1;
+        // }
+        // for (int i = 17; i < 25; i++) {
+        //     piece_map[i] = 4;
+        //     piece_map[i - 41] = 5;
+        // }
+        // for (int i = 25; i < 33; i++) {
+        //     piece_map[i] = 6;
+        //     piece_map[i - 57] = 7;
+        // }
+        // for (int i = 33; i < 41; i++) {
+        //     piece_map[i] = 2;
+        //     piece_map[i - 73] = 3;
+        // }
+        // for (int i = 41; i < 49; i++) {
+        //     piece_map[i] = 8;
+        //     piece_map[i - 89] = 9;
+        // }
         board[0][4] = 5;
         piece_locs[5] = { 0, 4 };
         board[1][3] = 12;
@@ -879,6 +893,8 @@ public:
             piece_locs[-i] = { -1, -1 };
         }
     };
+    BoardState(bool createFromCopy) {
+    };
 
     std::array<std::array<int, 8>, 8> Board() {
         return board;
@@ -888,7 +904,7 @@ public:
         return py::array_t<int>(arr.size(), arr.data());
     };
     BoardState Copy() {
-        BoardState copy = BoardState();
+        BoardState copy = BoardState(true);
         copy.Player = this->Player;
         copy.LastAction = this->LastAction;
         copy.PreviousPlayer = this->PreviousPlayer;
@@ -911,7 +927,7 @@ public:
         for (int row = 0; row < 8; row++) {
             for (int col = 0; col < 8; col++) {
                 if (this->board[row][col] != 0) {
-                    state[0][row][col][this->piece_map[this->board[row][col]]] = 1;
+                    state[0][row][col][piece_map.at(this->board[row][col])] = 1;
                 }
             }
         }
@@ -937,7 +953,7 @@ public:
             }
         }
         return state;
-    }
+    };
 
     template <typename T, size_t W_DIM, size_t X_DIM, size_t Y_DIM, size_t Z_DIM>
     py::array_t<T> py_InputArrayT(std::array<std::array<std::array<std::array<T, Z_DIM>, Y_DIM>, X_DIM>, W_DIM>& arr) {

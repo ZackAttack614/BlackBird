@@ -7,8 +7,7 @@ from FixedLazyMCTS import FixedLazyMCTS
 # start = time.time()
 # state = BoardState()
 # for i in range(100000):
-#     s = state.Copy()
-#     s.ApplyAction(188)
+#     s = BoardState(state)
 # print(time.time()-start)
 # exit()
 
@@ -16,7 +15,7 @@ import cProfile, pstats
     
 profiler = cProfile.Profile()
 profiler.enable()
-params = {'maxDepth' : 7, 'explorationRate' : 0.05, 'playLimit' : 500}
+params = {'maxDepth' : 10, 'explorationRate' : 0.05, 'playLimit' : 1000}
 player = FixedLazyMCTS(**params)
 
 state = BoardState()
@@ -31,6 +30,7 @@ while state.Winner() == -1:
     print('Child Values: {}'.format(player.Root.ChildWinRates()))
     print('Child Exploration Rates: {}'.format(player.Root.ChildPlays()))
     print(f'Time taken: {time.time()-start}')
+    start = time.time()
     player.MoveRoot(state)
 
 profiler.disable()
